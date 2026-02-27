@@ -9,7 +9,7 @@ import {
   ShieldCheck, FileDown, Bus, Plus, AlertTriangle,
   CheckCircle, XCircle, Trash2, Edit2, X,
   Users, Phone, Hash, UserPlus, UserX, UserCheck, Eye, EyeOff,
-  MapPin, Building2
+  MapPin, Building2, DollarSign, CalendarRange, Bell, Settings
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -29,6 +29,10 @@ import { useNotes } from '@/hooks/use-notes'
 import { useAwards } from '@/hooks/use-awards'
 import { useDiaristas } from '@/hooks/use-diaristas'
 import { useClients } from '@/hooks/use-clients'
+import { PaymentsSection } from '@/components/admin/payments-section'
+import { CalendarSection } from '@/components/admin/calendar-section'
+import { AlertsSection } from '@/components/admin/alerts-section'
+import { SettingsSection } from '@/components/admin/settings-section'
 import { useDbNotifications } from '@/hooks/use-db-notifications'
 import { MonthlyPaymentSection } from '@/components/monthly-payment-section'
 import { AttendanceSection } from '@/components/attendance-section'
@@ -67,17 +71,21 @@ const CLEANING_TYPES = [
   { value: 'light_cleaning', label: 'Limpeza Leve' },
 ] as const
 
-type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'notas' | 'contrato' | 'equipe' | 'clientes'
+type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'notas' | 'contrato' | 'equipe' | 'clientes' | 'pagamentos' | 'calendario' | 'alertas' | 'config'
 
 const NAV_ITEMS: { key: Tab; label: string; Icon: React.ElementType }[] = [
-  { key: 'resumo',      label: 'Dashboard',   Icon: LayoutDashboard },
+  { key: 'resumo',      label: 'Dashboard',    Icon: LayoutDashboard },
+  { key: 'calendario',  label: 'Agenda',       Icon: CalendarRange },
   { key: 'presenca',    label: 'Presenca',     Icon: CalendarCheck },
   { key: 'lavanderia',  label: 'Lavanderia',   Icon: WashingMachine },
   { key: 'transporte',  label: 'Transporte',   Icon: Bus },
+  { key: 'pagamentos',  label: 'Pagamentos',   Icon: DollarSign },
   { key: 'notas',       label: 'Notas',        Icon: FileText },
+  { key: 'alertas',     label: 'Alertas',      Icon: Bell },
   { key: 'contrato',    label: 'Contrato',     Icon: ScrollText },
   { key: 'equipe',      label: 'Equipe',       Icon: Users },
   { key: 'clientes',    label: 'Clientes',     Icon: Building2 },
+  { key: 'config',      label: 'Config',       Icon: Settings },
 ]
 
 export default function AdminPage() {
@@ -123,6 +131,18 @@ export default function AdminPage() {
   const { laundryWeeks, refetch: refetchLaundry } = useLaundryWeeks(selectedMonth, selectedYear, selectedDiaristaId)
   const { notes, addNote, updateNote, deleteNote } = useNotes(selectedMonth, selectedYear, selectedDiaristaId)
   const { sendNotification } = useDbNotifications()
+  const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0)
+
+  // Fetch pending payments count
+  useEffect(() => {
+    async function fetchPending() {
+      const supabase = (await import('@/lib/supabase')).createClient()
+      const { count } = await supabase.from('payment_history').select('*', { count: 'exact', head: true }).eq('month', selectedMonth).eq('year', selectedYear).eq('status', 'pending')
+      setPendingPaymentsCount(count || 0)
+    }
+    fetchPending()
+  }, [selectedMonth, selectedYear])
+
   const [showNoteForm, setShowNoteForm] = useState(false)
   const [editingNote, setEditingNote] = useState<Note | null>(null)
   const [noteFormData, setNoteFormData] = useState({
@@ -856,6 +876,43 @@ export default function AdminPage() {
               </div>
             )}
           </div>
+        )}
+
+        {/* PAGAMENTOS */}
+        {activeTab === 'pagamentos' && (
+          <PaymentsSection
+            diaristas={allDiaristas}
+            selectedDiaristaId={selectedDiaristaId}
+            month={selectedMonth}
+            year={selectedYear}
+          />
+        )}
+
+        {/* CALENDARIO */}
+        {activeTab === 'calendario' && (
+          <CalendarSection
+            diaristas={activeDiaristas}
+            clients={activeClients}
+            month={selectedMonth}
+            year={selectedYear}
+            onChangeMonth={(m, y) => { setSelectedMonth(m); setSelectedYear(y) }}
+          />
+        )}
+
+        {/* ALERTAS */}
+        {activeTab === 'alertas' && (
+          <AlertsSection
+            diaristas={allDiaristas}
+            notes={notes}
+            pendingPayments={pendingPaymentsCount}
+            month={selectedMonth}
+            year={selectedYear}
+          />
+        )}
+
+        {/* CONFIG */}
+        {activeTab === 'config' && (
+          <SettingsSection />
         )}
 
         {/* EQUIPE */}
