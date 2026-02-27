@@ -97,6 +97,7 @@ export default function AdminPage() {
   const [editingClient, setEditingClient] = useState<string | null>(null)
   const [clientForm, setClientForm] = useState({ name: '', address: '', neighborhood: '', phone: '', notes: '' })
   const [clientError, setClientError] = useState('')
+  const [confirmDeleteDiarista, setConfirmDeleteDiarista] = useState<string | null>(null)
   const [showDiaristaForm, setShowDiaristaForm] = useState(false)
   const [editingDiarista, setEditingDiarista] = useState<string | null>(null)
   const [diaristaForm, setDiaristaForm] = useState({
@@ -1323,14 +1324,47 @@ export default function AdminPage() {
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditDiarista(d)}>
                               <Edit2 className="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { if (selectedDiaristaId !== d.id) setSelectedDiaristaId(d.id) }}>
-                              <UserCheck className="h-3.5 w-3.5 text-primary" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleToggleDiarista(d.id, false)}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/60 hover:text-destructive" onClick={() => handleToggleDiarista(d.id, false)}>
                               <UserX className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setConfirmDeleteDiarista(d.id)}>
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </div>
+
+                        {/* Confirmacao de exclusao */}
+                        {confirmDeleteDiarista === d.id && (
+                          <div className="mt-3 p-3 rounded-lg bg-destructive/10 border border-destructive/30">
+                            <p className="text-xs text-destructive font-medium mb-2">
+                              Tem certeza que deseja excluir <strong>{d.name}</strong>? Esta acao nao pode ser desfeita.
+                            </p>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                className="h-8 text-xs flex-1"
+                                onClick={async () => {
+                                  await deleteDiarista(d.id)
+                                  setConfirmDeleteDiarista(null)
+                                  refetchDiaristas()
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3 mr-1" />
+                                Sim, excluir
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 text-xs flex-1"
+                                onClick={() => setConfirmDeleteDiarista(null)}
+                              >
+                                Cancelar
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
                       </CardContent>
                     </Card>
                   )
