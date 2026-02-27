@@ -2,9 +2,8 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLaundryWeeks } from '@/hooks/use-laundry-weeks'
-import { useConfig } from '@/hooks/use-config'
 import { supabase } from '@/lib/supabase'
-import { Shirt, Wind, CheckCircle2, Circle } from 'lucide-react'
+import { Shirt, CheckCircle2, Circle } from 'lucide-react'
 
 interface LaundrySectionProps {
   month: number
@@ -12,15 +11,17 @@ interface LaundrySectionProps {
   isAdmin?: boolean
   diaristaId?: string | null
   onDataChange?: () => void
+  diaristaIroningValue?: number
+  diaristaWashingValue?: number
+  diaristaTransportValue?: number
 }
 
-export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDataChange }: LaundrySectionProps) {
+export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDataChange, diaristaIroningValue, diaristaWashingValue, diaristaTransportValue }: LaundrySectionProps) {
   const { laundryWeeks, loading, updateLaundryService, refetch } = useLaundryWeeks(month, year, diaristaId)
-  const { getConfigValue } = useConfig()
 
-  const ironingValue = getConfigValue('ironing') || 50
-  const washingValue = getConfigValue('washing') || 75
-  const transportValue = getConfigValue('transport') || 30
+  const ironingValue = diaristaIroningValue ?? 50
+  const washingValue = diaristaWashingValue ?? 75
+  const transportValue = diaristaTransportValue ?? 30
 
   // Só mostra semanas que têm serviços cadastrados (igual ao AttendanceSection)
   const weeksWithServices = laundryWeeks.filter(w => w.ironed || w.washed)

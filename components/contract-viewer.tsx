@@ -118,9 +118,11 @@ const clauses: { icon: React.ElementType; title: string; items: ReactNode[] }[] 
 
 interface ContractViewerProps {
   isAdmin?: boolean
+  diaristaId?: string | null
+  diaristaName?: string
 }
 
-export function ContractViewer({ isAdmin = false }: ContractViewerProps) {
+export function ContractViewer({ isAdmin = false, diaristaId, diaristaName }: ContractViewerProps) {
   const [open, setOpen] = useState(false)
   const [agreed, setAgreed] = useState(false)
   const [agreedAt, setAgreedAt] = useState<string | null>(null)
@@ -130,25 +132,32 @@ export function ContractViewer({ isAdmin = false }: ContractViewerProps) {
 
   useEffect(() => {
     checkAgreement()
-  }, [])
+  }, [diaristaId])
 
   async function checkAgreement() {
     try {
-      // Cast para evitar erro de tipo 'never' quando a tabela nao esta nos tipos gerados
-      const result = await supabase
+      setAgreed(false)
+      setAgreedAt(null)
+      setLoading(true)
+
+      let query = supabase
         .from('contract_agreements')
         .select('agreed_at')
         .order('agreed_at', { ascending: false })
         .limit(1)
-        .maybeSingle()
 
+      if (diaristaId) {
+        query = query.eq('diarista_id', diaristaId)
+      }
+
+      const result = await query.maybeSingle()
       const row = (result as unknown as { data: { agreed_at: string } | null }).data
       if (row) {
         setAgreed(true)
         setAgreedAt(row.agreed_at)
       }
     } catch (e) {
-      console.error('Erro ao verificar concordância:', e)
+      console.error('Erro ao verificar concordancia:', e)
     } finally {
       setLoading(false)
     }
@@ -157,10 +166,13 @@ export function ContractViewer({ isAdmin = false }: ContractViewerProps) {
   async function handleAgree() {
     try {
       setConfirming(true)
+      const insertData: Record<string, unknown> = { agreed_at: new Date().toISOString() }
+      if (diaristaId) insertData.diarista_id = diaristaId
+
       const client = supabase as unknown as { from: (t: string) => { insert: (d: Record<string, unknown>[]) => Promise<{ error: unknown | null }> } }
       const insertResult = await client
         .from('contract_agreements')
-        .insert([{ agreed_at: new Date().toISOString() }])
+        .insert([insertData])
 
       if (insertResult.error) throw insertResult.error
 
@@ -168,7 +180,7 @@ export function ContractViewer({ isAdmin = false }: ContractViewerProps) {
       setAgreedAt(new Date().toISOString())
       setOpen(false)
     } catch (e) {
-      console.error('Erro ao registrar concordância:', e)
+      console.error('Erro ao registrar concordancia:', e)
     } finally {
       setConfirming(false)
     }
@@ -199,11 +211,12 @@ export function ContractViewer({ isAdmin = false }: ContractViewerProps) {
         <div className="flex-1">
           <p className="text-sm font-bold">
             {agreed ? 'Contrato Aceito' : 'Contrato Pendente'}
+            {diaristaName && <span className="font-normal text-muted-foreground">{` - ${diaristaName}`}</span>}
           </p>
           <p className="text-xs text-muted-foreground">
             {agreed && agreedAt
               ? `Concordou em ${new Date(agreedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`
-              :       'A diarista ainda não concordou com o contrato'}
+              : `${diaristaName || 'A diarista'} ainda nao concordou com o contrato`}
           </p>
         </div>
         {agreed && <Lock className="h-4 w-4 text-green-500 shrink-0" />}

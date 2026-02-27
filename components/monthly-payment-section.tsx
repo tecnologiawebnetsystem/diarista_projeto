@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useMonthlyPayments } from '@/hooks/use-monthly-payments'
-import { useConfig } from '@/hooks/use-config'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Calendar, Clock, CheckCircle2, XCircle, DollarSign } from 'lucide-react'
@@ -17,13 +16,11 @@ interface MonthlyPaymentSectionProps {
   isAdmin?: boolean
   hasActivity?: boolean
   diaristaId?: string | null
+  diaristaName?: string
 }
 
-export function MonthlyPaymentSection({ month, year, isAdmin = true, hasActivity = false, diaristaId }: MonthlyPaymentSectionProps) {
+export function MonthlyPaymentSection({ month, year, isAdmin = true, hasActivity = false, diaristaId, diaristaName }: MonthlyPaymentSectionProps) {
   const { payment, loading, createPayment, markAsPaid, updatePayment } = useMonthlyPayments(month, year, diaristaId)
-  const { getConfigValue } = useConfig()
-
-  const monthlySalary = getConfigValue('monthly_salary') || 2000
 
   // Cria o registro de pagamento apenas quando houver atividade e ele não existir ainda
   useEffect(() => {
@@ -63,7 +60,7 @@ export function MonthlyPaymentSection({ month, year, isAdmin = true, hasActivity
               Pagamento Mensal
             </CardTitle>
             <CardDescription>
-              Salário fixo mensal da diarista
+              {diaristaName ? `Pagamento mensal - ${diaristaName}` : 'Pagamento mensal da diarista'}
             </CardDescription>
           </div>
           {isPaid ? (

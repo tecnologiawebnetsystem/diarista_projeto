@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLaundryWeeks } from '@/hooks/use-laundry-weeks'
-import { useConfig } from '@/hooks/use-config'
 import { ReceiptUpload } from '@/components/receipt-upload'
 import { Bus, CheckCircle2, Circle, ChevronDown, ChevronUp } from 'lucide-react'
 
@@ -12,12 +11,12 @@ interface TransportSectionProps {
   year: number
   diaristaId?: string | null
   onDataChange?: () => void
+  diaristaTransportValue?: number
 }
 
-export function TransportSection({ month, year, diaristaId, onDataChange }: TransportSectionProps) {
+export function TransportSection({ month, year, diaristaId, onDataChange, diaristaTransportValue }: TransportSectionProps) {
   const { laundryWeeks, loading, markTransportPaid, updateTransportReceipt, refetch } = useLaundryWeeks(month, year, diaristaId)
-  const { getConfigValue } = useConfig()
-  const transportValue = getConfigValue('transport') || 30
+  const transportValue = diaristaTransportValue ?? 30
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null)
 
   // Só mostra semanas que têm algum serviço de lavanderia

@@ -437,9 +437,9 @@ export default function AdminPage() {
               <FileDown className="h-4 w-4 mr-2" />
               Gerar Relatorio Mensal
             </Button>
-            <MonthlyPaymentSection month={selectedMonth} year={selectedYear} isAdmin={true} hasActivity={hasActivity} diaristaId={selectedDiaristaId} />
+            <MonthlyPaymentSection month={selectedMonth} year={selectedYear} isAdmin={true} hasActivity={hasActivity} diaristaId={selectedDiaristaId} diaristaName={selectedDiarista?.name} />
             <AttendanceSection month={selectedMonth} year={selectedYear} readOnly diaristaId={selectedDiaristaId} workSchedule={selectedDiarista?.work_schedule} />
-            <LaundrySection month={selectedMonth} year={selectedYear} isAdmin diaristaId={selectedDiaristaId} />
+            <LaundrySection month={selectedMonth} year={selectedYear} isAdmin diaristaId={selectedDiaristaId} diaristaIroningValue={selectedDiarista?.ironing_value} diaristaWashingValue={selectedDiarista?.washing_value} diaristaTransportValue={selectedDiarista?.transport_value} />
           </>
         )}
 
@@ -450,12 +450,12 @@ export default function AdminPage() {
 
         {/* LAVANDERIA */}
         {activeTab === 'lavanderia' && (
-          <LaundrySection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} onDataChange={refetchLaundry} />
+          <LaundrySection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} onDataChange={refetchLaundry} diaristaIroningValue={selectedDiarista?.ironing_value} diaristaWashingValue={selectedDiarista?.washing_value} diaristaTransportValue={selectedDiarista?.transport_value} />
         )}
 
         {/* TRANSPORTE */}
         {activeTab === 'transporte' && (
-          <TransportSection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} onDataChange={refetchLaundry} />
+          <TransportSection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} onDataChange={refetchLaundry} diaristaTransportValue={selectedDiarista?.transport_value} />
         )}
 
         {/* NOTAS */}
@@ -614,7 +614,7 @@ export default function AdminPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="px-4 pb-4">
-                <ContractViewer isAdmin={true} />
+                <ContractViewer isAdmin={true} diaristaId={selectedDiaristaId} diaristaName={selectedDiarista?.name} />
               </CardContent>
             </Card>
             <Card>

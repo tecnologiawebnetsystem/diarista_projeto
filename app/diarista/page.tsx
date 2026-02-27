@@ -16,9 +16,7 @@ import { useAttendance } from '@/hooks/use-attendance'
 import { useLaundryWeeks } from '@/hooks/use-laundry-weeks'
 import { useNotes } from '@/hooks/use-notes'
 import { useAwards } from '@/hooks/use-awards'
-import { useConfig } from '@/hooks/use-config'
 import { useDiaristas } from '@/hooks/use-diaristas'
-import type { WorkScheduleDay } from '@/types/database'
 import { ContractViewer } from '@/components/contract-viewer'
 import { NotificationBanner } from '@/components/notification-banner'
 import { useDbNotifications } from '@/hooks/use-db-notifications'
@@ -48,7 +46,6 @@ export default function DiaristaPage() {
   const { laundryWeeks, refetch: refetchLaundry } = useLaundryWeeks(selectedMonth, selectedYear, diaristaId)
   const { notes } = useNotes(selectedMonth, selectedYear, diaristaId)
   const { currentPeriod: currentPeriodAward } = useAwards(diaristaId)
-  const { getConfigValue } = useConfig()
 
   useEffect(() => {
     if (isLoading) return
@@ -66,8 +63,8 @@ export default function DiaristaPage() {
     )
   }
 
-  const ironingValue = currentDiarista?.ironing_value ?? getConfigValue('ironing') ?? 50
-  const washingValue = currentDiarista?.washing_value ?? getConfigValue('washing') ?? 75
+  const ironingValue = currentDiarista?.ironing_value ?? 50
+  const washingValue = currentDiarista?.washing_value ?? 75
 
   const handleTabChange = (tab: typeof activeTab) => {
     setActiveTab(tab)
@@ -81,8 +78,8 @@ export default function DiaristaPage() {
   const presentDays = attendances.filter(a => a.present)
   const hasActivity = presentDays.length > 0 || laundryWeeks.some(w => w.ironed || w.washed)
 
-  const heavyCleaningValue = currentDiarista?.heavy_cleaning_value ?? getConfigValue('heavy_cleaning') ?? 250
-  const lightCleaningValue = currentDiarista?.light_cleaning_value ?? getConfigValue('light_cleaning') ?? 150
+  const heavyCleaningValue = currentDiarista?.heavy_cleaning_value ?? 250
+  const lightCleaningValue = currentDiarista?.light_cleaning_value ?? 150
   const heavyDays = presentDays.filter(a => a.day_type === 'heavy_cleaning')
   const lightDays = presentDays.filter(a => a.day_type === 'light_cleaning')
   const attendanceTotal = (heavyDays.length * heavyCleaningValue) + (lightDays.length * lightCleaningValue)
@@ -589,7 +586,7 @@ export default function DiaristaPage() {
 
         {/* CONTRATO */}
         {activeTab === 'contrato' && (
-          <ContractViewer isAdmin={false} />
+          <ContractViewer isAdmin={false} diaristaId={diaristaId} diaristaName={currentDiarista?.name} />
         )}
 
       </div>
