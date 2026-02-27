@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { LayoutDashboard, CalendarCheck, WashingMachine, FileText, ScrollText, Trophy, AlertTriangle, LogOut, CheckCircle2, XCircle, Briefcase, TrendingUp, CalendarDays, Receipt, FileDown, Bus, Bell, X } from 'lucide-react'
+import { LayoutDashboard, CalendarCheck, WashingMachine, FileText, ScrollText, Trophy, AlertTriangle, LogOut, CheckCircle2, XCircle, Briefcase, TrendingUp, CalendarDays, Receipt, FileDown, Bus, Bell, X, User, Camera, Phone, Save, Check, MapPin, Building2 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/contexts/auth-context'
@@ -17,6 +19,7 @@ import { useLaundryWeeks } from '@/hooks/use-laundry-weeks'
 import { useNotes } from '@/hooks/use-notes'
 import { useAwards } from '@/hooks/use-awards'
 import { useDiaristas } from '@/hooks/use-diaristas'
+import { useClients } from '@/hooks/use-clients'
 import { ContractViewer } from '@/components/contract-viewer'
 import { NotificationBanner } from '@/components/notification-banner'
 import { useDbNotifications } from '@/hooks/use-db-notifications'
@@ -34,11 +37,29 @@ export default function DiaristaPage() {
   const currentDate = new Date()
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear())
-  const [activeTab, setActiveTab] = useState<'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'anotacoes' | 'contrato'>('resumo')
+  const [activeTab, setActiveTab] = useState<'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'anotacoes' | 'contrato' | 'perfil'>('resumo')
 
   const { diaristaId } = useAuth()
-  const { diaristas: allDiaristas } = useDiaristas()
+  const { diaristas: allDiaristas, updateDiarista, refetch: refetchDiaristas } = useDiaristas()
+  const { activeClients } = useClients()
   const currentDiarista = allDiaristas.find(d => d.id === diaristaId)
+  const getClientName = (clientId?: string | null) => clientId ? activeClients.find(c => c.id === clientId)?.name : null
+
+  // Perfil states
+  const [profileName, setProfileName] = useState('')
+  const [profilePhone, setProfilePhone] = useState('')
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [profileSaved, setProfileSaved] = useState(false)
+  const [profileError, setProfileError] = useState('')
+
+  // Sync profile form when diarista loads
+  useEffect(() => {
+    if (currentDiarista) {
+      setProfileName(currentDiarista.name)
+      setProfilePhone(currentDiarista.phone || '')
+    }
+  }, [currentDiarista?.id, currentDiarista?.name, currentDiarista?.phone])
   const { notifications: dbNotifications, unreadCount, markAsRead, markAllAsRead } = useDbNotifications(diaristaId)
   const [showNotifications, setShowNotifications] = useState(false)
   const { payment } = useMonthlyPayments(selectedMonth, selectedYear, diaristaId)
@@ -65,6 +86,45 @@ export default function DiaristaPage() {
 
   const ironingValue = currentDiarista?.ironing_value ?? 50
   const washingValue = currentDiarista?.washing_value ?? 75
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !diaristaId) return
+    setUploadingPhoto(true)
+    setProfileError('')
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro no upload')
+      await updateDiarista(diaristaId, { photo_url: data.url })
+      refetchDiaristas()
+    } catch {
+      setProfileError('Erro ao enviar foto')
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
+
+  const handleSaveProfile = async () => {
+    if (!diaristaId || !profileName.trim()) return
+    setSavingProfile(true)
+    setProfileError('')
+    try {
+      await updateDiarista(diaristaId, {
+        name: profileName.trim(),
+        phone: profilePhone.trim() || null,
+      })
+      refetchDiaristas()
+      setProfileSaved(true)
+      setTimeout(() => setProfileSaved(false), 2000)
+    } catch {
+      setProfileError('Erro ao salvar perfil')
+    } finally {
+      setSavingProfile(false)
+    }
+  }
 
   const handleTabChange = (tab: typeof activeTab) => {
     setActiveTab(tab)
@@ -101,20 +161,25 @@ export default function DiaristaPage() {
       {/* Header */}
       <div className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-10 safe-area-inset-top">
         <div className="px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/logo.jpg"
-              alt="LIMPP DAY"
-              width={36}
-              height={36}
-              priority
-              className="rounded-lg"
-            />
+          <button className="flex items-center gap-3" onClick={() => handleTabChange('perfil')}>
+            {currentDiarista?.photo_url ? (
+              <Image
+                src={currentDiarista.photo_url}
+                alt={currentDiarista.name}
+                width={40}
+                height={40}
+                className="rounded-full object-cover w-10 h-10 border-2 border-primary/30"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-white font-bold text-sm border-2 border-primary/30">
+                {currentDiarista?.name?.charAt(0).toUpperCase() || 'D'}
+              </div>
+            )}
             <div>
-              <h1 className="text-base font-bold text-primary leading-none">LIMPP DAY</h1>
-              <p className="text-[10px] text-muted-foreground">Painel da Diarista</p>
+              <h1 className="text-sm font-bold text-foreground leading-none text-left">{currentDiarista?.name || 'Diarista'}</h1>
+              <p className="text-[10px] text-primary font-medium mt-0.5">LIMPP DAY</p>
             </div>
-          </div>
+          </button>
           <div className="flex items-center gap-1">
             <Button
               variant="ghost"
@@ -195,7 +260,7 @@ export default function DiaristaPage() {
       )}
 
       {/* Period Selector */}
-      <div className="px-4 pt-4 pb-2">
+      <div className={cn('px-4 pt-4 pb-2', activeTab === 'perfil' && 'hidden')}>
         <div className="flex gap-2">
           <Select value={selectedMonth.toString()} onValueChange={v => setSelectedMonth(parseInt(v))}>
             <SelectTrigger className="flex-1 h-10 text-sm">
@@ -221,7 +286,7 @@ export default function DiaristaPage() {
       </div>
 
       {/* Total Card */}
-      <div className="px-4 pb-3">
+      <div className={cn('px-4 pb-3', activeTab === 'perfil' && 'hidden')}>
         <Card className="gradient-primary text-white shadow-lg">
           <CardContent className="pt-4 pb-4">
             <div className="flex items-center justify-between">
@@ -260,6 +325,47 @@ export default function DiaristaPage() {
         {activeTab === 'resumo' && (
           <div className="space-y-3">
             <NotificationBanner />
+
+            {/* Card: Onde trabalho hoje */}
+            {(() => {
+              const DOW_MAP: Record<number, string> = { 0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday', 4: 'thursday', 5: 'friday', 6: 'saturday' }
+              const todayDow = DOW_MAP[new Date().getDay()]
+              const todaySchedule = currentDiarista?.work_schedule?.find(s => s.day === todayDow)
+              if (!todaySchedule) return null
+              const clientName = getClientName(todaySchedule.client_id)
+              const client = todaySchedule.client_id ? activeClients.find(c => c.id === todaySchedule.client_id) : null
+              return (
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardContent className="py-4 px-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                        <MapPin className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-primary font-semibold uppercase tracking-wide">Hoje</p>
+                        <p className="text-sm font-bold text-foreground mt-0.5">
+                          {todaySchedule.type === 'heavy_cleaning' ? 'Limpeza Pesada' : 'Limpeza Leve'}
+                        </p>
+                        {clientName ? (
+                          <div className="mt-1">
+                            <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                              <Building2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                              {clientName}
+                            </p>
+                            {client?.address && (
+                              <p className="text-[11px] text-muted-foreground mt-0.5 ml-5">{client.address}</p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-[11px] text-muted-foreground mt-0.5">Sem cliente vinculado</p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })()}
+
             <Card>
               <CardContent className="py-4 px-4">
                 <div className="flex gap-2">
@@ -353,27 +459,38 @@ export default function DiaristaPage() {
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {attendances.map(a => (
-                    <div key={a.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                      <div className="flex items-center gap-2">
-                        {a.present
-                          ? <CheckCircle2 className="h-4 w-4 text-success" />
-                          : <XCircle className="h-4 w-4 text-destructive" />
-                        }
-                        <div>
-                          <p className="text-sm font-medium">
-                            {format(new Date(a.date + 'T00:00:00'), "dd/MM/yyyy")}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground">
-                            {format(new Date(a.date + 'T00:00:00'), 'EEEE', { locale: ptBR })}
-                          </p>
+                  {attendances.map(a => {
+                    const DOW_MAP2: Record<number, string> = { 0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday', 4: 'thursday', 5: 'friday', 6: 'saturday' }
+                    const dateDow = DOW_MAP2[new Date(a.date + 'T00:00:00').getDay()]
+                    const schedEntry = currentDiarista?.work_schedule?.find(s => s.day === dateDow)
+                    const clientForDay = getClientName(schedEntry?.client_id)
+                    return (
+                      <div key={a.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                        <div className="flex items-center gap-2">
+                          {a.present
+                            ? <CheckCircle2 className="h-4 w-4 text-success" />
+                            : <XCircle className="h-4 w-4 text-destructive" />
+                          }
+                          <div>
+                            <p className="text-sm font-medium">
+                              {format(new Date(a.date + 'T00:00:00'), "dd/MM/yyyy")}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {format(new Date(a.date + 'T00:00:00'), 'EEEE', { locale: ptBR })}
+                            </p>
+                            {clientForDay && (
+                              <p className="text-[10px] text-primary font-medium flex items-center gap-1 mt-0.5">
+                                <Building2 className="h-3 w-3" />{clientForDay}
+                              </p>
+                            )}
+                          </div>
                         </div>
+                        <Badge variant="outline" className={`text-[10px] ${a.day_type === 'heavy_cleaning' ? 'border-destructive text-destructive' : 'border-primary text-primary'}`}>
+                          {a.day_type === 'heavy_cleaning' ? 'Pesada' : 'Leve'}
+                        </Badge>
                       </div>
-                      <Badge variant="outline" className={`text-[10px] ${a.day_type === 'heavy_cleaning' ? 'border-destructive text-destructive' : 'border-primary text-primary'}`}>
-                        {a.day_type === 'heavy_cleaning' ? 'Pesada' : 'Leve'}
-                      </Badge>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </CardContent>
@@ -589,23 +706,244 @@ export default function DiaristaPage() {
           <ContractViewer isAdmin={false} diaristaId={diaristaId} diaristaName={currentDiarista?.name} />
         )}
 
+        {/* PERFIL */}
+        {activeTab === 'perfil' && (
+          <div className="space-y-5">
+
+            {/* Hero profile card */}
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 via-card to-card border border-primary/10">
+              {/* Glow */}
+              <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/10 rounded-full blur-3xl" />
+              <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-primary/5 rounded-full blur-2xl" />
+
+              <div className="relative px-5 pt-8 pb-6 flex flex-col items-center">
+                {/* Avatar com camera */}
+                <div className="relative group">
+                  <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl scale-110 opacity-60" />
+                  {currentDiarista?.photo_url ? (
+                    <Image
+                      src={currentDiarista.photo_url}
+                      alt={currentDiarista.name}
+                      width={110}
+                      height={110}
+                      className="relative rounded-full object-cover w-[110px] h-[110px] border-[3px] border-primary/30 shadow-lg shadow-primary/10"
+                    />
+                  ) : (
+                    <div className="relative w-[110px] h-[110px] rounded-full gradient-primary flex items-center justify-center text-white font-bold text-4xl border-[3px] border-primary/30 shadow-lg shadow-primary/10">
+                      {currentDiarista?.name?.charAt(0).toUpperCase() || 'D'}
+                    </div>
+                  )}
+                  <label className="absolute bottom-1 right-1 w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center cursor-pointer shadow-lg hover:scale-105 active:scale-95 transition-transform ring-2 ring-card">
+                    {uploadingPhoto ? (
+                      <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                    ) : (
+                      <Camera className="h-4 w-4" />
+                    )}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="sr-only"
+                      onChange={handlePhotoUpload}
+                      disabled={uploadingPhoto}
+                    />
+                  </label>
+                </div>
+
+                {/* Nome e telefone */}
+                <h2 className="text-xl font-bold text-foreground mt-4 tracking-tight">{currentDiarista?.name || 'Diarista'}</h2>
+                {currentDiarista?.phone && (
+                  <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
+                    <Phone className="h-3.5 w-3.5" />
+                    {currentDiarista.phone}
+                  </p>
+                )}
+
+                {/* Mini stats */}
+                <div className="flex items-center gap-5 mt-5 pt-5 border-t border-border/50 w-full justify-center">
+                  <div className="text-center">
+                    <p className="text-xl font-bold text-primary">{currentDiarista?.work_schedule?.length || 0}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mt-0.5">dias/sem</p>
+                  </div>
+                  <div className="w-px h-8 bg-border/50" />
+                  <div className="text-center">
+                    <p className="text-xl font-bold text-primary">
+                      {new Set(currentDiarista?.work_schedule?.map(s => s.client_id).filter(Boolean)).size}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mt-0.5">clientes</p>
+                  </div>
+                  <div className="w-px h-8 bg-border/50" />
+                  <div className="text-center">
+                    <p className="text-xl font-bold text-primary">{currentPeriodAward?.performance_score || 0}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mt-0.5">score</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Dados pessoais -- inline edit style */}
+            <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
+              <div className="px-5 py-4 border-b border-border/40 flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <User className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Meus Dados</p>
+                  <p className="text-[11px] text-muted-foreground">Toque para editar</p>
+                </div>
+              </div>
+              <div className="px-5 py-4 space-y-4">
+                <div>
+                  <Label className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium mb-2 block">Nome completo</Label>
+                  <Input
+                    value={profileName}
+                    onChange={e => setProfileName(e.target.value)}
+                    placeholder="Seu nome"
+                    className="h-11 bg-muted/50 border-transparent focus:border-primary/50 focus:bg-card transition-all text-sm font-medium"
+                  />
+                </div>
+                <div>
+                  <Label className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium mb-2 block">Telefone</Label>
+                  <Input
+                    value={profilePhone}
+                    onChange={e => setProfilePhone(e.target.value)}
+                    placeholder="(11) 99999-9999"
+                    className="h-11 bg-muted/50 border-transparent focus:border-primary/50 focus:bg-card transition-all text-sm font-medium"
+                  />
+                </div>
+
+                {profileError && (
+                  <p className="text-xs text-destructive font-medium">{profileError}</p>
+                )}
+
+                <Button
+                  onClick={handleSaveProfile}
+                  disabled={savingProfile || !profileName.trim()}
+                  className={cn(
+                    'w-full h-11 rounded-xl font-semibold text-sm transition-all',
+                    profileSaved ? 'bg-green-600 hover:bg-green-600 shadow-lg shadow-green-600/20' : 'shadow-lg shadow-primary/20'
+                  )}
+                >
+                  {profileSaved ? (
+                    <><Check className="h-4 w-4 mr-2" />Salvo com sucesso</>
+                  ) : savingProfile ? (
+                    <div className="h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                  ) : (
+                    <><Save className="h-4 w-4 mr-2" />Salvar Alteracoes</>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Agenda semanal */}
+            <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
+              <div className="px-5 py-4 border-b border-border/40 flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <CalendarCheck className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Minha Agenda</p>
+                  <p className="text-[11px] text-muted-foreground">Definida pelo administrador</p>
+                </div>
+              </div>
+              <div className="divide-y divide-border/30">
+                {currentDiarista?.work_schedule && currentDiarista.work_schedule.length > 0 ? (
+                  currentDiarista.work_schedule.map((s, i) => {
+                    const WDAY: Record<string, string> = { monday: 'Seg', tuesday: 'Ter', wednesday: 'Qua', thursday: 'Qui', friday: 'Sex', saturday: 'Sab', sunday: 'Dom' }
+                    const WDAY_FULL: Record<string, string> = { monday: 'Segunda', tuesday: 'Terca', wednesday: 'Quarta', thursday: 'Quinta', friday: 'Sexta', saturday: 'Sabado', sunday: 'Domingo' }
+                    const clientForSchedule = getClientName(s.client_id)
+                    const isHeavy = s.type === 'heavy_cleaning'
+                    return (
+                      <div key={i} className="px-5 py-3.5 flex items-center gap-3">
+                        <div className={cn(
+                          'w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold shrink-0',
+                          isHeavy ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'
+                        )}>
+                          {WDAY[s.day]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground">{WDAY_FULL[s.day] || s.day}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className={cn('text-[10px] font-semibold uppercase tracking-wider', isHeavy ? 'text-destructive' : 'text-primary')}>
+                              {isHeavy ? 'Pesada' : 'Leve'}
+                            </span>
+                            {clientForSchedule && (
+                              <>
+                                <span className="text-muted-foreground/30">{'|'}</span>
+                                <span className="text-[11px] text-muted-foreground flex items-center gap-1 truncate">
+                                  <Building2 className="h-3 w-3 shrink-0 text-primary/60" />{clientForSchedule}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-8">Nenhuma agenda definida</p>
+                )}
+              </div>
+            </div>
+
+            {/* Valores -- visual limpo */}
+            <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
+              <div className="px-5 py-4 border-b border-border/40 flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Tabela de Valores</p>
+                  <p className="text-[11px] text-muted-foreground">Definidos pelo administrador</p>
+                </div>
+              </div>
+              <div className="p-4">
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: 'Limpeza Pesada', value: currentDiarista?.heavy_cleaning_value ?? 250, color: 'text-destructive' },
+                    { label: 'Limpeza Leve', value: currentDiarista?.light_cleaning_value ?? 150, color: 'text-primary' },
+                    { label: 'Lavagem', value: currentDiarista?.washing_value ?? 75, color: 'text-primary' },
+                    { label: 'Passar Roupa', value: currentDiarista?.ironing_value ?? 50, color: 'text-primary' },
+                  ].map((item, i) => (
+                    <div key={i} className="rounded-xl bg-muted/50 p-3.5 text-center border border-border/30">
+                      <p className={cn('text-lg font-bold', item.color)}>
+                        {'R$ '}{item.value.toFixed(2)}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mt-1">{item.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Logout button */}
+            <button
+              onClick={() => { logout(); router.push('/login') }}
+              className="w-full py-3.5 rounded-2xl border border-destructive/20 text-destructive text-sm font-medium hover:bg-destructive/5 transition-colors flex items-center justify-center gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Sair da conta
+            </button>
+          </div>
+        )}
+
       </div>
 
       {/* Bottom Navigation Bar */}
       <div className="fixed bottom-0 left-0 right-0 z-20 bg-card border-t border-border" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="flex items-stretch h-16">
+        <div className="flex items-stretch h-16 overflow-x-auto scrollbar-hide">
           {([
-            { key: 'resumo',      label: 'Dashboard',   Icon: LayoutDashboard },
+            { key: 'resumo',      label: 'Inicio',      Icon: LayoutDashboard },
             { key: 'presenca',    label: 'Presenca',    Icon: CalendarCheck },
             { key: 'lavanderia',  label: 'Lavanderia',  Icon: WashingMachine },
             { key: 'transporte',  label: 'Transporte',  Icon: Bus },
             { key: 'anotacoes',   label: warnings.length > 0 ? `Notas·${warnings.length}` : 'Notas', Icon: FileText },
             { key: 'contrato',    label: 'Contrato',    Icon: ScrollText },
+            { key: 'perfil',      label: 'Perfil',      Icon: User },
           ] as { key: typeof activeTab; label: string; Icon: React.ElementType }[]).map(({ key, label, Icon }) => (
             <button
               key={key}
               onClick={() => handleTabChange(key)}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
+              className={`flex-1 min-w-[52px] flex flex-col items-center justify-center gap-0.5 transition-colors ${
                 activeTab === key
                   ? 'text-primary'
                   : 'text-muted-foreground'
