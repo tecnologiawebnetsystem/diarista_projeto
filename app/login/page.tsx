@@ -20,6 +20,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [shake, setShake] = useState(false)
   const [diaristas, setDiaristas] = useState<Diarista[]>([])
+  const [selectedDiarista, setSelectedDiarista] = useState<Diarista | null>(null)
   const [loadingDiaristas, setLoadingDiaristas] = useState(false)
 
   useEffect(() => {
@@ -46,13 +47,15 @@ export default function LoginPage() {
 
   const handleDiaristaClick = () => {
     if (diaristas.length === 1) {
-      // Uma unica diarista — login direto
-      loginAsDiarista(diaristas[0])
-      router.push('/diarista')
+      // Uma unica diarista — vai direto para PIN
+      setSelectedDiarista(diaristas[0])
+      setScreen('diarista-pin')
+      setPin('')
+      setError(false)
     } else if (diaristas.length > 1) {
       setScreen('diarista-select')
     } else {
-      // Sem diaristas cadastradas — entra no modo PIN antigo
+      // Sem diaristas cadastradas — entra no modo PIN
       setScreen('diarista-pin')
       setPin('')
       setError(false)
@@ -60,8 +63,10 @@ export default function LoginPage() {
   }
 
   const handleSelectDiarista = (d: Diarista) => {
-    loginAsDiarista(d)
-    router.push('/diarista')
+    setSelectedDiarista(d)
+    setScreen('diarista-pin')
+    setPin('')
+    setError(false)
   }
 
   const triggerShake = () => {
@@ -109,15 +114,30 @@ export default function LoginPage() {
 
     if (next.length === DIARISTA_PIN_LENGTH) {
       setLoading(true)
-      const found = diaristas.find(d => d.pin === next && d.active)
-      if (found) {
-        loginAsDiarista(found)
-        router.push('/diarista')
+
+      if (selectedDiarista) {
+        // Valida o PIN da diarista selecionada
+        if (selectedDiarista.pin === next) {
+          loginAsDiarista(selectedDiarista)
+          router.push('/diarista')
+        } else {
+          setError(true)
+          triggerShake()
+          setPin('')
+          setLoading(false)
+        }
       } else {
-        setError(true)
-        triggerShake()
-        setPin('')
-        setLoading(false)
+        // Fallback: busca qualquer diarista com esse PIN
+        const found = diaristas.find(d => d.pin === next && d.active)
+        if (found) {
+          loginAsDiarista(found)
+          router.push('/diarista')
+        } else {
+          setError(true)
+          triggerShake()
+          setPin('')
+          setLoading(false)
+        }
       }
     }
   }
@@ -221,11 +241,20 @@ export default function LoginPage() {
   if (screen === 'diarista-pin') {
     return (
       <PinScreen
-        title="PIN da Diarista"
+        title={selectedDiarista ? selectedDiarista.name : 'PIN da Diarista'}
         subtitle={`Digite seu PIN de ${DIARISTA_PIN_LENGTH} digitos`}
         pinLength={DIARISTA_PIN_LENGTH}
         onKey={handleDiaristaKey}
-        onBack={() => { setScreen('home'); setPin(''); setError(false) }}
+        onBack={() => {
+          if (selectedDiarista && diaristas.length > 1) {
+            setScreen('diarista-select')
+          } else {
+            setScreen('home')
+          }
+          setPin('')
+          setError(false)
+          setSelectedDiarista(null)
+        }}
       />
     )
   }
