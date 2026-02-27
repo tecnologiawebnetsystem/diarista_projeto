@@ -102,5 +102,41 @@ export function useLaundryWeeks(month: number, year: number, diaristaId?: string
     }
   }
 
-  return { laundryWeeks, loading, toggleLaundryWeek, updateLaundryService, refetch: fetchLaundryWeeks }
+  async function markTransportPaid(id: string, paid: boolean) {
+    try {
+      const { data, error } = await supabase
+        .from('laundry_weeks')
+        .update({ paid_at: paid ? new Date().toISOString() : null })
+        .eq('id', id)
+        .select()
+        .single()
+      if (error) throw error
+      if (data) {
+        setLaundryWeeks(prev => prev.map(w => w.id === id ? data : w))
+      }
+    } catch (error) {
+      console.error('Error marking transport paid:', error)
+      throw error
+    }
+  }
+
+  async function updateTransportReceipt(id: string, receiptUrl: string | null) {
+    try {
+      const { data, error } = await supabase
+        .from('laundry_weeks')
+        .update({ receipt_url: receiptUrl })
+        .eq('id', id)
+        .select()
+        .single()
+      if (error) throw error
+      if (data) {
+        setLaundryWeeks(prev => prev.map(w => w.id === id ? data : w))
+      }
+    } catch (error) {
+      console.error('Error updating transport receipt:', error)
+      throw error
+    }
+  }
+
+  return { laundryWeeks, loading, toggleLaundryWeek, updateLaundryService, markTransportPaid, updateTransportReceipt, refetch: fetchLaundryWeeks }
 }

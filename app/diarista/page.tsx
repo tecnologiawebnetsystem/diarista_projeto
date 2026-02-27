@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { LayoutDashboard, CalendarCheck, WashingMachine, FileText, ScrollText, Trophy, AlertTriangle, LogOut, CheckCircle2, XCircle, Briefcase, TrendingUp, CalendarDays, Receipt, FileDown } from 'lucide-react'
+import { LayoutDashboard, CalendarCheck, WashingMachine, FileText, ScrollText, Trophy, AlertTriangle, LogOut, CheckCircle2, XCircle, Briefcase, TrendingUp, CalendarDays, Receipt, FileDown, Bus } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -32,12 +32,12 @@ export default function DiaristaPage() {
   const currentDate = new Date()
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear())
-  const [activeTab, setActiveTab] = useState<'resumo' | 'presenca' | 'lavanderia' | 'anotacoes' | 'contrato'>('resumo')
+  const [activeTab, setActiveTab] = useState<'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'anotacoes' | 'contrato'>('resumo')
 
   const { diaristaId } = useAuth()
   const { payment } = useMonthlyPayments(selectedMonth, selectedYear, diaristaId)
-  const { attendance: attendances } = useAttendance(selectedMonth, selectedYear, diaristaId)
-  const { laundryWeeks } = useLaundryWeeks(selectedMonth, selectedYear, diaristaId)
+  const { attendance: attendances, refetch: refetchAttendance } = useAttendance(selectedMonth, selectedYear, diaristaId)
+  const { laundryWeeks, refetch: refetchLaundry } = useLaundryWeeks(selectedMonth, selectedYear, diaristaId)
   const { notes } = useNotes(selectedMonth, selectedYear, diaristaId)
   const { currentPeriod: currentPeriodAward } = useAwards(diaristaId)
   const { getConfigValue } = useConfig()
@@ -61,22 +61,34 @@ export default function DiaristaPage() {
   const ironingValue = getConfigValue('ironing') || 50
   const washingValue = getConfigValue('washing') || 75
 
-  // Só mostra salário se houver atividade registrada no mês
-  const hasActivity = attendances.length > 0 || laundryWeeks.some(w => w.ironed || w.washed)
-  const monthlySalary = (hasActivity && payment?.paid_at) ? (payment?.monthly_value || 0) : 0
-  const monthlySalaryDisplay = hasActivity ? (payment?.monthly_value || 0) : 0
+  const handleTabChange = (tab: typeof activeTab) => {
+    setActiveTab(tab)
+    if (tab === 'resumo') {
+      refetchAttendance()
+      refetchLaundry()
+    }
+  }
+
+  // Só mostra valores se houver atividade registrada no mês
+  const presentDays = attendances.filter(a => a.present)
+  const hasActivity = presentDays.length > 0 || laundryWeeks.some(w => w.ironed || w.washed)
+
+  const heavyCleaningValue = getConfigValue('heavy_cleaning') || 0
+  const lightCleaningValue = getConfigValue('light_cleaning') || 0
+  const heavyDays = presentDays.filter(a => a.day_type === 'heavy_cleaning')
+  const lightDays = presentDays.filter(a => a.day_type === 'light_cleaning')
+  const attendanceTotal = (heavyDays.length * heavyCleaningValue) + (lightDays.length * lightCleaningValue)
 
   const laundryTotal = laundryWeeks.reduce((sum, week) => {
     const services = (week.ironed ? ironingValue : 0) + (week.washed ? washingValue : 0)
-    const transport = (week.ironed || week.washed) ? week.transport_fee : 0
-    return sum + services + transport
+    return sum + services
   }, 0)
-  const grandTotal = monthlySalary + laundryTotal
+  const grandTotal = attendanceTotal + laundryTotal
+  const transportPaidTotal = laundryWeeks
+    .filter(w => (w.ironed || w.washed) && w.paid_at)
+    .reduce((sum, w) => sum + (w.transport_fee || 0), 0)
   const warnings = notes.filter(n => n.is_warning)
   const years = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i)
-
-  const heavyDays = attendances.filter(a => a.day_type === 'heavy_cleaning' && a.present)
-  const lightDays = attendances.filter(a => a.day_type === 'light_cleaning' && a.present)
 
   return (
     <div className="min-h-dvh bg-background flex flex-col">
@@ -134,29 +146,31 @@ export default function DiaristaPage() {
       <div className="px-4 pb-3">
         <Card className="gradient-primary text-white shadow-lg">
           <CardContent className="pt-4 pb-4">
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 mb-1">
-                <TrendingUp className="h-3.5 w-3.5 opacity-80" />
-                <p className="text-xs opacity-80">Seus Ganhos no Mês</p>
-              </div>
-              <p className="text-4xl font-bold mb-2">R$ {grandTotal.toFixed(2)}</p>
-              {hasActivity ? (
-                <div className="flex justify-center gap-5 text-xs">
-                  <div>
-                    <p className="opacity-70 mb-0.5">Salário {payment?.paid_at ? 'Pago' : 'Pendente'}</p>
-                    <p className="text-sm font-semibold">R$ {monthlySalaryDisplay.toFixed(2)}</p>
-                    {!payment?.paid_at && <p className="opacity-50 text-[10px]">aguardando pagamento</p>}
-                  </div>
-                  <div className="w-px bg-white/20" />
-                  <div>
-                    <p className="opacity-70 mb-0.5">Lavanderia</p>
-                    <p className="text-sm font-semibold">R$ {laundryTotal.toFixed(2)}</p>
-                  </div>
+            <div className="flex items-center justify-between">
+              <div className="flex-1 text-center">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <TrendingUp className="h-3.5 w-3.5 opacity-80" />
+                  <p className="text-xs opacity-80">Seus Ganhos no Mes</p>
                 </div>
-              ) : (
-                <p className="text-xs opacity-60">Nenhuma atividade registrada neste mês</p>
+                <p className="text-3xl font-bold">R$ {grandTotal.toFixed(2)}</p>
+              </div>
+              {transportPaidTotal > 0 && (
+                <>
+                  <div className="w-px h-12 bg-white/20 mx-3" />
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <Bus className="h-3.5 w-3.5 opacity-80" />
+                      <p className="text-xs opacity-80">Transporte</p>
+                    </div>
+                    <p className="text-xl font-bold">R$ {transportPaidTotal.toFixed(2)}</p>
+                    <p className="text-[10px] opacity-60">recebido</p>
+                  </div>
+                </>
               )}
             </div>
+            {!hasActivity && (
+              <p className="text-xs opacity-60 text-center mt-1">Nenhuma atividade registrada neste mes</p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -203,7 +217,7 @@ export default function DiaristaPage() {
                   </div>
                   <div className="flex-1 bg-muted rounded-lg p-3 text-center">
                     <p className="text-2xl font-bold text-destructive">{warnings.length}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">Advert.</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{'Anotações'}</p>
                   </div>
                 </div>
               </CardContent>
@@ -227,7 +241,7 @@ export default function DiaristaPage() {
                       <p className="text-xs text-muted-foreground mt-1">Limite: {payment.hour_limit?.slice(0, 5) || '20:00'}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xl font-bold text-primary">R$ {monthlySalaryDisplay.toFixed(2)}</p>
+                      <p className="text-xl font-bold text-primary">R$ {grandTotal.toFixed(2)}</p>
                       <Badge variant={payment.paid_at ? 'default' : 'outline'} className="text-[10px] mt-1">
                         {payment.paid_at ? 'Pago' : 'Aguardando'}
                       </Badge>
@@ -322,23 +336,129 @@ export default function DiaristaPage() {
                 <div className="space-y-2">
                   {laundryWeeks.map(week => {
                     const services = (week.ironed ? ironingValue : 0) + (week.washed ? washingValue : 0)
-                    const transport = (week.ironed || week.washed) ? week.transport_fee : 0
+                    const hasServices = week.ironed || week.washed
+                    const transportPaid = hasServices && !!week.paid_at
                     return (
                       <div key={week.id} className="p-3 bg-muted rounded-lg">
                         <div className="flex items-center justify-between mb-1">
                           <p className="text-sm font-semibold">Semana {week.week_number}</p>
-                          <p className="text-sm font-bold text-primary">R$ {(services + transport).toFixed(2)}</p>
+                          <p className="text-sm font-bold text-primary">R$ {services.toFixed(2)}</p>
                         </div>
                         <div className="text-[11px] text-muted-foreground space-y-0.5">
                           {week.ironed && <p>Passou roupa: R$ {ironingValue.toFixed(2)}</p>}
                           {week.washed && <p>Lavou roupa: R$ {washingValue.toFixed(2)}</p>}
-                          {(week.ironed || week.washed) && <p>Transporte: R$ {transport.toFixed(2)}</p>}
                         </div>
+                        {hasServices && (
+                          <div className="mt-2 pt-2 border-t border-border/50 flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <Bus className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-[11px] text-muted-foreground">
+                                Transporte: R$ {(week.transport_fee || 0).toFixed(2)}
+                              </span>
+                            </div>
+                            <Badge
+                              variant={transportPaid ? 'default' : 'outline'}
+                              className={`text-[10px] ${transportPaid ? 'bg-green-600' : ''}`}
+                            >
+                              {transportPaid ? 'Pago' : 'Pendente'}
+                            </Badge>
+                          </div>
+                        )}
                       </div>
                     )
                   })}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* TRANSPORTE */}
+        {activeTab === 'transporte' && (
+          <Card>
+            <CardHeader className="pb-2 pt-4 px-4">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Bus className="h-4 w-4 text-primary" />
+                Transporte
+              </CardTitle>
+              <CardDescription className="text-xs">Pagamentos de transporte por semana</CardDescription>
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
+              {(() => {
+                const transportWeeks = laundryWeeks.filter(w => (w.ironed || w.washed))
+                if (transportWeeks.length === 0) {
+                  return (
+                    <p className="text-center text-muted-foreground py-8 text-sm">
+                      Nenhum transporte registrado neste mes
+                    </p>
+                  )
+                }
+                const paidWeeks = transportWeeks.filter(w => w.paid_at)
+                const pendingWeeks = transportWeeks.filter(w => !w.paid_at)
+                const totalPaid = paidWeeks.reduce((s, w) => s + (w.transport_fee || 0), 0)
+                const totalPending = pendingWeeks.reduce((s, w) => s + (w.transport_fee || 0), 0)
+                return (
+                  <div className="space-y-3">
+                    {/* Resumo */}
+                    <div className="flex gap-2">
+                      <div className="flex-1 bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-center">
+                        <p className="text-lg font-bold text-green-500">R$ {totalPaid.toFixed(2)}</p>
+                        <p className="text-[10px] text-muted-foreground">Recebido</p>
+                      </div>
+                      <div className="flex-1 bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-center">
+                        <p className="text-lg font-bold text-amber-500">R$ {totalPending.toFixed(2)}</p>
+                        <p className="text-[10px] text-muted-foreground">Pendente</p>
+                      </div>
+                    </div>
+
+                    {/* Lista de semanas */}
+                    <div className="space-y-2">
+                      {transportWeeks.map(week => {
+                        const isPaid = !!week.paid_at
+                        return (
+                          <div key={week.id} className="p-3 bg-muted rounded-lg">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Bus className="h-4 w-4 text-muted-foreground" />
+                                <div>
+                                  <p className="text-sm font-semibold">Semana {week.week_number}</p>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    {week.ironed && week.washed ? 'Lavou e Passou' : week.ironed ? 'Passou roupa' : 'Lavou roupa'}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className={`text-sm font-bold ${isPaid ? 'text-green-500' : 'text-amber-500'}`}>
+                                  R$ {(week.transport_fee || 0).toFixed(2)}
+                                </p>
+                                <Badge
+                                  variant={isPaid ? 'default' : 'outline'}
+                                  className={`text-[10px] ${isPaid ? 'bg-green-600' : 'border-amber-500 text-amber-500'}`}
+                                >
+                                  {isPaid ? 'Recebido' : 'Pendente'}
+                                </Badge>
+                              </div>
+                            </div>
+                            {isPaid && week.receipt_url && (
+                              <div className="mt-2 pt-2 border-t border-border/50">
+                                <a
+                                  href={week.receipt_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1.5 text-[11px] text-primary hover:underline"
+                                >
+                                  <Receipt className="h-3 w-3" />
+                                  Ver comprovante
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })()}
             </CardContent>
           </Card>
         )}
@@ -412,15 +532,16 @@ export default function DiaristaPage() {
       <div className="fixed bottom-0 left-0 right-0 z-20 bg-card border-t border-border" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="flex items-stretch h-16">
           {([
-            { key: 'resumo',     label: 'Resumo',     Icon: LayoutDashboard },
-            { key: 'presenca',   label: 'Presença',   Icon: CalendarCheck },
-            { key: 'lavanderia', label: 'Lavanderia', Icon: WashingMachine },
-            { key: 'anotacoes',  label: warnings.length > 0 ? `Notas·${warnings.length}` : 'Notas', Icon: FileText },
-            { key: 'contrato',   label: 'Contrato',   Icon: ScrollText },
+            { key: 'resumo',      label: 'Dashboard',   Icon: LayoutDashboard },
+            { key: 'presenca',    label: 'Presenca',    Icon: CalendarCheck },
+            { key: 'lavanderia',  label: 'Lavanderia',  Icon: WashingMachine },
+            { key: 'transporte',  label: 'Transporte',  Icon: Bus },
+            { key: 'anotacoes',   label: warnings.length > 0 ? `Notas·${warnings.length}` : 'Notas', Icon: FileText },
+            { key: 'contrato',    label: 'Contrato',    Icon: ScrollText },
           ] as { key: typeof activeTab; label: string; Icon: React.ElementType }[]).map(({ key, label, Icon }) => (
             <button
               key={key}
-              onClick={() => setActiveTab(key)}
+              onClick={() => handleTabChange(key)}
               className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
                 activeTab === key
                   ? 'text-primary'

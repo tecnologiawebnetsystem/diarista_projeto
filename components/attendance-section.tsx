@@ -12,10 +12,11 @@ interface AttendanceSectionProps {
   month: number
   year: number
   isAdmin?: boolean
+  readOnly?: boolean
   diaristaId?: string | null
 }
 
-export function AttendanceSection({ month, year, isAdmin, diaristaId }: AttendanceSectionProps) {
+export function AttendanceSection({ month, year, isAdmin, readOnly = false, diaristaId }: AttendanceSectionProps) {
   const { attendance, loading, markAttendance, deleteAttendance } = useAttendance(month, year, diaristaId)
   const [toggling, setToggling] = useState<string | null>(null)
 
@@ -87,9 +88,11 @@ export function AttendanceSection({ month, year, isAdmin, diaristaId }: Attendan
             </Badge>
           </div>
         </div>
-        <p className="text-[11px] text-muted-foreground mt-1">
-          Toque no dia para marcar/desmarcar presenca
-        </p>
+        {!readOnly && (
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Toque no dia para marcar/desmarcar presenca
+          </p>
+        )}
       </CardHeader>
       <CardContent className="px-4 pb-4">
         {validDays.length === 0 ? (
@@ -119,23 +122,19 @@ export function AttendanceSection({ month, year, isAdmin, diaristaId }: Attendan
                 const isHeavy = dayType === 'heavy_cleaning'
                 const dateObj = new Date(date + 'T00:00:00')
 
-                return (
-                  <button
-                    key={date}
-                    onClick={() => handleToggle(date, dayType)}
-                    disabled={!!toggling}
-                    className={`
-                      relative flex items-center gap-3 px-3 py-3 rounded-xl border-2 transition-all active:scale-95
-                      ${present
-                        ? isHeavy
-                          ? 'border-destructive bg-destructive/15 text-destructive'
-                          : 'border-primary bg-primary/15 text-primary'
-                        : 'border-border bg-muted/30 text-muted-foreground'
-                      }
-                      ${isToggling ? 'opacity-60' : ''}
-                    `}
-                  >
-                    {/* Spinner */}
+                const baseClasses = `
+                  relative flex items-center gap-3 px-3 py-3 rounded-xl border-2 transition-all
+                  ${present
+                    ? isHeavy
+                      ? 'border-destructive bg-destructive/15 text-destructive'
+                      : 'border-primary bg-primary/15 text-primary'
+                    : 'border-border bg-muted/30 text-muted-foreground'
+                  }
+                  ${isToggling ? 'opacity-60' : ''}
+                `
+
+                const content = (
+                  <>
                     {isToggling ? (
                       <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" />
                     ) : present ? (
@@ -155,6 +154,25 @@ export function AttendanceSection({ month, year, isAdmin, diaristaId }: Attendan
                         {isHeavy ? 'Pesada' : 'Leve'}
                       </p>
                     </div>
+                  </>
+                )
+
+                if (readOnly) {
+                  return (
+                    <div key={date} className={baseClasses}>
+                      {content}
+                    </div>
+                  )
+                }
+
+                return (
+                  <button
+                    key={date}
+                    onClick={() => handleToggle(date, dayType)}
+                    disabled={!!toggling}
+                    className={`${baseClasses} active:scale-95`}
+                  >
+                    {content}
                   </button>
                 )
               })}

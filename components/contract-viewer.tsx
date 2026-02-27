@@ -1,119 +1,117 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { ScrollText, X, Shield, Clock, DollarSign, AlertTriangle, Star, Smartphone, Shirt, ChevronRight, Users, CheckCircle2, Lock } from 'lucide-react'
+import { ScrollText, X, Shield, Clock, DollarSign, AlertTriangle, Smartphone, Shirt, ChevronRight, Users, CheckCircle2, Lock } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 
-const clauses = [
+const clauses: { icon: React.ElementType; title: string; items: ReactNode[] }[] = [
   {
     icon: Shield,
-    title: 'Clausula 1 - Fundamentacao e Quitacao',
+    title: 'Cláusula 1 - Fundamentação e Quitação',
     items: [
-      'Regido pelo Art. 442-B da CLT e Art. 1 da LC 150/2015, ratificando a natureza autonoma da relacao.',
-      'Quitacao Retroativa: todos os valores e debitos referentes a periodos anteriores foram integralmente liquidados.',
-      'O contrato formaliza a continuidade da prestacao de servicos autonomos, sem qualquer vinculo empregaticio.',
+      'Regido pelo Art. 442-B da CLT e Art. 1 da LC 150/2015, ratificando a natureza autônoma da relação.',
+      'Quitação Retroativa: todos os valores e débitos referentes a períodos anteriores foram integralmente liquidados.',
+      'O contrato formaliza a continuidade da prestação de serviços autônomos, sem qualquer vínculo empregatício.',
     ],
   },
   {
     icon: DollarSign,
-    title: 'Clausula 2 - Cronograma, Valores e Agenda',
+    title: 'Cláusula 2 - Cronograma, Valores e Agenda',
     items: [
-      'DIARIAS: Segunda-feira R$ 250,00 (Limpeza Pesada) e Quinta-feira R$ 150,00 (Manutencao).',
-      'Alteracao pela CONTRATADA: aviso minimo de 07 dias. Sem disponibilidade do CONTRATANTE, diaria e cancelada e valor indevido.',
-      'Alteracao pelo CONTRATANTE na Segunda: se sem disponibilidade da CONTRATADA, R$ 250,00 e devido integralmente.',
-      'Alteracao pelo CONTRATANTE na Quinta: sem disponibilidade da CONTRATADA, valor nao e devido.',
-      'Cancelamento definitivo na Segunda: pago integralmente. Na Quinta: valor indevido.',
+      'DIÁRIAS: Segunda-feira R$ 250,00 (Limpeza Pesada) e Quinta-feira R$ 150,00 (Manutenção).',
+      <>{'FERIADOS: Caso a segunda-feira seja feriado, o valor de R$ 250,00 '}<span className="text-green-500 font-semibold">{'será pago integralmente'}</span>{'.'}</>,
+      <>{'FERIADOS: Caso a quinta-feira seja feriado, o valor de R$ 150,00 '}<span className="text-destructive font-semibold">{'NÃO será pago integralmente'}</span>{'.'}</>,
+      <>{'Alteração pela CONTRATADA: aviso mínimo de 02 dias de antecedência. Na Segunda: se sem disponibilidade da CONTRATADA, '}<span className="text-green-500 font-semibold">{'R$ 250,00 é devido integralmente'}</span>{'. Na Quinta: sem disponibilidade da CONTRATADA, '}<span className="text-destructive font-semibold">{'valor não é devido'}</span>{'.'}</>,
+      <>{'Alteração pelo CONTRATANTE: aviso mínimo de 02 dias de antecedência. Na Segunda: se sem disponibilidade da CONTRATADA, '}<span className="text-green-500 font-semibold">{'R$ 250,00 é devido integralmente'}</span>{'. Na Quinta: sem disponibilidade da CONTRATADA, '}<span className="text-destructive font-semibold">{'valor não é devido'}</span>{'.'}</>,
     ],
   },
   {
     icon: Shield,
-    title: 'Clausula 3 - Escopo Tecnico',
+    title: 'Cláusula 3 - Escopo Técnico',
     items: [
-      'PESADA (SEGUNDA): Banheiros, cozinha (desengorduramento), vidros, esquadrias, trilhos, garagem, quintal e churrasqueira. Inclui movimentacao de moveis.',
-      'MANUTENCAO (QUINTA): Organizacao estetica, retirada de po, aspiracao e higiene superficial.',
-      'ANIMAIS DOMESTICOS: Lavagem dos pisos inclusa. Excluidos: alimentacao, troca de agua, caixas de areia e tapetes higienicos.',
+      'PESADA (SEGUNDA): Banheiros, cozinha (desengorduramento), vidros, esquadrias, trilhos, garagem, quintal e churrasqueira. Inclui movimentação de móveis.',
+      'MANUTENÇÃO (QUINTA): Organização estética, retirada de pó, aspiração e higiene superficial.',
+      'ANIMAIS DOMÉSTICOS: Lavagem dos pisos inclusa. Excluídos: alimentação, troca de água, caixas de areia e tapetes higiênicos.',
     ],
   },
   {
     icon: Clock,
-    title: 'Clausula 4 - Autonomia, Horarios e Eficiencia',
+    title: 'Cláusula 4 - Autonomia, Horários e Eficiência',
     items: [
-      'Inexiste carga horaria fixa. A CONTRATADA detem autonomia sobre inicio e termino, sem descontos por atrasos.',
-      'Obrigacao de comunicar ao CONTRATANTE a hora prevista de chegada com antecedencia.',
-      'Inicio efetivo das atividades em tempo razoavel apos a chegada, evitando conversas prolongadas.',
+      'Inexiste carga horária fixa. A CONTRATADA detém autonomia sobre início e término, sem descontos por atrasos.',
+      'Obrigação de comunicar ao CONTRATANTE a hora prevista de chegada com antecedência.',
+      'Início efetivo das atividades em tempo razoável após a chegada, evitando conversas prolongadas.',
     ],
   },
   {
     icon: Shirt,
-    title: 'Clausula 5 - Lavanderia e Transporte',
+    title: 'Cláusula 5 - Lavanderia e Transporte',
     items: [
       'Lavagem: R$ 75,00 por semana executada.',
-      'Bonus de Passadoria: entrega na mesma semana (ate sexta-feira 18h00) gera premio de R$ 50,00.',
-      'Transporte de vestuario: R$ 30,00 semanais (toda sexta ate 20h00) para deslocamento de lavanderia.',
-      'Caso nao realize o translado, os R$ 30,00 sao devolvidos ao CONTRATANTE.',
+      'Bônus de Passadoria: entrega na mesma semana (até sexta-feira 18h00) gera prêmio de R$ 50,00.',
+      'Transporte de vestuário: R$ 30,00 semanais (toda sexta até 20h00) para deslocamento de lavanderia.',
+      'Caso não realize o translado, os R$ 30,00 são devolvidos ao CONTRATANTE, ou descontado para a próxima semana.',
     ],
   },
   {
     icon: Smartphone,
-    title: 'Clausula 6 - Pagamento Mensal (APP LIMPP DAY)',
+    title: 'Cláusula 6 - Pagamento Mensal (APP LIMPP DAY)',
     items: [
-      'Pagamento das diarias e bonus realizado mensalmente ate o 5 dia util do mes subsequente.',
-      'Calculo baseado estritamente nas diarias efetivamente realizadas e registradas no App.',
-      'Obrigatorio: anexar no App a foto do RECIBO preenchido e assinado a cada fechamento mensal.',
-      'Nao validacao dos recibos no App em ate 01 semana apos o pagamento gera advertencia verbal registrada.',
+      'Pagamento das diárias realizado mensalmente até o 5º dia útil do mês subsequente.',
+      'Cálculo baseado estritamente nas diárias efetivamente realizadas e registradas no App.',
       'Vedados adiantamentos ou vales sob qualquer pretexto.',
     ],
   },
   {
     icon: Shield,
-    title: 'Clausula 7 - Seguranca e EPIs',
+    title: 'Cláusula 7 - Segurança e EPIs',
     items: [
-      'O CONTRATANTE fornece: luvas de cano longo, calcado antiderrapante, avental de PVC e mascaras.',
-      'Uso obrigatorio. Recusa injustificada pode ensejar rescisao imediata.',
+      'O CONTRATANTE fornece: luvas de cano longo, calçado antiderrapante, avental de PVC e máscaras.',
+      'Uso obrigatório. Recusa injustificada pode ensejar rescisão imediata.',
     ],
   },
   {
     icon: Shield,
-    title: 'Clausula 8 - Acesso e Privacidade',
+    title: 'Cláusula 8 - Acesso e Privacidade',
     items: [
       'Responsabilidade civil da CONTRATADA por extravios ou danos de chaves (Art. 186 CC).',
-      'Vedada captacao de imagens (fotos/videos) da residencia ou moradores para redes sociais.',
+      'Vedada captação de imagens (fotos/vídeos) da residência ou moradores para redes sociais.',
       'Wi-Fi liberado para uso moderado, sem comprometer o trabalho.',
     ],
   },
   {
     icon: Users,
-    title: 'Clausula 9 - Conduta Profissional',
+    title: 'Cláusula 9 - Conduta Profissional',
     items: [
-      'Relacao pautada na dinamica Contratante-Prestador. Assuntos familiares e pessoais devem ser evitados no expediente.',
-      'Dialogos sociais devem ser breves. Assuntos longos fora dos horarios de servico.',
+      'Relação pautada na dinâmica Contratante-Prestador. Assuntos familiares e pessoais devem ser evitados no expediente.',
+      'Diálogos sociais devem ser breves. Assuntos longos fora dos horários de serviço.',
     ],
   },
   {
     icon: Shield,
-    title: 'Clausula 10 - Dignidade e Igualdade',
+    title: 'Cláusula 10 - Dignidade e Igualdade',
     items: [
       'Ambiente livre de racismo ou preconceito.',
-      'A CONTRATADA utilizara os mesmos utensilios, banheiros e realizara refeicoes na mesma mesa que o CONTRATANTE.',
+      'A CONTRATADA utilizará os mesmos utensílios, banheiros e realizará refeições na mesma mesa que o CONTRATANTE.',
     ],
   },
   {
     icon: Clock,
-    title: 'Clausula 11 - Repouso e Alimentacao',
+    title: 'Cláusula 11 - Repouso e Alimentação',
     items: [
-      'Intervalo de 01 (uma) hora garantido, com total liberdade de locomocao.',
-      'O CONTRATANTE nao solicitara atividades durante o intervalo.',
+      'Intervalo de 01 (uma) hora garantido, com total liberdade de locomoção.',
+      'O CONTRATANTE não solicitará atividades durante o intervalo.',
     ],
   },
   {
     icon: Clock,
-    title: 'Clausula 13 - Vigencia e Reajuste',
+    title: 'Cláusula 12 - Vigência e Reajuste',
     items: [
-      'Inicio em 09/03/2026, prazo indeterminado.',
-      'Reajuste anual pelo IPCA (IBGE) para manutencao do equilibrio economico.',
-      'Rescisao: 30 dias de aviso por cortesia ou imediata por descumprimento de clausulas.',
+      'Início em 09/03/2026, prazo indeterminado.',
+      'Reajuste anual pelo IPCA (IBGE) para manutenção do equilíbrio econômico.',
+      'Rescisão: 30 dias de aviso por cortesia ou imediata por descumprimento de cláusulas.',
     ],
   },
 ]
@@ -150,7 +148,7 @@ export function ContractViewer({ isAdmin = false }: ContractViewerProps) {
         setAgreedAt(row.agreed_at)
       }
     } catch (e) {
-      console.error('Erro ao verificar concordancia:', e)
+      console.error('Erro ao verificar concordância:', e)
     } finally {
       setLoading(false)
     }
@@ -170,7 +168,7 @@ export function ContractViewer({ isAdmin = false }: ContractViewerProps) {
       setAgreedAt(new Date().toISOString())
       setOpen(false)
     } catch (e) {
-      console.error('Erro ao registrar concordancia:', e)
+      console.error('Erro ao registrar concordância:', e)
     } finally {
       setConfirming(false)
     }
@@ -205,7 +203,7 @@ export function ContractViewer({ isAdmin = false }: ContractViewerProps) {
           <p className="text-xs text-muted-foreground">
             {agreed && agreedAt
               ? `Concordou em ${new Date(agreedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`
-              : 'A diarista ainda nao concordou com o contrato'}
+              :       'A diarista ainda não concordou com o contrato'}
           </p>
         </div>
         {agreed && <Lock className="h-4 w-4 text-green-500 shrink-0" />}
@@ -222,8 +220,8 @@ export function ContractViewer({ isAdmin = false }: ContractViewerProps) {
             <p className="text-sm font-bold text-green-500">Contrato Aceito</p>
             <p className="text-xs text-muted-foreground">
               {agreedAt
-                ? `Voce concordou em ${new Date(agreedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`
-                : 'Concordancia registrada'}
+                ? `Você concordou em ${new Date(agreedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`
+                : 'Concordância registrada'}
             </p>
           </div>
           <Lock className="h-4 w-4 text-green-500 shrink-0" />
@@ -233,7 +231,7 @@ export function ContractViewer({ isAdmin = false }: ContractViewerProps) {
           <AlertTriangle className="h-6 w-6 text-destructive shrink-0" />
           <div className="flex-1">
             <p className="text-sm font-bold text-destructive">Contrato Pendente</p>
-            <p className="text-xs text-muted-foreground">Voce ainda nao concordou com o contrato</p>
+            <p className="text-xs text-muted-foreground">Você ainda não concordou com o contrato</p>
           </div>
         </div>
       )}
@@ -265,7 +263,7 @@ export function ContractViewer({ isAdmin = false }: ContractViewerProps) {
             </button>
             <div className="flex-1 min-w-0">
               <p className="font-bold text-sm truncate">Contrato de Trabalho</p>
-              <p className="text-[10px] text-muted-foreground">Prestacao Autonoma - Diarista</p>
+              <p className="text-[10px] text-muted-foreground">Prestação Autônoma - Diarista</p>
             </div>
             <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
               <ScrollText className="h-4 w-4 text-primary" />
@@ -274,7 +272,7 @@ export function ContractViewer({ isAdmin = false }: ContractViewerProps) {
 
           {!agreed && !scrolledToEnd && (
             <div className="px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 shrink-0">
-              <p className="text-[11px] text-amber-500 text-center">Role ate o final para habilitar a concordancia</p>
+              <p className="text-[11px] text-amber-500 text-center">Role até o final para habilitar a concordância</p>
             </div>
           )}
 
@@ -311,29 +309,15 @@ export function ContractViewer({ isAdmin = false }: ContractViewerProps) {
               </div>
             ))}
 
-            <div className="rounded-xl border-2 border-amber-500/50 bg-amber-500/10 p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center shrink-0">
-                  <Star className="h-4 w-4 text-amber-500" />
-                </div>
-                <p className="text-xs font-bold text-amber-500">Clausula 12 - Premio Quadrimestral</p>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                {'Concessao eventual de '}
-                <span className="text-amber-500 font-bold">R$ 300,00 a cada 4 meses</span>
-                {', condicionada a excelencia tecnica, assiduidade e ausencia de mais de 02 advertencias no periodo. Natureza meramente indenizatoria (Art. 457, par. 2 CLT).'}
-              </p>
-            </div>
-
             <div className="rounded-xl border-2 border-destructive/50 bg-destructive/10 p-4">
               <div className="flex items-center gap-2 mb-2">
                 <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
-                <p className="text-xs font-bold text-destructive uppercase tracking-wide">Nota Essencial</p>
+                <p className="text-xs font-bold text-destructive uppercase tracking-wide">{'Nota Essencial'}</p>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                {'E dever da CONTRATADA a visualizacao constante das notificacoes no '}
+                {'É dever da CONTRATADA a visualização constante das notificações no '}
                 <span className="text-foreground font-bold">APP LIMPP DAY</span>
-                {', canal oficial para registros e seguranca juridica de ambos.'}
+                {', canal oficial para registros e segurança jurídica de ambos.'}
               </p>
             </div>
 

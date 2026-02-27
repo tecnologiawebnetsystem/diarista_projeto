@@ -61,20 +61,25 @@ export async function GET(request: NextRequest) {
     // Calculos
     const ironingValue = cfg.ironing || 50
     const washingValue = cfg.washing || 75
-    const monthlySalary = paymentData?.monthly_value || cfg.monthly_salary || 2000
-    const isPaid = !!paymentData?.paid_at
-
-    const laundryTotal = (laundryData || []).reduce((sum, w) => {
-      const services = (w.ironed ? ironingValue : 0) + (w.washed ? washingValue : 0)
-      const transport = (w.ironed || w.washed) ? (w.transport_fee || 30) : 0
-      return sum + services + transport
-    }, 0)
+    const heavyCleaningValue = cfg.heavy_cleaning || 0
+    const lightCleaningValue = cfg.light_cleaning || 0
 
     const heavyDays = (attendanceData || []).filter((a: { day_type: string; present: boolean }) => a.day_type === 'heavy_cleaning' && a.present).length
     const lightDays = (attendanceData || []).filter((a: { day_type: string; present: boolean }) => a.day_type === 'light_cleaning' && a.present).length
     const totalDays = heavyDays + lightDays
+    const attendanceTotal = (heavyDays * heavyCleaningValue) + (lightDays * lightCleaningValue)
+
+    const laundryTotal = (laundryData || []).reduce((sum, w) => {
+      return sum + (w.ironed ? ironingValue : 0) + (w.washed ? washingValue : 0)
+    }, 0)
+
+    const transportTotal = (laundryData || []).reduce((sum, w) => {
+      return sum + ((w.ironed || w.washed) ? (w.transport_fee || 0) : 0)
+    }, 0)
+    const transportPaidTotal = (laundryData || []).filter((w: { ironed: boolean; washed: boolean; paid_at: string | null }) => (w.ironed || w.washed) && w.paid_at).reduce((sum, w) => sum + (w.transport_fee || 0), 0)
+
     const warnings = (notesData || []).filter((n: { is_warning: boolean }) => n.is_warning).length
-    const grandTotal = (isPaid ? monthlySalary : 0) + laundryTotal
+    const grandTotal = attendanceTotal + laundryTotal
 
     // Gerar HTML do relatorio
     const html = `<!DOCTYPE html>
@@ -125,7 +130,7 @@ export async function GET(request: NextRequest) {
     <p class="label">Total do Mes</p>
     <p class="amount">R$ ${grandTotal.toFixed(2)}</p>
     <p style="opacity: 0.7; font-size: 13px; margin-top: 8px;">
-      Salario: R$ ${isPaid ? monthlySalary.toFixed(2) : '0.00'} ${isPaid ? '(Pago)' : '(Pendente)'} | Lavanderia: R$ ${laundryTotal.toFixed(2)}
+      Limpeza: R$ ${attendanceTotal.toFixed(2)} | Lavanderia: R$ ${laundryTotal.toFixed(2)} | Transporte: R$ ${transportPaidTotal.toFixed(2)} (pago)
     </p>
   </div>
 
@@ -176,16 +181,17 @@ export async function GET(request: NextRequest) {
         <tr><th>Semana</th><th>Lavagem</th><th>Passagem</th><th>Transporte</th><th>Total</th></tr>
       </thead>
       <tbody>
-        ${laundryData.map((w: { week_number: number; washed: boolean; ironed: boolean; transport_fee: number }) => {
+        ${laundryData.map((w: { week_number: number; washed: boolean; ironed: boolean; transport_fee: number; paid_at: string | null }) => {
           const services = (w.ironed ? ironingValue : 0) + (w.washed ? washingValue : 0)
-          const transport = (w.ironed || w.washed) ? (w.transport_fee || 30) : 0
+          const hasServices = w.ironed || w.washed
+          const transportPaid = hasServices && !!w.paid_at
           return `
             <tr>
               <td>Semana ${w.week_number}</td>
               <td>${w.washed ? `R$ ${washingValue.toFixed(2)}` : '-'}</td>
               <td>${w.ironed ? `R$ ${ironingValue.toFixed(2)}` : '-'}</td>
-              <td>R$ ${transport.toFixed(2)}</td>
-              <td><strong>R$ ${(services + transport).toFixed(2)}</strong></td>
+              <td>${hasServices ? `R$ ${(w.transport_fee || 0).toFixed(2)} <span class="badge ${transportPaid ? 'badge-paid' : 'badge-pending'}">${transportPaid ? 'Pago' : 'Pendente'}</span>` : '-'}</td>
+              <td><strong>R$ ${services.toFixed(2)}</strong></td>
             </tr>
           `
         }).join('')}
