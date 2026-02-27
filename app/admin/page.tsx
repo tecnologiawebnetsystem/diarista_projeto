@@ -9,7 +9,7 @@ import {
   ShieldCheck, FileDown, Bus, Plus, AlertTriangle,
   CheckCircle, XCircle, Trash2, Edit2, X,
   Users, Phone, Hash, UserPlus, UserX, UserCheck, Eye, EyeOff,
-  MapPin, Building2
+  MapPin, Building2, DollarSign, CalendarRange, Bell, Settings
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -29,6 +29,10 @@ import { useNotes } from '@/hooks/use-notes'
 import { useAwards } from '@/hooks/use-awards'
 import { useDiaristas } from '@/hooks/use-diaristas'
 import { useClients } from '@/hooks/use-clients'
+import { PaymentsSection } from '@/components/admin/payments-section'
+import { CalendarSection } from '@/components/admin/calendar-section'
+import { AlertsSection } from '@/components/admin/alerts-section'
+import { SettingsSection } from '@/components/admin/settings-section'
 import { useDbNotifications } from '@/hooks/use-db-notifications'
 import { MonthlyPaymentSection } from '@/components/monthly-payment-section'
 import { AttendanceSection } from '@/components/attendance-section'
@@ -67,17 +71,21 @@ const CLEANING_TYPES = [
   { value: 'light_cleaning', label: 'Limpeza Leve' },
 ] as const
 
-type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'notas' | 'contrato' | 'equipe' | 'clientes'
+type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'notas' | 'contrato' | 'equipe' | 'clientes' | 'pagamentos' | 'calendario' | 'alertas' | 'config'
 
 const NAV_ITEMS: { key: Tab; label: string; Icon: React.ElementType }[] = [
-  { key: 'resumo',      label: 'Dashboard',   Icon: LayoutDashboard },
+  { key: 'resumo',      label: 'Dashboard',    Icon: LayoutDashboard },
+  { key: 'calendario',  label: 'Agenda',       Icon: CalendarRange },
   { key: 'presenca',    label: 'Presenca',     Icon: CalendarCheck },
   { key: 'lavanderia',  label: 'Lavanderia',   Icon: WashingMachine },
   { key: 'transporte',  label: 'Transporte',   Icon: Bus },
+  { key: 'pagamentos',  label: 'Pagamentos',   Icon: DollarSign },
   { key: 'notas',       label: 'Notas',        Icon: FileText },
+  { key: 'alertas',     label: 'Alertas',      Icon: Bell },
   { key: 'contrato',    label: 'Contrato',     Icon: ScrollText },
   { key: 'equipe',      label: 'Equipe',       Icon: Users },
   { key: 'clientes',    label: 'Clientes',     Icon: Building2 },
+  { key: 'config',      label: 'Config',       Icon: Settings },
 ]
 
 export default function AdminPage() {
@@ -89,6 +97,7 @@ export default function AdminPage() {
   const [editingClient, setEditingClient] = useState<string | null>(null)
   const [clientForm, setClientForm] = useState({ name: '', address: '', neighborhood: '', phone: '', notes: '' })
   const [clientError, setClientError] = useState('')
+  const [confirmDeleteDiarista, setConfirmDeleteDiarista] = useState<string | null>(null)
   const [showDiaristaForm, setShowDiaristaForm] = useState(false)
   const [editingDiarista, setEditingDiarista] = useState<string | null>(null)
   const [diaristaForm, setDiaristaForm] = useState({
@@ -123,6 +132,18 @@ export default function AdminPage() {
   const { laundryWeeks, refetch: refetchLaundry } = useLaundryWeeks(selectedMonth, selectedYear, selectedDiaristaId)
   const { notes, addNote, updateNote, deleteNote } = useNotes(selectedMonth, selectedYear, selectedDiaristaId)
   const { sendNotification } = useDbNotifications()
+  const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0)
+
+  // Fetch pending payments count
+  useEffect(() => {
+    async function fetchPending() {
+      const { supabase: sb } = await import('@/lib/supabase')
+      const { count } = await sb.from('payment_history').select('*', { count: 'exact', head: true }).eq('month', selectedMonth).eq('year', selectedYear).eq('status', 'pending')
+      setPendingPaymentsCount(count || 0)
+    }
+    fetchPending()
+  }, [selectedMonth, selectedYear])
+
   const [showNoteForm, setShowNoteForm] = useState(false)
   const [editingNote, setEditingNote] = useState<Note | null>(null)
   const [noteFormData, setNoteFormData] = useState({
@@ -858,6 +879,43 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* PAGAMENTOS */}
+        {activeTab === 'pagamentos' && (
+          <PaymentsSection
+            diaristas={allDiaristas}
+            selectedDiaristaId={selectedDiaristaId}
+            month={selectedMonth}
+            year={selectedYear}
+          />
+        )}
+
+        {/* CALENDARIO */}
+        {activeTab === 'calendario' && (
+          <CalendarSection
+            diaristas={activeDiaristas}
+            clients={activeClients}
+            month={selectedMonth}
+            year={selectedYear}
+            onChangeMonth={(m, y) => { setSelectedMonth(m); setSelectedYear(y) }}
+          />
+        )}
+
+        {/* ALERTAS */}
+        {activeTab === 'alertas' && (
+          <AlertsSection
+            diaristas={allDiaristas}
+            notes={notes}
+            pendingPayments={pendingPaymentsCount}
+            month={selectedMonth}
+            year={selectedYear}
+          />
+        )}
+
+        {/* CONFIG */}
+        {activeTab === 'config' && (
+          <SettingsSection />
+        )}
+
         {/* EQUIPE */}
         {activeTab === 'equipe' && (
           <div className="space-y-3">
@@ -1266,14 +1324,47 @@ export default function AdminPage() {
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditDiarista(d)}>
                               <Edit2 className="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { if (selectedDiaristaId !== d.id) setSelectedDiaristaId(d.id) }}>
-                              <UserCheck className="h-3.5 w-3.5 text-primary" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleToggleDiarista(d.id, false)}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/60 hover:text-destructive" onClick={() => handleToggleDiarista(d.id, false)}>
                               <UserX className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setConfirmDeleteDiarista(d.id)}>
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </div>
+
+                        {/* Confirmacao de exclusao */}
+                        {confirmDeleteDiarista === d.id && (
+                          <div className="mt-3 p-3 rounded-lg bg-destructive/10 border border-destructive/30">
+                            <p className="text-xs text-destructive font-medium mb-2">
+                              Tem certeza que deseja excluir <strong>{d.name}</strong>? Esta acao nao pode ser desfeita.
+                            </p>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                className="h-8 text-xs flex-1"
+                                onClick={async () => {
+                                  await deleteDiarista(d.id)
+                                  setConfirmDeleteDiarista(null)
+                                  refetchDiaristas()
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3 mr-1" />
+                                Sim, excluir
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 text-xs flex-1"
+                                onClick={() => setConfirmDeleteDiarista(null)}
+                              >
+                                Cancelar
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
                       </CardContent>
                     </Card>
                   )
