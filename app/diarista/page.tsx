@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { LayoutDashboard, CalendarCheck, WashingMachine, FileText, ScrollText, Trophy, AlertTriangle, LogOut, CheckCircle2, XCircle, Briefcase, TrendingUp, CalendarDays, Receipt, FileDown, Bus, Bell, X } from 'lucide-react'
+import { LayoutDashboard, CalendarCheck, WashingMachine, FileText, ScrollText, Trophy, AlertTriangle, LogOut, CheckCircle2, XCircle, Briefcase, TrendingUp, CalendarDays, Receipt, FileDown, Bus, Bell, X, User, Camera, Phone, Save, Check } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/contexts/auth-context'
@@ -34,11 +36,27 @@ export default function DiaristaPage() {
   const currentDate = new Date()
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear())
-  const [activeTab, setActiveTab] = useState<'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'anotacoes' | 'contrato'>('resumo')
+  const [activeTab, setActiveTab] = useState<'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'anotacoes' | 'contrato' | 'perfil'>('resumo')
 
   const { diaristaId } = useAuth()
-  const { diaristas: allDiaristas } = useDiaristas()
+  const { diaristas: allDiaristas, updateDiarista, refetch: refetchDiaristas } = useDiaristas()
   const currentDiarista = allDiaristas.find(d => d.id === diaristaId)
+
+  // Perfil states
+  const [profileName, setProfileName] = useState('')
+  const [profilePhone, setProfilePhone] = useState('')
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [profileSaved, setProfileSaved] = useState(false)
+  const [profileError, setProfileError] = useState('')
+
+  // Sync profile form when diarista loads
+  useEffect(() => {
+    if (currentDiarista) {
+      setProfileName(currentDiarista.name)
+      setProfilePhone(currentDiarista.phone || '')
+    }
+  }, [currentDiarista?.id, currentDiarista?.name, currentDiarista?.phone])
   const { notifications: dbNotifications, unreadCount, markAsRead, markAllAsRead } = useDbNotifications(diaristaId)
   const [showNotifications, setShowNotifications] = useState(false)
   const { payment } = useMonthlyPayments(selectedMonth, selectedYear, diaristaId)
@@ -65,6 +83,45 @@ export default function DiaristaPage() {
 
   const ironingValue = currentDiarista?.ironing_value ?? 50
   const washingValue = currentDiarista?.washing_value ?? 75
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !diaristaId) return
+    setUploadingPhoto(true)
+    setProfileError('')
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro no upload')
+      await updateDiarista(diaristaId, { photo_url: data.url })
+      refetchDiaristas()
+    } catch {
+      setProfileError('Erro ao enviar foto')
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
+
+  const handleSaveProfile = async () => {
+    if (!diaristaId || !profileName.trim()) return
+    setSavingProfile(true)
+    setProfileError('')
+    try {
+      await updateDiarista(diaristaId, {
+        name: profileName.trim(),
+        phone: profilePhone.trim() || null,
+      })
+      refetchDiaristas()
+      setProfileSaved(true)
+      setTimeout(() => setProfileSaved(false), 2000)
+    } catch {
+      setProfileError('Erro ao salvar perfil')
+    } finally {
+      setSavingProfile(false)
+    }
+  }
 
   const handleTabChange = (tab: typeof activeTab) => {
     setActiveTab(tab)
@@ -101,20 +158,25 @@ export default function DiaristaPage() {
       {/* Header */}
       <div className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-10 safe-area-inset-top">
         <div className="px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/logo.jpg"
-              alt="LIMPP DAY"
-              width={36}
-              height={36}
-              priority
-              className="rounded-lg"
-            />
+          <button className="flex items-center gap-3" onClick={() => handleTabChange('perfil')}>
+            {currentDiarista?.photo_url ? (
+              <Image
+                src={currentDiarista.photo_url}
+                alt={currentDiarista.name}
+                width={40}
+                height={40}
+                className="rounded-full object-cover w-10 h-10 border-2 border-primary/30"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-white font-bold text-sm border-2 border-primary/30">
+                {currentDiarista?.name?.charAt(0).toUpperCase() || 'D'}
+              </div>
+            )}
             <div>
-              <h1 className="text-base font-bold text-primary leading-none">LIMPP DAY</h1>
-              <p className="text-[10px] text-muted-foreground">Painel da Diarista</p>
+              <h1 className="text-sm font-bold text-foreground leading-none text-left">{currentDiarista?.name || 'Diarista'}</h1>
+              <p className="text-[10px] text-primary font-medium mt-0.5">LIMPP DAY</p>
             </div>
-          </div>
+          </button>
           <div className="flex items-center gap-1">
             <Button
               variant="ghost"
@@ -589,23 +651,183 @@ export default function DiaristaPage() {
           <ContractViewer isAdmin={false} diaristaId={diaristaId} diaristaName={currentDiarista?.name} />
         )}
 
+        {/* PERFIL */}
+        {activeTab === 'perfil' && (
+          <div className="space-y-4">
+            {/* Foto */}
+            <Card>
+              <CardContent className="py-6 flex flex-col items-center gap-4">
+                <div className="relative">
+                  {currentDiarista?.photo_url ? (
+                    <Image
+                      src={currentDiarista.photo_url}
+                      alt={currentDiarista.name}
+                      width={100}
+                      height={100}
+                      className="rounded-full object-cover w-[100px] h-[100px] border-4 border-primary/20"
+                    />
+                  ) : (
+                    <div className="w-[100px] h-[100px] rounded-full gradient-primary flex items-center justify-center text-white font-bold text-3xl border-4 border-primary/20">
+                      {currentDiarista?.name?.charAt(0).toUpperCase() || 'D'}
+                    </div>
+                  )}
+                  <label className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center cursor-pointer shadow-md hover:bg-primary/90 transition-colors">
+                    {uploadingPhoto ? (
+                      <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                    ) : (
+                      <Camera className="h-4 w-4" />
+                    )}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="sr-only"
+                      onChange={handlePhotoUpload}
+                      disabled={uploadingPhoto}
+                    />
+                  </label>
+                </div>
+                <div className="text-center">
+                  <p className="font-bold text-lg">{currentDiarista?.name}</p>
+                  {currentDiarista?.phone && (
+                    <p className="text-sm text-muted-foreground flex items-center justify-center gap-1.5 mt-1">
+                      <Phone className="h-3.5 w-3.5" />
+                      {currentDiarista.phone}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Dados pessoais */}
+            <Card>
+              <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <User className="h-4 w-4 text-primary" />
+                  Meus Dados
+                </CardTitle>
+                <CardDescription className="text-xs">Atualize suas informacoes pessoais</CardDescription>
+              </CardHeader>
+              <CardContent className="px-4 pb-4 space-y-3">
+                <div>
+                  <Label className="text-xs mb-1.5 block">Nome completo</Label>
+                  <Input
+                    value={profileName}
+                    onChange={e => setProfileName(e.target.value)}
+                    placeholder="Seu nome"
+                    className="h-10"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs mb-1.5 block">Telefone</Label>
+                  <Input
+                    value={profilePhone}
+                    onChange={e => setProfilePhone(e.target.value)}
+                    placeholder="(11) 99999-9999"
+                    className="h-10"
+                  />
+                </div>
+
+                {profileError && (
+                  <p className="text-xs text-destructive font-medium">{profileError}</p>
+                )}
+
+                <Button
+                  onClick={handleSaveProfile}
+                  disabled={savingProfile || !profileName.trim()}
+                  className={cn('w-full h-10 transition-all', profileSaved && 'bg-green-600 hover:bg-green-600')}
+                >
+                  {profileSaved ? (
+                    <><Check className="h-4 w-4 mr-2" />Salvo</>
+                  ) : savingProfile ? (
+                    <div className="h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                  ) : (
+                    <><Save className="h-4 w-4 mr-2" />Salvar Alteracoes</>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Info da agenda */}
+            <Card>
+              <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <CalendarCheck className="h-4 w-4 text-primary" />
+                  Minha Agenda
+                </CardTitle>
+                <CardDescription className="text-xs">Definida pelo administrador</CardDescription>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                {currentDiarista?.work_schedule && currentDiarista.work_schedule.length > 0 ? (
+                  <div className="space-y-2">
+                    {currentDiarista.work_schedule.map((s, i) => {
+                      const WDAY: Record<string, string> = { monday: 'Segunda-feira', tuesday: 'Terca-feira', wednesday: 'Quarta-feira', thursday: 'Quinta-feira', friday: 'Sexta-feira', saturday: 'Sabado', sunday: 'Domingo' }
+                      return (
+                        <div key={i} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                          <span className="text-sm font-medium">{WDAY[s.day] || s.day}</span>
+                          <Badge variant="outline" className={cn('text-[10px]', s.type === 'heavy_cleaning' ? 'border-destructive text-destructive' : 'border-primary text-primary')}>
+                            {s.type === 'heavy_cleaning' ? 'Limpeza Pesada' : 'Limpeza Leve'}
+                          </Badge>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">Nenhuma agenda definida</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Valores */}
+            <Card>
+              <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  Meus Valores
+                </CardTitle>
+                <CardDescription className="text-xs">Valores definidos pelo administrador</CardDescription>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-3 bg-muted rounded-lg text-center">
+                    <p className="text-lg font-bold text-foreground">R$ {(currentDiarista?.heavy_cleaning_value ?? 250).toFixed(2)}</p>
+                    <p className="text-[10px] text-muted-foreground">Limpeza Pesada</p>
+                  </div>
+                  <div className="p-3 bg-muted rounded-lg text-center">
+                    <p className="text-lg font-bold text-foreground">R$ {(currentDiarista?.light_cleaning_value ?? 150).toFixed(2)}</p>
+                    <p className="text-[10px] text-muted-foreground">Limpeza Leve</p>
+                  </div>
+                  <div className="p-3 bg-muted rounded-lg text-center">
+                    <p className="text-lg font-bold text-foreground">R$ {(currentDiarista?.washing_value ?? 75).toFixed(2)}</p>
+                    <p className="text-[10px] text-muted-foreground">Lavagem</p>
+                  </div>
+                  <div className="p-3 bg-muted rounded-lg text-center">
+                    <p className="text-lg font-bold text-foreground">R$ {(currentDiarista?.ironing_value ?? 50).toFixed(2)}</p>
+                    <p className="text-[10px] text-muted-foreground">Passar Roupa</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
       </div>
 
       {/* Bottom Navigation Bar */}
       <div className="fixed bottom-0 left-0 right-0 z-20 bg-card border-t border-border" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="flex items-stretch h-16">
+        <div className="flex items-stretch h-16 overflow-x-auto scrollbar-hide">
           {([
-            { key: 'resumo',      label: 'Dashboard',   Icon: LayoutDashboard },
+            { key: 'resumo',      label: 'Inicio',      Icon: LayoutDashboard },
             { key: 'presenca',    label: 'Presenca',    Icon: CalendarCheck },
             { key: 'lavanderia',  label: 'Lavanderia',  Icon: WashingMachine },
             { key: 'transporte',  label: 'Transporte',  Icon: Bus },
             { key: 'anotacoes',   label: warnings.length > 0 ? `Notas·${warnings.length}` : 'Notas', Icon: FileText },
             { key: 'contrato',    label: 'Contrato',    Icon: ScrollText },
+            { key: 'perfil',      label: 'Perfil',      Icon: User },
           ] as { key: typeof activeTab; label: string; Icon: React.ElementType }[]).map(({ key, label, Icon }) => (
             <button
               key={key}
               onClick={() => handleTabChange(key)}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
+              className={`flex-1 min-w-[52px] flex flex-col items-center justify-center gap-0.5 transition-colors ${
                 activeTab === key
                   ? 'text-primary'
                   : 'text-muted-foreground'
