@@ -20,19 +20,19 @@ const clauses: { icon: React.ElementType; title: string; items: ReactNode[] }[] 
     icon: DollarSign,
     title: 'Cláusula 2 - Cronograma, Valores e Agenda',
     items: [
-      'DIARIAS: Limpeza Pesada R$ 250,00 e Limpeza Leve (Manutencao) R$ 150,00, conforme agenda definida no cadastro.',
-      <>{'FERIADOS: Caso o dia de Limpeza Pesada seja feriado, o valor de R$ 250,00 '}<span className="text-green-500 font-semibold">{'sera pago integralmente'}</span>{'.'}</>,
-      <>{'FERIADOS: Caso o dia de Limpeza Leve seja feriado, o valor de R$ 150,00 '}<span className="text-destructive font-semibold">{'NAO sera pago integralmente'}</span>{'.'}</>,
-      <>{'Alteracao pela CONTRATADA: aviso minimo de 02 dias de antecedencia. No dia de Limpeza Pesada: se sem disponibilidade da CONTRATADA, '}<span className="text-green-500 font-semibold">{'R$ 250,00 e devido integralmente'}</span>{'. No dia de Limpeza Leve: sem disponibilidade da CONTRATADA, '}<span className="text-destructive font-semibold">{'valor nao e devido'}</span>{'.'}</>,
-      <>{'Alteracao pelo CONTRATANTE: aviso minimo de 02 dias de antecedencia. No dia de Limpeza Pesada: se sem disponibilidade da CONTRATADA, '}<span className="text-green-500 font-semibold">{'R$ 250,00 e devido integralmente'}</span>{'. No dia de Limpeza Leve: sem disponibilidade da CONTRATADA, '}<span className="text-destructive font-semibold">{'valor nao e devido'}</span>{'.'}</>,
+      <>{'DIÁRIAS: '}<strong>{'Limpeza Pesada'}</strong>{' R$ 250,00 e '}<strong>{'Limpeza Leve'}</strong>{' (Manutenção) R$ 150,00, conforme agenda definida no cadastro.'}</>,
+      <>{'FERIADOS: Caso o dia de '}<strong>{'Limpeza Pesada'}</strong>{' seja feriado, o valor de R$ 250,00 '}<span className="text-green-500 font-semibold">{'será pago integralmente'}</span>{'.'}</>,
+      <>{'FERIADOS: Caso o dia de '}<strong>{'Limpeza Leve'}</strong>{' seja feriado, o valor de R$ 150,00 '}<span className="text-destructive font-semibold">{'NÃO será pago integralmente'}</span>{'.'}</>,
+      <>{'Alteração pela CONTRATADA: aviso mínimo de 02 dias de antecedência. No dia de '}<strong>{'Limpeza Pesada'}</strong>{': se sem disponibilidade da CONTRATADA, '}<span className="text-green-500 font-semibold">{'R$ 250,00 é devido integralmente'}</span>{'. No dia de '}<strong>{'Limpeza Leve'}</strong>{': sem disponibilidade da CONTRATADA, '}<span className="text-destructive font-semibold">{'valor não é devido'}</span>{'.'}</>,
+      <>{'Alteração pelo CONTRATANTE: aviso mínimo de 02 dias de antecedência. No dia de '}<strong>{'Limpeza Pesada'}</strong>{': se sem disponibilidade da CONTRATADA, '}<span className="text-green-500 font-semibold">{'R$ 250,00 é devido integralmente'}</span>{'. No dia de '}<strong>{'Limpeza Leve'}</strong>{': sem disponibilidade da CONTRATADA, '}<span className="text-destructive font-semibold">{'valor não é devido'}</span>{'.'}</>,
     ],
   },
   {
     icon: Shield,
     title: 'Cláusula 3 - Escopo Técnico',
     items: [
-      'LIMPEZA PESADA: Banheiros, cozinha (desengorduramento), vidros, esquadrias, trilhos, garagem, quintal e churrasqueira. Inclui movimentacao de moveis.',
-      'LIMPEZA LEVE (MANUTENCAO): Organizacao estetica, retirada de po, aspiracao e higiene superficial.',
+      <><strong>{'LIMPEZA PESADA'}</strong>{': Banheiros, cozinha (desengorduramento), vidros, esquadrias, trilhos, garagem, quintal e churrasqueira. Inclui movimentação de móveis.'}</>,
+      <><strong>{'LIMPEZA LEVE (MANUTENÇÃO)'}</strong>{': Organização estética, retirada de pó, aspiração e higiene superficial.'}</>,
       'ANIMAIS DOMÉSTICOS: Lavagem dos pisos inclusa. Excluídos: alimentação, troca de água, caixas de areia e tapetes higiênicos.',
     ],
   },
@@ -52,7 +52,7 @@ const clauses: { icon: React.ElementType; title: string; items: ReactNode[] }[] 
       'Lavagem: R$ 75,00 por semana executada.',
       'Bônus de Passadoria: entrega na mesma semana (até sexta-feira 18h00) gera prêmio de R$ 50,00.',
       'Transporte de vestuário: R$ 30,00 semanais (toda sexta até 20h00) para deslocamento de lavanderia.',
-      'Caso não realize o translado, os R$ 30,00 são devolvidos ao CONTRATANTE, ou descontado para a próxima semana.',
+      'Caso não realize o translado, os R$ 30,00 são devolvidos ao CONTRATANTE, ou descontados para a próxima semana.',
     ],
   },
   {
@@ -153,7 +153,7 @@ export function ContractViewer({ isAdmin = false, diaristaId, diaristaName }: Co
         setAgreedAt(row.agreed_at)
       }
     } catch (e) {
-      console.error('Erro ao verificar concordancia:', e)
+      console.error('Erro ao verificar concordância:', e)
     } finally {
       setLoading(false)
     }
@@ -180,7 +180,7 @@ export function ContractViewer({ isAdmin = false, diaristaId, diaristaName }: Co
       setAgreedAt(new Date().toISOString())
       setOpen(false)
     } catch (e) {
-      console.error('Erro ao registrar concordancia:', e)
+      console.error('Erro ao registrar concordância:', e)
     } finally {
       setConfirming(false)
     }
@@ -216,7 +216,7 @@ export function ContractViewer({ isAdmin = false, diaristaId, diaristaName }: Co
           <p className="text-xs text-muted-foreground">
             {agreed && agreedAt
               ? `Concordou em ${new Date(agreedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`
-              : `${diaristaName || 'A diarista'} ainda nao concordou com o contrato`}
+              : `${diaristaName || 'A diarista'} ainda não concordou com o contrato`}
           </p>
         </div>
         {agreed && <Lock className="h-4 w-4 text-green-500 shrink-0" />}
@@ -259,7 +259,7 @@ export function ContractViewer({ isAdmin = false, diaristaId, diaristaName }: Co
         <div className="flex-1 text-left">
           <p className="font-semibold text-sm text-foreground">Ler Contrato Completo</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {agreed ? 'Toque para reler o contrato' : 'Leia ate o final para poder concordar'}
+            {agreed ? 'Toque para reler o contrato' : 'Leia até o final para poder concordar'}
           </p>
         </div>
         <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
@@ -359,7 +359,7 @@ export function ContractViewer({ isAdmin = false, diaristaId, diaristaName }: Co
                 ) : (
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5" />
-                    {scrolledToEnd ? 'Li e Concordo com o Contrato' : 'Role ate o final para concordar'}
+                    {scrolledToEnd ? 'Li e Concordo com o Contrato' : 'Role até o final para concordar'}
                   </div>
                 )}
               </Button>
