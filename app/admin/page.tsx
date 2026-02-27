@@ -251,7 +251,7 @@ export default function AdminPage() {
 
         {/* LAVANDERIA */}
         {activeTab === 'lavanderia' && (
-          <LaundrySection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} />
+          <LaundrySection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} onDataChange={refetchLaundry} />
         )}
 
         {/* NOTAS */}

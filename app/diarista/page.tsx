@@ -224,7 +224,7 @@ export default function DiaristaPage() {
                       <p className="text-xs text-muted-foreground mt-1">Limite: {payment.hour_limit?.slice(0, 5) || '20:00'}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xl font-bold text-primary">R$ {monthlySalaryDisplay.toFixed(2)}</p>
+                      <p className="text-xl font-bold text-primary">R$ {grandTotal.toFixed(2)}</p>
                       <Badge variant={payment.paid_at ? 'default' : 'outline'} className="text-[10px] mt-1">
                         {payment.paid_at ? 'Pago' : 'Aguardando'}
                       </Badge>

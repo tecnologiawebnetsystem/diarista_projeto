@@ -11,9 +11,10 @@ interface LaundrySectionProps {
   year: number
   isAdmin?: boolean
   diaristaId?: string | null
+  onDataChange?: () => void
 }
 
-export function LaundrySection({ month, year, isAdmin = false, diaristaId }: LaundrySectionProps) {
+export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDataChange }: LaundrySectionProps) {
   const { laundryWeeks, loading, updateLaundryService, refetch } = useLaundryWeeks(month, year, diaristaId)
   const { getConfigValue } = useConfig()
 
@@ -37,6 +38,7 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId }: Lau
       await supabase.from('laundry_weeks').insert([insertData]).select().single()
       await refetch()
     }
+    onDataChange?.()
   }
 
   const handleWashedChange = async (weekNumber: number, checked: boolean) => {
@@ -52,6 +54,7 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId }: Lau
       await supabase.from('laundry_weeks').insert([insertData]).select().single()
       await refetch()
     }
+    onDataChange?.()
   }
 
   const getWeekTotal = (weekNumber: number) => {
