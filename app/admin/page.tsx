@@ -94,8 +94,10 @@ export default function AdminPage() {
     )
   }
 
-  const hasActivity = attendance.length > 0 || laundryWeeks.some(w => w.ironed || w.washed)
-  const monthlySalary = payment?.paid_at ? (payment?.monthly_value || 0) : 0
+  const presentDays = attendance.filter(a => a.present)
+  const hasActivity = presentDays.length > 0 || laundryWeeks.some(w => w.ironed || w.washed)
+  const monthlySalaryDisplay = hasActivity ? (payment?.monthly_value || 0) : 0
+  const monthlySalary = (hasActivity && payment?.paid_at) ? (payment?.monthly_value || 0) : 0
   const laundryTotal = laundryWeeks.reduce((sum, week) => {
     const services = (week.ironed ? ironingValue : 0) + (week.washed ? washingValue : 0)
     const transport = (week.ironed || week.washed) ? week.transport_fee : 0
@@ -203,7 +205,7 @@ export default function AdminPage() {
               <div className="flex justify-center gap-5 text-xs">
                 <div>
                   <p className="opacity-70 mb-0.5">Salário {payment?.paid_at ? 'Pago' : 'Pendente'}</p>
-                  <p className="text-sm font-semibold">R$ {(payment?.monthly_value || 0).toFixed(2)}</p>
+                  <p className="text-sm font-semibold">R$ {monthlySalaryDisplay.toFixed(2)}</p>
                 </div>
                 <div className="w-px bg-white/20" />
                 <div>

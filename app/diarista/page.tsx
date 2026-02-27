@@ -62,7 +62,8 @@ export default function DiaristaPage() {
   const washingValue = getConfigValue('washing') || 75
 
   // Só mostra salário se houver atividade registrada no mês
-  const hasActivity = attendances.length > 0 || laundryWeeks.some(w => w.ironed || w.washed)
+  const presentDays = attendances.filter(a => a.present)
+  const hasActivity = presentDays.length > 0 || laundryWeeks.some(w => w.ironed || w.washed)
   const monthlySalary = (hasActivity && payment?.paid_at) ? (payment?.monthly_value || 0) : 0
   const monthlySalaryDisplay = hasActivity ? (payment?.monthly_value || 0) : 0
 
