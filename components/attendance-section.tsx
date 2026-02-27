@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAttendance } from '@/hooks/use-attendance'
 import { Clock, CheckCircle2, XCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import type { WorkScheduleDay } from '@/types/database'
+import type { WorkScheduleDay, Client } from '@/types/database'
 
 const DAY_TO_DOW: Record<string, number> = {
   sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
@@ -21,9 +21,10 @@ interface AttendanceSectionProps {
   readOnly?: boolean
   diaristaId?: string | null
   workSchedule?: WorkScheduleDay[]
+  clients?: Client[]
 }
 
-export function AttendanceSection({ month, year, isAdmin, readOnly = false, diaristaId, workSchedule }: AttendanceSectionProps) {
+export function AttendanceSection({ month, year, isAdmin, readOnly = false, diaristaId, workSchedule, clients = [] }: AttendanceSectionProps) {
   const { attendance, loading, markAttendance, deleteAttendance } = useAttendance(month, year, diaristaId)
   const [toggling, setToggling] = useState<string | null>(null)
 
@@ -33,21 +34,21 @@ export function AttendanceSection({ month, year, isAdmin, readOnly = false, diar
       ? workSchedule
       : [{ day: 'monday' as const, type: 'heavy_cleaning' as const }, { day: 'thursday' as const, type: 'light_cleaning' as const }]
 
-    const scheduleMap = new Map<number, 'heavy_cleaning' | 'light_cleaning'>()
+    const scheduleMap = new Map<number, { type: 'heavy_cleaning' | 'light_cleaning'; client_id?: string | null }>()
     for (const s of schedule) {
       const dow = DAY_TO_DOW[s.day]
-      if (dow !== undefined) scheduleMap.set(dow, s.type)
+      if (dow !== undefined) scheduleMap.set(dow, { type: s.type, client_id: s.client_id })
     }
 
     const daysInMonth = getDaysInMonth(new Date(year, month - 1))
-    const days: { date: string; dayOfWeek: number; dayType: 'heavy_cleaning' | 'light_cleaning' }[] = []
+    const days: { date: string; dayOfWeek: number; dayType: 'heavy_cleaning' | 'light_cleaning'; clientId?: string | null }[] = []
 
     for (let d = 1; d <= daysInMonth; d++) {
       const dateObj = new Date(year, month - 1, d)
       const dow = getDay(dateObj)
-      const type = scheduleMap.get(dow)
-      if (type) {
-        days.push({ date: format(dateObj, 'yyyy-MM-dd'), dayOfWeek: dow, dayType: type })
+      const entry = scheduleMap.get(dow)
+      if (entry) {
+        days.push({ date: format(dateObj, 'yyyy-MM-dd'), dayOfWeek: dow, dayType: entry.type, clientId: entry.client_id })
       }
     }
     return days
@@ -131,12 +132,13 @@ export function AttendanceSection({ month, year, isAdmin, readOnly = false, diar
 
             {/* Grade de dias */}
             <div className="grid grid-cols-2 gap-2">
-              {validDays.map(({ date, dayType }) => {
+              {validDays.map(({ date, dayType, clientId }) => {
                 const record = attendanceMap[date]
                 const present = !!record && record.present
                 const isToggling = toggling === date
                 const isHeavy = dayType === 'heavy_cleaning'
                 const dateObj = new Date(date + 'T00:00:00')
+                const clientName = clientId ? clients.find(c => c.id === clientId)?.name : null
 
                 const baseClasses = `
                   relative flex items-center gap-3 px-3 py-3 rounded-xl border-2 transition-all
@@ -169,6 +171,11 @@ export function AttendanceSection({ month, year, isAdmin, readOnly = false, diar
                       <p className={`text-[9px] font-semibold mt-0.5 uppercase tracking-wide ${present ? 'opacity-80' : 'opacity-40'}`}>
                         {isHeavy ? 'Pesada' : 'Leve'}
                       </p>
+                      {clientName && (
+                        <p className={`text-[9px] mt-0.5 truncate max-w-[80px] ${present ? 'opacity-70' : 'opacity-30'}`}>
+                          {clientName}
+                        </p>
+                      )}
                     </div>
                   </>
                 )

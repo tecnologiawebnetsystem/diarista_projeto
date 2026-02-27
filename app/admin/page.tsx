@@ -490,14 +490,14 @@ export default function AdminPage() {
               Gerar Relatorio Mensal
             </Button>
             <MonthlyPaymentSection month={selectedMonth} year={selectedYear} isAdmin={true} hasActivity={hasActivity} diaristaId={selectedDiaristaId} diaristaName={selectedDiarista?.name} />
-            <AttendanceSection month={selectedMonth} year={selectedYear} readOnly diaristaId={selectedDiaristaId} workSchedule={selectedDiarista?.work_schedule} />
+            <AttendanceSection month={selectedMonth} year={selectedYear} readOnly diaristaId={selectedDiaristaId} workSchedule={selectedDiarista?.work_schedule} clients={activeClients} />
             <LaundrySection month={selectedMonth} year={selectedYear} isAdmin diaristaId={selectedDiaristaId} diaristaIroningValue={selectedDiarista?.ironing_value} diaristaWashingValue={selectedDiarista?.washing_value} diaristaTransportValue={selectedDiarista?.transport_value} />
           </>
         )}
 
         {/* PRESENÇA */}
         {activeTab === 'presenca' && (
-          <AttendanceSection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} workSchedule={selectedDiarista?.work_schedule} />
+          <AttendanceSection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} workSchedule={selectedDiarista?.work_schedule} clients={activeClients} />
         )}
 
         {/* LAVANDERIA */}

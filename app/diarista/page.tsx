@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { LayoutDashboard, CalendarCheck, WashingMachine, FileText, ScrollText, Trophy, AlertTriangle, LogOut, CheckCircle2, XCircle, Briefcase, TrendingUp, CalendarDays, Receipt, FileDown, Bus, Bell, X, User, Camera, Phone, Save, Check } from 'lucide-react'
+import { LayoutDashboard, CalendarCheck, WashingMachine, FileText, ScrollText, Trophy, AlertTriangle, LogOut, CheckCircle2, XCircle, Briefcase, TrendingUp, CalendarDays, Receipt, FileDown, Bus, Bell, X, User, Camera, Phone, Save, Check, MapPin, Building2 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,6 +19,7 @@ import { useLaundryWeeks } from '@/hooks/use-laundry-weeks'
 import { useNotes } from '@/hooks/use-notes'
 import { useAwards } from '@/hooks/use-awards'
 import { useDiaristas } from '@/hooks/use-diaristas'
+import { useClients } from '@/hooks/use-clients'
 import { ContractViewer } from '@/components/contract-viewer'
 import { NotificationBanner } from '@/components/notification-banner'
 import { useDbNotifications } from '@/hooks/use-db-notifications'
@@ -40,7 +41,9 @@ export default function DiaristaPage() {
 
   const { diaristaId } = useAuth()
   const { diaristas: allDiaristas, updateDiarista, refetch: refetchDiaristas } = useDiaristas()
+  const { activeClients } = useClients()
   const currentDiarista = allDiaristas.find(d => d.id === diaristaId)
+  const getClientName = (clientId?: string | null) => clientId ? activeClients.find(c => c.id === clientId)?.name : null
 
   // Perfil states
   const [profileName, setProfileName] = useState('')
@@ -322,6 +325,47 @@ export default function DiaristaPage() {
         {activeTab === 'resumo' && (
           <div className="space-y-3">
             <NotificationBanner />
+
+            {/* Card: Onde trabalho hoje */}
+            {(() => {
+              const DOW_MAP: Record<number, string> = { 0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday', 4: 'thursday', 5: 'friday', 6: 'saturday' }
+              const todayDow = DOW_MAP[new Date().getDay()]
+              const todaySchedule = currentDiarista?.work_schedule?.find(s => s.day === todayDow)
+              if (!todaySchedule) return null
+              const clientName = getClientName(todaySchedule.client_id)
+              const client = todaySchedule.client_id ? activeClients.find(c => c.id === todaySchedule.client_id) : null
+              return (
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardContent className="py-4 px-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                        <MapPin className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-primary font-semibold uppercase tracking-wide">Hoje</p>
+                        <p className="text-sm font-bold text-foreground mt-0.5">
+                          {todaySchedule.type === 'heavy_cleaning' ? 'Limpeza Pesada' : 'Limpeza Leve'}
+                        </p>
+                        {clientName ? (
+                          <div className="mt-1">
+                            <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                              <Building2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                              {clientName}
+                            </p>
+                            {client?.address && (
+                              <p className="text-[11px] text-muted-foreground mt-0.5 ml-5">{client.address}</p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-[11px] text-muted-foreground mt-0.5">Sem cliente vinculado</p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })()}
+
             <Card>
               <CardContent className="py-4 px-4">
                 <div className="flex gap-2">
@@ -415,27 +459,38 @@ export default function DiaristaPage() {
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {attendances.map(a => (
-                    <div key={a.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                      <div className="flex items-center gap-2">
-                        {a.present
-                          ? <CheckCircle2 className="h-4 w-4 text-success" />
-                          : <XCircle className="h-4 w-4 text-destructive" />
-                        }
-                        <div>
-                          <p className="text-sm font-medium">
-                            {format(new Date(a.date + 'T00:00:00'), "dd/MM/yyyy")}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground">
-                            {format(new Date(a.date + 'T00:00:00'), 'EEEE', { locale: ptBR })}
-                          </p>
+                  {attendances.map(a => {
+                    const DOW_MAP2: Record<number, string> = { 0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday', 4: 'thursday', 5: 'friday', 6: 'saturday' }
+                    const dateDow = DOW_MAP2[new Date(a.date + 'T00:00:00').getDay()]
+                    const schedEntry = currentDiarista?.work_schedule?.find(s => s.day === dateDow)
+                    const clientForDay = getClientName(schedEntry?.client_id)
+                    return (
+                      <div key={a.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                        <div className="flex items-center gap-2">
+                          {a.present
+                            ? <CheckCircle2 className="h-4 w-4 text-success" />
+                            : <XCircle className="h-4 w-4 text-destructive" />
+                          }
+                          <div>
+                            <p className="text-sm font-medium">
+                              {format(new Date(a.date + 'T00:00:00'), "dd/MM/yyyy")}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {format(new Date(a.date + 'T00:00:00'), 'EEEE', { locale: ptBR })}
+                            </p>
+                            {clientForDay && (
+                              <p className="text-[10px] text-primary font-medium flex items-center gap-1 mt-0.5">
+                                <Building2 className="h-3 w-3" />{clientForDay}
+                              </p>
+                            )}
+                          </div>
                         </div>
+                        <Badge variant="outline" className={`text-[10px] ${a.day_type === 'heavy_cleaning' ? 'border-destructive text-destructive' : 'border-primary text-primary'}`}>
+                          {a.day_type === 'heavy_cleaning' ? 'Pesada' : 'Leve'}
+                        </Badge>
                       </div>
-                      <Badge variant="outline" className={`text-[10px] ${a.day_type === 'heavy_cleaning' ? 'border-destructive text-destructive' : 'border-primary text-primary'}`}>
-                        {a.day_type === 'heavy_cleaning' ? 'Pesada' : 'Leve'}
-                      </Badge>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </CardContent>
@@ -761,12 +816,20 @@ export default function DiaristaPage() {
                   <div className="space-y-2">
                     {currentDiarista.work_schedule.map((s, i) => {
                       const WDAY: Record<string, string> = { monday: 'Segunda-feira', tuesday: 'Terca-feira', wednesday: 'Quarta-feira', thursday: 'Quinta-feira', friday: 'Sexta-feira', saturday: 'Sabado', sunday: 'Domingo' }
+                      const clientForSchedule = getClientName(s.client_id)
                       return (
-                        <div key={i} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                          <span className="text-sm font-medium">{WDAY[s.day] || s.day}</span>
-                          <Badge variant="outline" className={cn('text-[10px]', s.type === 'heavy_cleaning' ? 'border-destructive text-destructive' : 'border-primary text-primary')}>
-                            {s.type === 'heavy_cleaning' ? 'Limpeza Pesada' : 'Limpeza Leve'}
-                          </Badge>
+                        <div key={i} className="p-3 bg-muted rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">{WDAY[s.day] || s.day}</span>
+                            <Badge variant="outline" className={cn('text-[10px]', s.type === 'heavy_cleaning' ? 'border-destructive text-destructive' : 'border-primary text-primary')}>
+                              {s.type === 'heavy_cleaning' ? 'Limpeza Pesada' : 'Limpeza Leve'}
+                            </Badge>
+                          </div>
+                          {clientForSchedule && (
+                            <p className="text-[11px] text-primary font-medium flex items-center gap-1 mt-1.5">
+                              <Building2 className="h-3 w-3 shrink-0" />{clientForSchedule}
+                            </p>
+                          )}
                         </div>
                       )
                     })}
