@@ -73,13 +73,21 @@ export default function AdminPage() {
   const [values, setValues] = useState<Record<string, string>>({})
 
   const { payment } = useMonthlyPayments(selectedMonth, selectedYear, selectedDiaristaId)
-  const { attendance } = useAttendance(selectedMonth, selectedYear, selectedDiaristaId)
-  const { laundryWeeks } = useLaundryWeeks(selectedMonth, selectedYear, selectedDiaristaId)
+  const { attendance, refetch: refetchAttendance } = useAttendance(selectedMonth, selectedYear, selectedDiaristaId)
+  const { laundryWeeks, refetch: refetchLaundry } = useLaundryWeeks(selectedMonth, selectedYear, selectedDiaristaId)
   const { notes } = useNotes(selectedMonth, selectedYear, selectedDiaristaId)
   const { getConfigValue } = useConfig()
 
   const ironingValue = getConfigValue('ironing') || 50
   const washingValue = getConfigValue('washing') || 75
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab)
+    if (tab === 'resumo') {
+      refetchAttendance()
+      refetchLaundry()
+    }
+  }
 
   useEffect(() => {
     if (isLoading) return
@@ -351,7 +359,7 @@ export default function AdminPage() {
           {NAV_ITEMS.map(({ key, label, Icon }) => (
             <button
               key={key}
-              onClick={() => setActiveTab(key)}
+              onClick={() => handleTabChange(key)}
               className={`flex-1 flex flex-col items-center justify-center gap-0.5 relative transition-colors ${
                 activeTab === key ? 'text-primary' : 'text-muted-foreground'
               }`}

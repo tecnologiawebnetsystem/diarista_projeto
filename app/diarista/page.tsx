@@ -36,8 +36,8 @@ export default function DiaristaPage() {
 
   const { diaristaId } = useAuth()
   const { payment } = useMonthlyPayments(selectedMonth, selectedYear, diaristaId)
-  const { attendance: attendances } = useAttendance(selectedMonth, selectedYear, diaristaId)
-  const { laundryWeeks } = useLaundryWeeks(selectedMonth, selectedYear, diaristaId)
+  const { attendance: attendances, refetch: refetchAttendance } = useAttendance(selectedMonth, selectedYear, diaristaId)
+  const { laundryWeeks, refetch: refetchLaundry } = useLaundryWeeks(selectedMonth, selectedYear, diaristaId)
   const { notes } = useNotes(selectedMonth, selectedYear, diaristaId)
   const { currentPeriod: currentPeriodAward } = useAwards(diaristaId)
   const { getConfigValue } = useConfig()
@@ -60,6 +60,14 @@ export default function DiaristaPage() {
 
   const ironingValue = getConfigValue('ironing') || 50
   const washingValue = getConfigValue('washing') || 75
+
+  const handleTabChange = (tab: typeof activeTab) => {
+    setActiveTab(tab)
+    if (tab === 'resumo') {
+      refetchAttendance()
+      refetchLaundry()
+    }
+  }
 
   // Só mostra valores se houver atividade registrada no mês
   const presentDays = attendances.filter(a => a.present)
@@ -409,7 +417,7 @@ export default function DiaristaPage() {
           ] as { key: typeof activeTab; label: string; Icon: React.ElementType }[]).map(({ key, label, Icon }) => (
             <button
               key={key}
-              onClick={() => setActiveTab(key)}
+              onClick={() => handleTabChange(key)}
               className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
                 activeTab === key
                   ? 'text-primary'
