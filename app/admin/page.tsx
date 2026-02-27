@@ -8,7 +8,8 @@ import {
   ScrollText, Save, Check, DollarSign,
   LayoutDashboard, CalendarCheck, WashingMachine,
   ShieldCheck, FileDown, Bus, Plus, AlertTriangle,
-  CheckCircle, XCircle, Trash2, Edit2, X
+  CheckCircle, XCircle, Trash2, Edit2, X,
+  Users, Phone, Hash, UserPlus, UserX, UserCheck, Eye, EyeOff
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -60,22 +61,29 @@ const CONFIG_ITEMS = [
   { key: 'transport', label: 'Transporte', desc: 'Por semana de lavanderia' },
 ]
 
-type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'notas' | 'contrato' | 'config'
+type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'notas' | 'contrato' | 'equipe' | 'config'
 
 const NAV_ITEMS: { key: Tab; label: string; Icon: React.ElementType }[] = [
   { key: 'resumo',      label: 'Dashboard',   Icon: LayoutDashboard },
-  { key: 'presenca',    label: 'Presença',    Icon: CalendarCheck },
-  { key: 'lavanderia',  label: 'Lavanderia',  Icon: WashingMachine },
-  { key: 'transporte',  label: 'Transporte',  Icon: Bus },
-  { key: 'notas',       label: 'Notas',       Icon: FileText },
-  { key: 'contrato',    label: 'Contrato',    Icon: ScrollText },
-  { key: 'config',      label: 'Config',      Icon: Settings },
+  { key: 'presenca',    label: 'Presenca',     Icon: CalendarCheck },
+  { key: 'lavanderia',  label: 'Lavanderia',   Icon: WashingMachine },
+  { key: 'transporte',  label: 'Transporte',   Icon: Bus },
+  { key: 'notas',       label: 'Notas',        Icon: FileText },
+  { key: 'contrato',    label: 'Contrato',     Icon: ScrollText },
+  { key: 'equipe',      label: 'Equipe',       Icon: Users },
+  { key: 'config',      label: 'Config',       Icon: Settings },
 ]
 
 export default function AdminPage() {
   const router = useRouter()
   const { role, isLoading, logout, selectedDiaristaId, setSelectedDiaristaId } = useAuth()
-  const { activeDiaristas, loading: loadingDiaristas } = useDiaristas()
+  const { diaristas: allDiaristas, activeDiaristas, loading: loadingDiaristas, addDiarista, updateDiarista, deleteDiarista, refetch: refetchDiaristas } = useDiaristas()
+  const [showDiaristaForm, setShowDiaristaForm] = useState(false)
+  const [editingDiarista, setEditingDiarista] = useState<string | null>(null)
+  const [diaristaForm, setDiaristaForm] = useState({ name: '', pin: '', phone: '' })
+  const [showPin, setShowPin] = useState<string | null>(null)
+  const [diaristaError, setDiaristaError] = useState('')
+  const [showInactive, setShowInactive] = useState(false)
   const currentDate = new Date()
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear())
@@ -150,6 +158,52 @@ export default function AdminPage() {
     setShowNoteForm(false)
     setEditingNote(null)
     setNoteFormData({ date: new Date(), note_type: 'general', content: '', is_warning: false })
+  }
+
+  // Diarista CRUD
+  const handleDiaristaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setDiaristaError('')
+    if (diaristaForm.pin.length < 4) {
+      setDiaristaError('O PIN deve ter pelo menos 4 digitos')
+      return
+    }
+    try {
+      if (editingDiarista) {
+        await updateDiarista(editingDiarista, {
+          name: diaristaForm.name,
+          pin: diaristaForm.pin,
+          phone: diaristaForm.phone || undefined,
+        })
+      } else {
+        await addDiarista(diaristaForm.name, diaristaForm.pin, diaristaForm.phone || undefined)
+      }
+      setDiaristaForm({ name: '', pin: '', phone: '' })
+      setShowDiaristaForm(false)
+      setEditingDiarista(null)
+      refetchDiaristas()
+    } catch {
+      setDiaristaError('Erro ao salvar diarista')
+    }
+  }
+
+  const handleEditDiarista = (d: { id: string; name: string; pin: string; phone?: string | null }) => {
+    setEditingDiarista(d.id)
+    setDiaristaForm({ name: d.name, pin: d.pin, phone: d.phone || '' })
+    setShowDiaristaForm(true)
+    setDiaristaError('')
+  }
+
+  const handleToggleDiarista = async (id: string, active: boolean) => {
+    await updateDiarista(id, { active })
+    refetchDiaristas()
+  }
+
+  const handleCancelDiarista = () => {
+    setShowDiaristaForm(false)
+    setEditingDiarista(null)
+    setDiaristaForm({ name: '', pin: '', phone: '' })
+    setDiaristaError('')
   }
   const { getConfigValue } = useConfig()
 
@@ -264,21 +318,33 @@ export default function AdminPage() {
       </div>
 
       {/* Diarista Selector */}
-      {activeDiaristas.length > 1 && (
+      {activeDiaristas.length > 0 && (
         <div className="px-4 pb-3">
-          <Select
-            value={selectedDiaristaId || ''}
-            onValueChange={v => setSelectedDiaristaId(v)}
-          >
-            <SelectTrigger className="h-10 text-sm">
-              <SelectValue placeholder="Selecionar diarista" />
-            </SelectTrigger>
-            <SelectContent>
-              {activeDiaristas.map(d => (
-                <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {activeDiaristas.length === 1 ? (
+            <div className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/50 border border-border">
+              <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center shrink-0 text-white font-bold text-xs">
+                {activeDiaristas[0].name.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold truncate">{activeDiaristas[0].name}</p>
+                <p className="text-[10px] text-muted-foreground">Diarista ativa</p>
+              </div>
+            </div>
+          ) : (
+            <Select
+              value={selectedDiaristaId || ''}
+              onValueChange={v => setSelectedDiaristaId(v)}
+            >
+              <SelectTrigger className="h-10 text-sm">
+                <SelectValue placeholder="Selecionar diarista" />
+              </SelectTrigger>
+              <SelectContent>
+                {activeDiaristas.map(d => (
+                  <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       )}
 
@@ -523,6 +589,198 @@ export default function AdminPage() {
                 <ContractViewer isAdmin={false} />
               </CardContent>
             </Card>
+          </div>
+        )}
+
+        {/* EQUIPE */}
+        {activeTab === 'equipe' && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" />
+                <p className="text-sm font-semibold">{'Gestao de Diaristas'}</p>
+              </div>
+              <Button size="sm" className="h-9 px-3" onClick={() => { setShowDiaristaForm(true); setEditingDiarista(null); setDiaristaForm({ name: '', pin: '', phone: '' }) }}>
+                <UserPlus className="h-4 w-4 mr-1" />
+                <span className="text-xs">Nova</span>
+              </Button>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-2">
+              <Card>
+                <CardContent className="p-3 text-center">
+                  <p className="text-2xl font-bold text-primary">{activeDiaristas.length}</p>
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Ativas</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-3 text-center">
+                  <p className="text-2xl font-bold text-muted-foreground">{allDiaristas.filter(d => !d.active).length}</p>
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Inativas</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Formulario */}
+            {showDiaristaForm && (
+              <Card className="border-primary/40">
+                <CardHeader className="pb-2 pt-4 px-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm">{editingDiarista ? 'Editar' : 'Nova'} Diarista</CardTitle>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCancelDiarista}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  <form onSubmit={handleDiaristaSubmit} className="space-y-3">
+                    <div>
+                      <Label className="text-xs mb-1.5 block">Nome completo</Label>
+                      <Input
+                        value={diaristaForm.name}
+                        onChange={e => setDiaristaForm({ ...diaristaForm, name: e.target.value })}
+                        placeholder="Ex: Maria Silva"
+                        required
+                        className="h-10"
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-xs mb-1.5 block">PIN de acesso (4+ digitos)</Label>
+                      <Input
+                        value={diaristaForm.pin}
+                        onChange={e => setDiaristaForm({ ...diaristaForm, pin: e.target.value.replace(/\D/g, '') })}
+                        placeholder="Ex: 1234"
+                        required
+                        maxLength={8}
+                        inputMode="numeric"
+                        className="h-10 font-mono tracking-widest"
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-xs mb-1.5 block">Telefone (opcional)</Label>
+                      <Input
+                        value={diaristaForm.phone}
+                        onChange={e => setDiaristaForm({ ...diaristaForm, phone: e.target.value })}
+                        placeholder="(11) 99999-9999"
+                        className="h-10"
+                      />
+                    </div>
+
+                    {diaristaError && (
+                      <p className="text-xs text-destructive font-medium">{diaristaError}</p>
+                    )}
+
+                    <div className="flex gap-2">
+                      <Button type="submit" className="flex-1 h-10">
+                        {editingDiarista ? 'Atualizar' : 'Cadastrar'}
+                      </Button>
+                      <Button type="button" variant="outline" onClick={handleCancelDiarista} className="h-10">
+                        Cancelar
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Lista de diaristas ativas */}
+            {activeDiaristas.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground">
+                <Users className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                <p className="text-sm">{'Nenhuma diarista cadastrada'}</p>
+                <p className="text-xs mt-1 opacity-60">Clique em "Nova" para cadastrar</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {activeDiaristas.map(d => (
+                  <Card key={d.id} className={cn(selectedDiaristaId === d.id && 'border-primary/50 bg-primary/5')}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center shrink-0 text-white font-bold text-sm">
+                          {d.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-sm truncate">{d.name}</p>
+                            <Badge variant="outline" className="text-[9px] h-4 px-1.5 border-green-500/50 text-green-500">Ativa</Badge>
+                          </div>
+                          <div className="flex items-center gap-3 mt-1">
+                            {d.phone && (
+                              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                                <Phone className="h-3 w-3" />{d.phone}
+                              </span>
+                            )}
+                            <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                              <Hash className="h-3 w-3" />
+                              PIN: {showPin === d.id ? (
+                                <span className="font-mono">{d.pin}</span>
+                              ) : (
+                                <span>{'****'}</span>
+                              )}
+                              <button onClick={() => setShowPin(showPin === d.id ? null : d.id)} className="ml-0.5">
+                                {showPin === d.id ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                              </button>
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditDiarista(d)}>
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { if (selectedDiaristaId !== d.id) setSelectedDiaristaId(d.id) }}>
+                            <UserCheck className="h-3.5 w-3.5 text-primary" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleToggleDiarista(d.id, false)}>
+                            <UserX className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Diaristas inativas */}
+            {allDiaristas.filter(d => !d.active).length > 0 && (
+              <div className="pt-2">
+                <button
+                  onClick={() => setShowInactive(!showInactive)}
+                  className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <UserX className="h-3.5 w-3.5" />
+                  {showInactive ? 'Ocultar' : 'Mostrar'} inativas ({allDiaristas.filter(d => !d.active).length})
+                </button>
+                {showInactive && (
+                  <div className="space-y-2 mt-2">
+                    {allDiaristas.filter(d => !d.active).map(d => (
+                      <Card key={d.id} className="opacity-60">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0 text-muted-foreground font-bold text-sm">
+                              {d.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold text-sm truncate">{d.name}</p>
+                                <Badge variant="outline" className="text-[9px] h-4 px-1.5 border-destructive/50 text-destructive">Inativa</Badge>
+                              </div>
+                            </div>
+                            <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => handleToggleDiarista(d.id, true)}>
+                              <UserCheck className="h-3.5 w-3.5 mr-1" />
+                              Reativar
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
