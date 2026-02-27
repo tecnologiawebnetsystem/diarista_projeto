@@ -60,10 +60,7 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
   const getWeekTotal = (weekNumber: number) => {
     const week = laundryWeeks.find(w => w.week_number === weekNumber)
     if (!week) return 0
-    const services = (week.ironed ? ironingValue : 0) + (week.washed ? washingValue : 0)
-    // Só cobra transporte se houver algum serviço
-    const transport = (week.ironed || week.washed) ? (week.transport_fee || transportValue) : 0
-    return services + transport
+    return (week.ironed ? ironingValue : 0) + (week.washed ? washingValue : 0)
   }
 
   const isIroned = (weekNumber: number) => {
@@ -77,9 +74,7 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
   }
 
   const totalLaundry = laundryWeeks.reduce((sum, week) => {
-    const services = (week.ironed ? ironingValue : 0) + (week.washed ? washingValue : 0)
-    const transport = (week.ironed || week.washed) ? (week.transport_fee || transportValue) : 0
-    return sum + services + transport
+    return sum + (week.ironed ? ironingValue : 0) + (week.washed ? washingValue : 0)
   }, 0)
 
   if (loading) {
@@ -183,11 +178,7 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
                 </div>
               )}
 
-              {(ironed || washed) && (
-                <div className="px-4 pb-3">
-                  <span className="text-[11px] text-muted-foreground">+ Transporte: R$ {transportValue.toFixed(2)}</span>
-                </div>
-              )}
+
             </div>
           )
         })}

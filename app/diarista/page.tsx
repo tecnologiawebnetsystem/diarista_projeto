@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { LayoutDashboard, CalendarCheck, WashingMachine, FileText, ScrollText, Trophy, AlertTriangle, LogOut, CheckCircle2, XCircle, Briefcase, TrendingUp, CalendarDays, Receipt, FileDown } from 'lucide-react'
+import { LayoutDashboard, CalendarCheck, WashingMachine, FileText, ScrollText, Trophy, AlertTriangle, LogOut, CheckCircle2, XCircle, Briefcase, TrendingUp, CalendarDays, Receipt, FileDown, Bus } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -81,10 +81,12 @@ export default function DiaristaPage() {
 
   const laundryTotal = laundryWeeks.reduce((sum, week) => {
     const services = (week.ironed ? ironingValue : 0) + (week.washed ? washingValue : 0)
-    const transport = (week.ironed || week.washed) ? week.transport_fee : 0
-    return sum + services + transport
+    return sum + services
   }, 0)
   const grandTotal = attendanceTotal + laundryTotal
+  const transportPaidTotal = laundryWeeks
+    .filter(w => (w.ironed || w.washed) && w.paid_at)
+    .reduce((sum, w) => sum + (w.transport_fee || 0), 0)
   const warnings = notes.filter(n => n.is_warning)
   const years = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i)
 
@@ -144,16 +146,31 @@ export default function DiaristaPage() {
       <div className="px-4 pb-3">
         <Card className="gradient-primary text-white shadow-lg">
           <CardContent className="pt-4 pb-4">
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 mb-1">
-                <TrendingUp className="h-3.5 w-3.5 opacity-80" />
-                <p className="text-xs opacity-80">Seus Ganhos no Mês</p>
+            <div className="flex items-center justify-between">
+              <div className="flex-1 text-center">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <TrendingUp className="h-3.5 w-3.5 opacity-80" />
+                  <p className="text-xs opacity-80">Seus Ganhos no Mes</p>
+                </div>
+                <p className="text-3xl font-bold">R$ {grandTotal.toFixed(2)}</p>
               </div>
-              <p className="text-4xl font-bold mb-1">R$ {grandTotal.toFixed(2)}</p>
-              {!hasActivity && (
-                <p className="text-xs opacity-60">Nenhuma atividade registrada neste mês</p>
+              {transportPaidTotal > 0 && (
+                <>
+                  <div className="w-px h-12 bg-white/20 mx-3" />
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <Bus className="h-3.5 w-3.5 opacity-80" />
+                      <p className="text-xs opacity-80">Transporte</p>
+                    </div>
+                    <p className="text-xl font-bold">R$ {transportPaidTotal.toFixed(2)}</p>
+                    <p className="text-[10px] opacity-60">recebido</p>
+                  </div>
+                </>
               )}
             </div>
+            {!hasActivity && (
+              <p className="text-xs opacity-60 text-center mt-1">Nenhuma atividade registrada neste mes</p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -319,18 +336,34 @@ export default function DiaristaPage() {
                 <div className="space-y-2">
                   {laundryWeeks.map(week => {
                     const services = (week.ironed ? ironingValue : 0) + (week.washed ? washingValue : 0)
-                    const transport = (week.ironed || week.washed) ? week.transport_fee : 0
+                    const hasServices = week.ironed || week.washed
+                    const transportPaid = hasServices && !!week.paid_at
                     return (
                       <div key={week.id} className="p-3 bg-muted rounded-lg">
                         <div className="flex items-center justify-between mb-1">
                           <p className="text-sm font-semibold">Semana {week.week_number}</p>
-                          <p className="text-sm font-bold text-primary">R$ {(services + transport).toFixed(2)}</p>
+                          <p className="text-sm font-bold text-primary">R$ {services.toFixed(2)}</p>
                         </div>
                         <div className="text-[11px] text-muted-foreground space-y-0.5">
                           {week.ironed && <p>Passou roupa: R$ {ironingValue.toFixed(2)}</p>}
                           {week.washed && <p>Lavou roupa: R$ {washingValue.toFixed(2)}</p>}
-                          {(week.ironed || week.washed) && <p>Transporte: R$ {transport.toFixed(2)}</p>}
                         </div>
+                        {hasServices && (
+                          <div className="mt-2 pt-2 border-t border-border/50 flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <Bus className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-[11px] text-muted-foreground">
+                                Transporte: R$ {(week.transport_fee || 0).toFixed(2)}
+                              </span>
+                            </div>
+                            <Badge
+                              variant={transportPaid ? 'default' : 'outline'}
+                              className={`text-[10px] ${transportPaid ? 'bg-green-600' : ''}`}
+                            >
+                              {transportPaid ? 'Pago' : 'Pendente'}
+                            </Badge>
+                          </div>
+                        )}
                       </div>
                     )
                   })}

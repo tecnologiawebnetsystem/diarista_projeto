@@ -7,7 +7,7 @@ import {
   Settings, LogOut, TrendingUp, FileText,
   ScrollText, Save, Check, DollarSign,
   LayoutDashboard, CalendarCheck, WashingMachine,
-  ShieldCheck, FileDown
+  ShieldCheck, FileDown, Bus
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -25,6 +25,7 @@ import { MonthlyPaymentSection } from '@/components/monthly-payment-section'
 import { AttendanceSection } from '@/components/attendance-section'
 import { LaundrySection } from '@/components/laundry-section'
 import { ContractViewer } from '@/components/contract-viewer'
+import { TransportSection } from '@/components/transport-section'
 import Link from 'next/link'
 
 const MONTHS = [
@@ -40,15 +41,16 @@ const CONFIG_ITEMS = [
   { key: 'transport', label: 'Transporte', desc: 'Por semana de lavanderia' },
 ]
 
-type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'notas' | 'contrato' | 'config'
+type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'notas' | 'contrato' | 'config'
 
 const NAV_ITEMS: { key: Tab; label: string; Icon: React.ElementType }[] = [
-  { key: 'resumo',     label: 'Dashboard',  Icon: LayoutDashboard },
-  { key: 'presenca',   label: 'Presença',  Icon: CalendarCheck },
-  { key: 'lavanderia', label: 'Lavanderia',Icon: WashingMachine },
-  { key: 'notas',      label: 'Notas',     Icon: FileText },
-  { key: 'contrato',   label: 'Contrato',  Icon: ScrollText },
-  { key: 'config',     label: 'Config',    Icon: Settings },
+  { key: 'resumo',      label: 'Dashboard',   Icon: LayoutDashboard },
+  { key: 'presenca',    label: 'Presença',    Icon: CalendarCheck },
+  { key: 'lavanderia',  label: 'Lavanderia',  Icon: WashingMachine },
+  { key: 'transporte',  label: 'Transporte',  Icon: Bus },
+  { key: 'notas',       label: 'Notas',       Icon: FileText },
+  { key: 'contrato',    label: 'Contrato',    Icon: ScrollText },
+  { key: 'config',      label: 'Config',      Icon: Settings },
 ]
 
 export default function AdminPage() {
@@ -113,10 +115,12 @@ export default function AdminPage() {
 
   const laundryTotal = laundryWeeks.reduce((sum, week) => {
     const services = (week.ironed ? ironingValue : 0) + (week.washed ? washingValue : 0)
-    const transport = (week.ironed || week.washed) ? week.transport_fee : 0
-    return sum + services + transport
+    return sum + services
   }, 0)
   const grandTotal = attendanceTotal + laundryTotal
+  const transportPaidTotal = laundryWeeks
+    .filter(w => (w.ironed || w.washed) && w.paid_at)
+    .reduce((sum, w) => sum + (w.transport_fee || 0), 0)
   const warnings = notes.filter(n => n.is_warning)
   const years = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i)
 
@@ -208,14 +212,31 @@ export default function AdminPage() {
       {/* Total Card */}
       <div className="px-4 pb-3">
         <Card className="gradient-primary text-white shadow-lg">
-          <CardContent className="pt-4 pb-4 text-center">
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <TrendingUp className="h-3.5 w-3.5 opacity-80" />
-              <p className="text-xs opacity-80">Total do Mês</p>
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex-1 text-center">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <TrendingUp className="h-3.5 w-3.5 opacity-80" />
+                  <p className="text-xs opacity-80">Total do Mes</p>
+                </div>
+                <p className="text-3xl font-bold">R$ {grandTotal.toFixed(2)}</p>
+              </div>
+              {transportPaidTotal > 0 && (
+                <>
+                  <div className="w-px h-12 bg-white/20 mx-3" />
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <Bus className="h-3.5 w-3.5 opacity-80" />
+                      <p className="text-xs opacity-80">Transporte</p>
+                    </div>
+                    <p className="text-xl font-bold">R$ {transportPaidTotal.toFixed(2)}</p>
+                    <p className="text-[10px] opacity-60">pago</p>
+                  </div>
+                </>
+              )}
             </div>
-            <p className="text-4xl font-bold mb-1">R$ {grandTotal.toFixed(2)}</p>
             {!hasActivity && (
-              <p className="text-xs opacity-60">Nenhuma atividade registrada neste mês</p>
+              <p className="text-xs opacity-60 text-center mt-1">Nenhuma atividade registrada neste mes</p>
             )}
           </CardContent>
         </Card>
@@ -252,6 +273,11 @@ export default function AdminPage() {
         {/* LAVANDERIA */}
         {activeTab === 'lavanderia' && (
           <LaundrySection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} onDataChange={refetchLaundry} />
+        )}
+
+        {/* TRANSPORTE */}
+        {activeTab === 'transporte' && (
+          <TransportSection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} onDataChange={refetchLaundry} />
         )}
 
         {/* NOTAS */}
