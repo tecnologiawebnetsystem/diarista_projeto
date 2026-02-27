@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { createClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -32,7 +32,6 @@ interface PaymentsSectionProps {
 }
 
 export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: PaymentsSectionProps) {
-  const supabase = createClient()
   const [payments, setPayments] = useState<Payment[]>([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'paid'>('all')
@@ -40,12 +39,17 @@ export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: 
 
   const fetchPayments = useCallback(async () => {
     setLoading(true)
-    let query = supabase.from('payment_history').select('*').eq('month', month).eq('year', year).order('created_at', { ascending: false })
-    if (selectedDiaristaId) query = query.eq('diarista_id', selectedDiaristaId)
-    const { data } = await query
-    setPayments((data as unknown as Payment[]) || [])
+    try {
+      let query = supabase.from('payment_history').select('*').eq('month', month).eq('year', year).order('created_at', { ascending: false })
+      if (selectedDiaristaId) query = query.eq('diarista_id', selectedDiaristaId)
+      const { data } = await query
+      setPayments((data as unknown as Payment[]) || [])
+    } catch (err) {
+      console.log('[v0] Error fetching payments:', err)
+      setPayments([])
+    }
     setLoading(false)
-  }, [month, year, selectedDiaristaId, supabase])
+  }, [month, year, selectedDiaristaId])
 
   useEffect(() => { fetchPayments() }, [fetchPayments])
 

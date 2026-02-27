@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { createClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,7 +18,6 @@ interface ConfigRow {
 }
 
 export function SettingsSection() {
-  const supabase = createClient()
   const [configs, setConfigs] = useState<ConfigRow[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -36,19 +35,23 @@ export function SettingsSection() {
 
   const fetchConfigs = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase.from('config').select('*').order('key')
-    const rows = (data as unknown as ConfigRow[]) || []
-    setConfigs(rows)
-    const vals: Record<string, string> = {}
-    for (const r of rows) vals[r.key] = String(r.value)
+    try {
+      const { data } = await supabase.from('config').select('*').order('key')
+      const rows = (data as unknown as ConfigRow[]) || []
+      setConfigs(rows)
+      const vals: Record<string, string> = {}
+      for (const r of rows) vals[r.key] = String(r.value)
 
-    // Find admin pin config
-    const pinConfig = rows.find(r => r.key === 'admin_pin')
-    if (pinConfig) setAdminPin(String(pinConfig.value))
+      // Find admin pin config
+      const pinConfig = rows.find(r => r.key === 'admin_pin')
+      if (pinConfig) setAdminPin(String(pinConfig.value))
 
-    setEditValues(vals)
+      setEditValues(vals)
+    } catch (err) {
+      console.log('[v0] Error fetching configs:', err)
+    }
     setLoading(false)
-  }, [supabase])
+  }, [])
 
   useEffect(() => { fetchConfigs() }, [fetchConfigs])
 
