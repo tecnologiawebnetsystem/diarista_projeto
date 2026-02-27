@@ -863,7 +863,7 @@ export default function AdminPage() {
               <div className="text-center py-10 text-muted-foreground">
                 <Users className="h-12 w-12 mx-auto mb-3 opacity-20" />
                 <p className="text-sm">{'Nenhuma diarista cadastrada'}</p>
-                <p className="text-xs mt-1 opacity-60">Clique em "Nova" para cadastrar</p>
+                <p className="text-xs mt-1 opacity-60">{'Clique em "Nova" para cadastrar'}</p>
               </div>
             ) : (
               <div className="space-y-2">

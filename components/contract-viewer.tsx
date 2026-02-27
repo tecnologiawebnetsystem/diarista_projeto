@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { ScrollText, X, Shield, Clock, DollarSign, AlertTriangle, Smartphone, Shirt, ChevronRight, Users, CheckCircle2, Lock } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -130,11 +130,7 @@ export function ContractViewer({ isAdmin = false, diaristaId, diaristaName }: Co
   const [loading, setLoading] = useState(true)
   const [scrolledToEnd, setScrolledToEnd] = useState(false)
 
-  useEffect(() => {
-    checkAgreement()
-  }, [diaristaId])
-
-  async function checkAgreement() {
+  const checkAgreement = useCallback(async () => {
     try {
       setAgreed(false)
       setAgreedAt(null)
@@ -161,7 +157,11 @@ export function ContractViewer({ isAdmin = false, diaristaId, diaristaName }: Co
     } finally {
       setLoading(false)
     }
-  }
+  }, [diaristaId])
+
+  useEffect(() => {
+    checkAgreement()
+  }, [checkAgreement])
 
   async function handleAgree() {
     try {
