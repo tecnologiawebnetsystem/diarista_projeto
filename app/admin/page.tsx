@@ -426,21 +426,6 @@ export default function AdminPage() {
                       className="text-sm resize-none"
                     />
 
-                    <div className="flex items-start gap-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-                      <Checkbox
-                        id="is_warning_admin"
-                        checked={noteFormData.is_warning}
-                        onCheckedChange={(v) => setNoteFormData({ ...noteFormData, is_warning: v as boolean })}
-                        className="mt-0.5"
-                      />
-                      <Label htmlFor="is_warning_admin" className="text-sm cursor-pointer">
-                        <span className="font-semibold flex items-center gap-1.5">
-                          <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                          {'Advertência Formal'}
-                        </span>
-                      </Label>
-                    </div>
-
                     <div className="flex gap-2">
                       <Button type="submit" className="flex-1 h-10">
                         {editingNote ? 'Atualizar' : 'Salvar'}
