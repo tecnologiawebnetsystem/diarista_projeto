@@ -21,10 +21,10 @@ const clauses = [
     title: 'Cláusula 2 - Cronograma, Valores e Agenda',
     items: [
       'DIÁRIAS: Segunda-feira R$ 250,00 (Limpeza Pesada) e Quinta-feira R$ 150,00 (Manutenção).',
-      'Alteração pela CONTRATADA: aviso mínimo de 07 dias. Sem disponibilidade do CONTRATANTE, diária é cancelada e valor indevido.',
-      'Alteração pelo CONTRATANTE na Segunda: se sem disponibilidade da CONTRATADA, R$ 250,00 é devido integralmente.',
-      'Alteração pelo CONTRATANTE na Quinta: sem disponibilidade da CONTRATADA, valor não é devido.',
-      'Cancelamento definitivo na Segunda: pago integralmente. Na Quinta: valor indevido.',
+      'FERIADOS: Caso a segunda-feira seja feriado, o valor de R$ 250,00 será pago integralmente.',
+      'FERIADOS: Caso a quinta-feira seja feriado, o valor de R$ 150,00 será pago integralmente.',
+      'Alteração pela CONTRATADA: aviso mínimo de 02 dias de antecedência. Na Segunda: se sem disponibilidade da CONTRATADA, R$ 250,00 é devido integralmente. Na Quinta: sem disponibilidade da CONTRATADA, valor não é devido.',
+      'Alteração pelo CONTRATANTE: aviso mínimo de 02 dias de antecedência. Na Segunda: se sem disponibilidade da CONTRATADA, R$ 250,00 é devido integralmente. Na Quinta: sem disponibilidade da CONTRATADA, valor não é devido.',
     ],
   },
   {
