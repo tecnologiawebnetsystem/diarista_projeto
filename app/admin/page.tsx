@@ -33,7 +33,6 @@ const MONTHS = [
 ]
 
 const CONFIG_ITEMS = [
-  { key: 'monthly_salary', label: 'Salário Mensal', desc: 'Valor fixo mensal' },
   { key: 'heavy_cleaning', label: 'Limpeza Pesada', desc: 'Segunda-feira' },
   { key: 'light_cleaning', label: 'Limpeza Leve', desc: 'Quinta-feira' },
   { key: 'washing', label: 'Lavagem de Roupa', desc: 'Por semana' },
