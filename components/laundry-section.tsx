@@ -94,7 +94,8 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId }: Lau
     (new Date(year, month, 0).getDate() + new Date(year, month - 1, 1).getDay()) / 7
   )
   const allWeeks = Array.from({ length: totalWeeksInMonth }, (_, i) => i + 1)
-  const unregisteredWeeks = allWeeks.filter(w => !laundryWeeks.find(lw => lw.week_number === w))
+  // Semanas sem nenhum serviço ativo (ironed ou washed) devem aparecer como "não registradas"
+  const unregisteredWeeks = allWeeks.filter(w => !weeksWithServices.find(lw => lw.week_number === w))
 
   return (
     <Card>
