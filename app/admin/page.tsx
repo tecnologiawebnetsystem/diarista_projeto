@@ -28,6 +28,7 @@ import { useConfig } from '@/hooks/use-config'
 import { useNotes } from '@/hooks/use-notes'
 import { useAwards } from '@/hooks/use-awards'
 import { useDiaristas } from '@/hooks/use-diaristas'
+import { useDbNotifications } from '@/hooks/use-db-notifications'
 import { MonthlyPaymentSection } from '@/components/monthly-payment-section'
 import { AttendanceSection } from '@/components/attendance-section'
 import { LaundrySection } from '@/components/laundry-section'
@@ -96,6 +97,7 @@ export default function AdminPage() {
   const { attendance, refetch: refetchAttendance } = useAttendance(selectedMonth, selectedYear, selectedDiaristaId)
   const { laundryWeeks, refetch: refetchLaundry } = useLaundryWeeks(selectedMonth, selectedYear, selectedDiaristaId)
   const { notes, addNote, updateNote, deleteNote } = useNotes(selectedMonth, selectedYear, selectedDiaristaId)
+  const { sendNotification } = useDbNotifications()
   const [showNoteForm, setShowNoteForm] = useState(false)
   const [editingNote, setEditingNote] = useState<Note | null>(null)
   const [noteFormData, setNoteFormData] = useState({
@@ -112,10 +114,18 @@ export default function AdminPage() {
     e.preventDefault()
     try {
       const dateStr = format(noteFormData.date, 'yyyy-MM-dd')
+      const typeInfo = getNoteTypeInfo(noteFormData.note_type)
       if (editingNote) {
         await updateNote(editingNote.id, noteFormData.content, noteFormData.is_warning)
       } else {
         await addNote(dateStr, noteFormData.note_type, noteFormData.content, noteFormData.is_warning)
+      }
+      // Enviar notificacao para a diarista
+      if (selectedDiaristaId) {
+        const title = editingNote ? 'Anotacao Atualizada' : 'Nova Anotacao'
+        const message = `${typeInfo.label}: ${noteFormData.content.substring(0, 100)}${noteFormData.content.length > 100 ? '...' : ''}`
+        const type = noteFormData.is_warning ? 'warning' as const : 'note' as const
+        await sendNotification(selectedDiaristaId, title, message, type)
       }
       setNoteFormData({ date: new Date(), note_type: 'general', content: '', is_warning: false })
       setShowNoteForm(false)
