@@ -217,7 +217,7 @@ export default function DiaristaPage() {
                   </div>
                   <div className="flex-1 bg-muted rounded-lg p-3 text-center">
                     <p className="text-2xl font-bold text-destructive">{warnings.length}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">Advert.</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{'Anotações'}</p>
                   </div>
                 </div>
               </CardContent>
