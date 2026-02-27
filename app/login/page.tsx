@@ -277,83 +277,70 @@ export default function LoginPage() {
 
   /* ── Tela inicial ── */
   return (
-    <div className="min-h-dvh bg-background flex flex-col items-center justify-center select-none px-5">
-      {/* Widget principal */}
-      <div className="w-full max-w-sm">
-        {/* Header com logo */}
-        <div className="flex flex-col items-center gap-4 mb-8">
-          <div className="relative">
-            <div className="absolute -inset-3 rounded-[28px] bg-primary/10 blur-xl" />
-            <Image
-              src="/logo.jpg"
-              alt="LIMPP DAY"
-              width={80}
-              height={80}
-              priority
-              className="relative rounded-[20px] shadow-2xl ring-2 ring-primary/30"
-            />
-          </div>
-          <div className="flex flex-col items-center gap-1 text-center">
-            <h1 className="text-2xl font-extrabold tracking-tight text-primary">LIMPP DAY</h1>
-            <p className="text-[11px] text-muted-foreground tracking-[0.2em] uppercase font-medium">{'Gestao de Servicos'}</p>
-          </div>
+    <div className="min-h-dvh flex flex-col items-center justify-center select-none px-5 relative overflow-hidden">
+      {/* Background accent */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/[0.04] rounded-full blur-3xl pointer-events-none" />
+
+      <div className="w-full max-w-[340px] relative z-10">
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-10">
+          <Image
+            src="/logo.jpg"
+            alt="LIMPP DAY"
+            width={72}
+            height={72}
+            priority
+            className="rounded-2xl shadow-lg shadow-black/40"
+          />
+          <h1 className="text-[22px] font-extrabold tracking-tight text-foreground mt-5">LIMPP DAY</h1>
+          <p className="text-[10px] text-muted-foreground tracking-[0.25em] uppercase font-semibold mt-1">{'Gestao de Servicos'}</p>
         </div>
 
-        {/* Card container */}
-        <div className="rounded-3xl border border-border bg-card p-2 shadow-xl shadow-black/10">
-          {/* Label */}
-          <div className="px-4 pt-3 pb-2">
-            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Acessar como</p>
-          </div>
-
+        {/* Widget card */}
+        <div className="rounded-2xl bg-card/80 backdrop-blur-sm border border-border overflow-hidden">
           {/* Diarista */}
           <button
             onClick={handleDiaristaClick}
             disabled={loadingDiaristas}
-            className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-muted/50 active:scale-[0.98] transition-all text-left disabled:opacity-50"
+            className="w-full flex items-center gap-4 px-5 py-5 active:bg-muted/60 transition-colors text-left disabled:opacity-50 group"
           >
-            <div className="w-11 h-11 rounded-xl bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/25">
+            <div className="w-12 h-12 rounded-[14px] gradient-primary flex items-center justify-center shrink-0 shadow-md shadow-primary/20 group-active:scale-95 transition-transform">
               <User className="h-5 w-5 text-primary-foreground" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-[15px] text-foreground">Diarista</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+              <p className="font-bold text-[15px] text-foreground leading-tight">Diarista</p>
+              <p className="text-[12px] text-muted-foreground mt-1 leading-snug">
                 {diaristas.length > 1 ? `${diaristas.length} profissionais cadastradas` : 'Consultar ganhos e pagamentos'}
               </p>
             </div>
-            <ChevronRight className="h-5 w-5 text-muted-foreground/50 shrink-0" />
+            <ChevronRight className="h-5 w-5 text-muted-foreground/40 shrink-0 group-active:translate-x-0.5 transition-transform" />
           </button>
 
           {/* Divider */}
-          <div className="mx-4">
-            <div className="h-px bg-border" />
-          </div>
+          <div className="h-px bg-border mx-5" />
 
           {/* Admin */}
           <button
             onClick={() => { setScreen('admin-pin'); setPin(''); setError(false) }}
-            className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-muted/50 active:scale-[0.98] transition-all text-left"
+            className="w-full flex items-center gap-4 px-5 py-5 active:bg-muted/60 transition-colors text-left group"
           >
-            <div className="w-11 h-11 rounded-xl bg-muted flex items-center justify-center shrink-0 border border-border">
-              <ShieldCheck className="h-5 w-5 text-foreground" />
+            <div className="w-12 h-12 rounded-[14px] bg-muted border border-border flex items-center justify-center shrink-0 group-active:scale-95 transition-transform">
+              <ShieldCheck className="h-5 w-5 text-muted-foreground" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-[15px] text-foreground">Administrador</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">Acesso completo ao sistema</p>
+              <p className="font-bold text-[15px] text-foreground leading-tight">Administrador</p>
+              <p className="text-[12px] text-muted-foreground mt-1 leading-snug">Acesso completo ao sistema</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
-              <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+              <Lock className="h-3.5 w-3.5 text-muted-foreground/30" />
+              <ChevronRight className="h-5 w-5 text-muted-foreground/40 group-active:translate-x-0.5 transition-transform" />
             </div>
           </button>
-
-          {/* Bottom padding */}
-          <div className="h-1" />
         </div>
 
         {/* Version */}
-        <p className="text-center text-[10px] text-muted-foreground/50 mt-6 tracking-wide font-medium">
-          {'v2.0 — Acesso restrito'}
+        <p className="text-center text-[10px] text-muted-foreground/40 mt-8 font-medium tracking-wider">
+          {'LIMPP DAY v2.0'}
         </p>
       </div>
     </div>
