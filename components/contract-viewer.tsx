@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { ScrollText, X, Shield, Clock, DollarSign, AlertTriangle, Smartphone, Shirt, ChevronRight, Users, CheckCircle2, Lock } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -20,19 +20,19 @@ const clauses: { icon: React.ElementType; title: string; items: ReactNode[] }[] 
     icon: DollarSign,
     title: 'Cláusula 2 - Cronograma, Valores e Agenda',
     items: [
-      'DIÁRIAS: Segunda-feira R$ 250,00 (Limpeza Pesada) e Quinta-feira R$ 150,00 (Manutenção).',
-      <>{'FERIADOS: Caso a segunda-feira seja feriado, o valor de R$ 250,00 '}<span className="text-green-500 font-semibold">{'será pago integralmente'}</span>{'.'}</>,
-      <>{'FERIADOS: Caso a quinta-feira seja feriado, o valor de R$ 150,00 '}<span className="text-destructive font-semibold">{'NÃO será pago integralmente'}</span>{'.'}</>,
-      <>{'Alteração pela CONTRATADA: aviso mínimo de 02 dias de antecedência. Na Segunda: se sem disponibilidade da CONTRATADA, '}<span className="text-green-500 font-semibold">{'R$ 250,00 é devido integralmente'}</span>{'. Na Quinta: sem disponibilidade da CONTRATADA, '}<span className="text-destructive font-semibold">{'valor não é devido'}</span>{'.'}</>,
-      <>{'Alteração pelo CONTRATANTE: aviso mínimo de 02 dias de antecedência. Na Segunda: se sem disponibilidade da CONTRATADA, '}<span className="text-green-500 font-semibold">{'R$ 250,00 é devido integralmente'}</span>{'. Na Quinta: sem disponibilidade da CONTRATADA, '}<span className="text-destructive font-semibold">{'valor não é devido'}</span>{'.'}</>,
+      'DIARIAS: Limpeza Pesada R$ 250,00 e Limpeza Leve (Manutencao) R$ 150,00, conforme agenda definida no cadastro.',
+      <>{'FERIADOS: Caso o dia de Limpeza Pesada seja feriado, o valor de R$ 250,00 '}<span className="text-green-500 font-semibold">{'sera pago integralmente'}</span>{'.'}</>,
+      <>{'FERIADOS: Caso o dia de Limpeza Leve seja feriado, o valor de R$ 150,00 '}<span className="text-destructive font-semibold">{'NAO sera pago integralmente'}</span>{'.'}</>,
+      <>{'Alteracao pela CONTRATADA: aviso minimo de 02 dias de antecedencia. No dia de Limpeza Pesada: se sem disponibilidade da CONTRATADA, '}<span className="text-green-500 font-semibold">{'R$ 250,00 e devido integralmente'}</span>{'. No dia de Limpeza Leve: sem disponibilidade da CONTRATADA, '}<span className="text-destructive font-semibold">{'valor nao e devido'}</span>{'.'}</>,
+      <>{'Alteracao pelo CONTRATANTE: aviso minimo de 02 dias de antecedencia. No dia de Limpeza Pesada: se sem disponibilidade da CONTRATADA, '}<span className="text-green-500 font-semibold">{'R$ 250,00 e devido integralmente'}</span>{'. No dia de Limpeza Leve: sem disponibilidade da CONTRATADA, '}<span className="text-destructive font-semibold">{'valor nao e devido'}</span>{'.'}</>,
     ],
   },
   {
     icon: Shield,
     title: 'Cláusula 3 - Escopo Técnico',
     items: [
-      'PESADA (SEGUNDA): Banheiros, cozinha (desengorduramento), vidros, esquadrias, trilhos, garagem, quintal e churrasqueira. Inclui movimentação de móveis.',
-      'MANUTENÇÃO (QUINTA): Organização estética, retirada de pó, aspiração e higiene superficial.',
+      'LIMPEZA PESADA: Banheiros, cozinha (desengorduramento), vidros, esquadrias, trilhos, garagem, quintal e churrasqueira. Inclui movimentacao de moveis.',
+      'LIMPEZA LEVE (MANUTENCAO): Organizacao estetica, retirada de po, aspiracao e higiene superficial.',
       'ANIMAIS DOMÉSTICOS: Lavagem dos pisos inclusa. Excluídos: alimentação, troca de água, caixas de areia e tapetes higiênicos.',
     ],
   },
@@ -118,9 +118,11 @@ const clauses: { icon: React.ElementType; title: string; items: ReactNode[] }[] 
 
 interface ContractViewerProps {
   isAdmin?: boolean
+  diaristaId?: string | null
+  diaristaName?: string
 }
 
-export function ContractViewer({ isAdmin = false }: ContractViewerProps) {
+export function ContractViewer({ isAdmin = false, diaristaId, diaristaName }: ContractViewerProps) {
   const [open, setOpen] = useState(false)
   const [agreed, setAgreed] = useState(false)
   const [agreedAt, setAgreedAt] = useState<string | null>(null)
@@ -128,39 +130,49 @@ export function ContractViewer({ isAdmin = false }: ContractViewerProps) {
   const [loading, setLoading] = useState(true)
   const [scrolledToEnd, setScrolledToEnd] = useState(false)
 
-  useEffect(() => {
-    checkAgreement()
-  }, [])
-
-  async function checkAgreement() {
+  const checkAgreement = useCallback(async () => {
     try {
-      // Cast para evitar erro de tipo 'never' quando a tabela nao esta nos tipos gerados
-      const result = await supabase
+      setAgreed(false)
+      setAgreedAt(null)
+      setLoading(true)
+
+      let query = supabase
         .from('contract_agreements')
         .select('agreed_at')
         .order('agreed_at', { ascending: false })
         .limit(1)
-        .maybeSingle()
 
+      if (diaristaId) {
+        query = query.eq('diarista_id', diaristaId)
+      }
+
+      const result = await query.maybeSingle()
       const row = (result as unknown as { data: { agreed_at: string } | null }).data
       if (row) {
         setAgreed(true)
         setAgreedAt(row.agreed_at)
       }
     } catch (e) {
-      console.error('Erro ao verificar concordância:', e)
+      console.error('Erro ao verificar concordancia:', e)
     } finally {
       setLoading(false)
     }
-  }
+  }, [diaristaId])
+
+  useEffect(() => {
+    checkAgreement()
+  }, [checkAgreement])
 
   async function handleAgree() {
     try {
       setConfirming(true)
+      const insertData: Record<string, unknown> = { agreed_at: new Date().toISOString() }
+      if (diaristaId) insertData.diarista_id = diaristaId
+
       const client = supabase as unknown as { from: (t: string) => { insert: (d: Record<string, unknown>[]) => Promise<{ error: unknown | null }> } }
       const insertResult = await client
         .from('contract_agreements')
-        .insert([{ agreed_at: new Date().toISOString() }])
+        .insert([insertData])
 
       if (insertResult.error) throw insertResult.error
 
@@ -168,7 +180,7 @@ export function ContractViewer({ isAdmin = false }: ContractViewerProps) {
       setAgreedAt(new Date().toISOString())
       setOpen(false)
     } catch (e) {
-      console.error('Erro ao registrar concordância:', e)
+      console.error('Erro ao registrar concordancia:', e)
     } finally {
       setConfirming(false)
     }
@@ -199,11 +211,12 @@ export function ContractViewer({ isAdmin = false }: ContractViewerProps) {
         <div className="flex-1">
           <p className="text-sm font-bold">
             {agreed ? 'Contrato Aceito' : 'Contrato Pendente'}
+            {diaristaName && <span className="font-normal text-muted-foreground">{` - ${diaristaName}`}</span>}
           </p>
           <p className="text-xs text-muted-foreground">
             {agreed && agreedAt
               ? `Concordou em ${new Date(agreedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`
-              :       'A diarista ainda não concordou com o contrato'}
+              : `${diaristaName || 'A diarista'} ainda nao concordou com o contrato`}
           </p>
         </div>
         {agreed && <Lock className="h-4 w-4 text-green-500 shrink-0" />}

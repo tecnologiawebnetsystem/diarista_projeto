@@ -1,3 +1,8 @@
+export interface WorkScheduleDay {
+  day: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday'
+  type: 'heavy_cleaning' | 'light_cleaning'
+}
+
 export interface Diarista {
   id: string
   name: string
@@ -5,6 +10,12 @@ export interface Diarista {
   phone?: string | null
   active: boolean
   photo_url?: string | null
+  heavy_cleaning_value: number
+  light_cleaning_value: number
+  washing_value: number
+  ironing_value: number
+  transport_value: number
+  work_schedule: WorkScheduleDay[]
   created_at: string
   updated_at: string
 }

@@ -28,11 +28,18 @@ export function useDiaristas() {
     fetchDiaristas()
   }, [fetchDiaristas])
 
-  async function addDiarista(name: string, pin: string, phone?: string) {
+  async function addDiarista(name: string, pin: string, phone?: string, extras?: Record<string, unknown>) {
     try {
+      const insertData = {
+        name,
+        pin,
+        phone: phone || null,
+        active: true,
+        ...extras,
+      }
       const { data, error } = await supabase
         .from('diaristas')
-        .insert([{ name, pin, phone: phone || null, active: true }])
+        .insert([insertData])
         .select()
         .single()
 
@@ -46,7 +53,7 @@ export function useDiaristas() {
     }
   }
 
-  async function updateDiarista(id: string, updates: { name?: string; pin?: string; phone?: string; active?: boolean }) {
+  async function updateDiarista(id: string, updates: Record<string, unknown>) {
     try {
       const { data, error } = await supabase
         .from('diaristas')

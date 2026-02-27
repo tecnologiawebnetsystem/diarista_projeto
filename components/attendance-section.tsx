@@ -7,6 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAttendance } from '@/hooks/use-attendance'
 import { Clock, CheckCircle2, XCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import type { WorkScheduleDay } from '@/types/database'
+
+const DAY_TO_DOW: Record<string, number> = {
+  sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+  thursday: 4, friday: 5, saturday: 6,
+}
 
 interface AttendanceSectionProps {
   month: number
@@ -14,28 +20,38 @@ interface AttendanceSectionProps {
   isAdmin?: boolean
   readOnly?: boolean
   diaristaId?: string | null
+  workSchedule?: WorkScheduleDay[]
 }
 
-export function AttendanceSection({ month, year, isAdmin, readOnly = false, diaristaId }: AttendanceSectionProps) {
+export function AttendanceSection({ month, year, isAdmin, readOnly = false, diaristaId, workSchedule }: AttendanceSectionProps) {
   const { attendance, loading, markAttendance, deleteAttendance } = useAttendance(month, year, diaristaId)
   const [toggling, setToggling] = useState<string | null>(null)
 
-  // Gera todos os dias do mês que são segunda (1) ou quinta (4)
+  // Gera todos os dias do mes com base na agenda da diarista
   const validDays = useMemo(() => {
+    const schedule = workSchedule && workSchedule.length > 0
+      ? workSchedule
+      : [{ day: 'monday' as const, type: 'heavy_cleaning' as const }, { day: 'thursday' as const, type: 'light_cleaning' as const }]
+
+    const scheduleMap = new Map<number, 'heavy_cleaning' | 'light_cleaning'>()
+    for (const s of schedule) {
+      const dow = DAY_TO_DOW[s.day]
+      if (dow !== undefined) scheduleMap.set(dow, s.type)
+    }
+
     const daysInMonth = getDaysInMonth(new Date(year, month - 1))
     const days: { date: string; dayOfWeek: number; dayType: 'heavy_cleaning' | 'light_cleaning' }[] = []
 
     for (let d = 1; d <= daysInMonth; d++) {
       const dateObj = new Date(year, month - 1, d)
-      const dow = getDay(dateObj) // 0=Dom, 1=Seg, 4=Qui
-      if (dow === 1) {
-        days.push({ date: format(dateObj, 'yyyy-MM-dd'), dayOfWeek: 1, dayType: 'heavy_cleaning' })
-      } else if (dow === 4) {
-        days.push({ date: format(dateObj, 'yyyy-MM-dd'), dayOfWeek: 4, dayType: 'light_cleaning' })
+      const dow = getDay(dateObj)
+      const type = scheduleMap.get(dow)
+      if (type) {
+        days.push({ date: format(dateObj, 'yyyy-MM-dd'), dayOfWeek: dow, dayType: type })
       }
     }
     return days
-  }, [month, year])
+  }, [month, year, workSchedule])
 
   const attendanceMap = useMemo(() => {
     const map: Record<string, typeof attendance[0]> = {}
@@ -102,14 +118,14 @@ export function AttendanceSection({ month, year, isAdmin, readOnly = false, diar
         ) : (
           <div className="space-y-2">
             {/* Legenda */}
-            <div className="flex gap-3 mb-3">
+            <div className="flex flex-wrap gap-3 mb-3">
               <div className="flex items-center gap-1.5">
                 <div className="w-3 h-3 rounded-full bg-destructive/80" />
-                <span className="text-[11px] text-muted-foreground">Segunda — Pesada</span>
+                <span className="text-[11px] text-muted-foreground">Pesada</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-3 h-3 rounded-full bg-primary/80" />
-                <span className="text-[11px] text-muted-foreground">Quinta — Leve</span>
+                <span className="text-[11px] text-muted-foreground">Leve</span>
               </div>
             </div>
 

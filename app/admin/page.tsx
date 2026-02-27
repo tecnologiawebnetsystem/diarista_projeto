@@ -4,17 +4,16 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import {
-  Settings, LogOut, TrendingUp, FileText,
-  ScrollText, Save, Check, DollarSign,
-  LayoutDashboard, CalendarCheck, WashingMachine,
+  LogOut, TrendingUp, FileText,
+  ScrollText, LayoutDashboard, CalendarCheck, WashingMachine,
   ShieldCheck, FileDown, Bus, Plus, AlertTriangle,
-  CheckCircle, XCircle, Trash2, Edit2, X
+  CheckCircle, XCircle, Trash2, Edit2, X,
+  Users, Phone, Hash, UserPlus, UserX, UserCheck, Eye, EyeOff
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Calendar } from '@/components/ui/calendar'
@@ -24,7 +23,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { useMonthlyPayments } from '@/hooks/use-monthly-payments'
 import { useAttendance } from '@/hooks/use-attendance'
 import { useLaundryWeeks } from '@/hooks/use-laundry-weeks'
-import { useConfig } from '@/hooks/use-config'
+
 import { useNotes } from '@/hooks/use-notes'
 import { useAwards } from '@/hooks/use-awards'
 import { useDiaristas } from '@/hooks/use-diaristas'
@@ -37,7 +36,7 @@ import { TransportSection } from '@/components/transport-section'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
-import type { Note } from '@/types/database'
+import type { Note, Diarista, WorkScheduleDay } from '@/types/database'
 import Link from 'next/link'
 
 const NOTE_TYPES = [
@@ -52,30 +51,50 @@ const MONTHS = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ]
 
-const CONFIG_ITEMS = [
-  { key: 'heavy_cleaning', label: 'Limpeza Pesada', desc: 'Segunda-feira' },
-  { key: 'light_cleaning', label: 'Limpeza Leve', desc: 'Quinta-feira' },
-  { key: 'washing', label: 'Lavagem de Roupa', desc: 'Por semana' },
-  { key: 'ironing', label: 'Passar Roupa', desc: 'Por semana' },
-  { key: 'transport', label: 'Transporte', desc: 'Por semana de lavanderia' },
-]
+const WEEKDAYS = [
+  { value: 'monday', label: 'Segunda' },
+  { value: 'tuesday', label: 'Terca' },
+  { value: 'wednesday', label: 'Quarta' },
+  { value: 'thursday', label: 'Quinta' },
+  { value: 'friday', label: 'Sexta' },
+  { value: 'saturday', label: 'Sabado' },
+] as const
 
-type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'notas' | 'contrato' | 'config'
+const CLEANING_TYPES = [
+  { value: 'heavy_cleaning', label: 'Limpeza Pesada' },
+  { value: 'light_cleaning', label: 'Limpeza Leve' },
+] as const
+
+type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'notas' | 'contrato' | 'equipe'
 
 const NAV_ITEMS: { key: Tab; label: string; Icon: React.ElementType }[] = [
   { key: 'resumo',      label: 'Dashboard',   Icon: LayoutDashboard },
-  { key: 'presenca',    label: 'Presença',    Icon: CalendarCheck },
-  { key: 'lavanderia',  label: 'Lavanderia',  Icon: WashingMachine },
-  { key: 'transporte',  label: 'Transporte',  Icon: Bus },
-  { key: 'notas',       label: 'Notas',       Icon: FileText },
-  { key: 'contrato',    label: 'Contrato',    Icon: ScrollText },
-  { key: 'config',      label: 'Config',      Icon: Settings },
+  { key: 'presenca',    label: 'Presenca',     Icon: CalendarCheck },
+  { key: 'lavanderia',  label: 'Lavanderia',   Icon: WashingMachine },
+  { key: 'transporte',  label: 'Transporte',   Icon: Bus },
+  { key: 'notas',       label: 'Notas',        Icon: FileText },
+  { key: 'contrato',    label: 'Contrato',     Icon: ScrollText },
+  { key: 'equipe',      label: 'Equipe',       Icon: Users },
 ]
 
 export default function AdminPage() {
   const router = useRouter()
   const { role, isLoading, logout, selectedDiaristaId, setSelectedDiaristaId } = useAuth()
-  const { activeDiaristas, loading: loadingDiaristas } = useDiaristas()
+  const { diaristas: allDiaristas, activeDiaristas, loading: loadingDiaristas, addDiarista, updateDiarista, deleteDiarista, refetch: refetchDiaristas } = useDiaristas()
+  const [showDiaristaForm, setShowDiaristaForm] = useState(false)
+  const [editingDiarista, setEditingDiarista] = useState<string | null>(null)
+  const [diaristaForm, setDiaristaForm] = useState({
+    name: '', pin: '', phone: '',
+    heavy_cleaning_value: '250', light_cleaning_value: '150',
+    washing_value: '75', ironing_value: '50', transport_value: '30',
+    work_schedule: [
+      { day: 'monday' as const, type: 'heavy_cleaning' as const },
+      { day: 'thursday' as const, type: 'light_cleaning' as const },
+    ] as WorkScheduleDay[],
+  })
+  const [showPin, setShowPin] = useState<string | null>(null)
+  const [diaristaError, setDiaristaError] = useState('')
+  const [showInactive, setShowInactive] = useState(false)
   const currentDate = new Date()
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear())
@@ -88,10 +107,7 @@ export default function AdminPage() {
     }
   }, [activeDiaristas, selectedDiaristaId, setSelectedDiaristaId])
 
-  const { config, loading: configLoading, updateConfig } = useConfig()
-  const [saving, setSaving] = useState<string | null>(null)
-  const [saved, setSaved] = useState<string | null>(null)
-  const [values, setValues] = useState<Record<string, string>>({})
+
 
   const { payment } = useMonthlyPayments(selectedMonth, selectedYear, selectedDiaristaId)
   const { attendance, refetch: refetchAttendance } = useAttendance(selectedMonth, selectedYear, selectedDiaristaId)
@@ -151,10 +167,106 @@ export default function AdminPage() {
     setEditingNote(null)
     setNoteFormData({ date: new Date(), note_type: 'general', content: '', is_warning: false })
   }
-  const { getConfigValue } = useConfig()
 
-  const ironingValue = getConfigValue('ironing') || 50
-  const washingValue = getConfigValue('washing') || 75
+  const defaultDiaristaForm = {
+    name: '', pin: '', phone: '',
+    heavy_cleaning_value: '250', light_cleaning_value: '150',
+    washing_value: '75', ironing_value: '50', transport_value: '30',
+    work_schedule: [
+      { day: 'monday' as const, type: 'heavy_cleaning' as const },
+      { day: 'thursday' as const, type: 'light_cleaning' as const },
+    ] as WorkScheduleDay[],
+  }
+
+  // Diarista CRUD
+  const handleDiaristaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setDiaristaError('')
+    if (diaristaForm.pin.length < 4) {
+      setDiaristaError('O PIN deve ter pelo menos 4 digitos')
+      return
+    }
+    if (diaristaForm.work_schedule.length === 0) {
+      setDiaristaError('Adicione pelo menos um dia de trabalho')
+      return
+    }
+    try {
+      const payload = {
+        name: diaristaForm.name,
+        pin: diaristaForm.pin,
+        phone: diaristaForm.phone || null,
+        heavy_cleaning_value: parseFloat(diaristaForm.heavy_cleaning_value) || 0,
+        light_cleaning_value: parseFloat(diaristaForm.light_cleaning_value) || 0,
+        washing_value: parseFloat(diaristaForm.washing_value) || 0,
+        ironing_value: parseFloat(diaristaForm.ironing_value) || 0,
+        transport_value: parseFloat(diaristaForm.transport_value) || 0,
+        work_schedule: diaristaForm.work_schedule,
+      }
+      if (editingDiarista) {
+        await updateDiarista(editingDiarista, payload)
+      } else {
+        const { name, pin, phone, ...extras } = payload
+        await addDiarista(name, pin, phone || undefined, extras)
+      }
+      setDiaristaForm(defaultDiaristaForm)
+      setShowDiaristaForm(false)
+      setEditingDiarista(null)
+      refetchDiaristas()
+    } catch {
+      setDiaristaError('Erro ao salvar diarista')
+    }
+  }
+
+  const handleEditDiarista = (d: Diarista) => {
+    setEditingDiarista(d.id)
+    setDiaristaForm({
+      name: d.name,
+      pin: d.pin,
+      phone: d.phone || '',
+      heavy_cleaning_value: (d.heavy_cleaning_value ?? 250).toString(),
+      light_cleaning_value: (d.light_cleaning_value ?? 150).toString(),
+      washing_value: (d.washing_value ?? 75).toString(),
+      ironing_value: (d.ironing_value ?? 50).toString(),
+      transport_value: (d.transport_value ?? 30).toString(),
+      work_schedule: d.work_schedule || defaultDiaristaForm.work_schedule,
+    })
+    setShowDiaristaForm(true)
+    setDiaristaError('')
+  }
+
+  const handleToggleDiarista = async (id: string, active: boolean) => {
+    await updateDiarista(id, { active })
+    refetchDiaristas()
+  }
+
+  const handleCancelDiarista = () => {
+    setShowDiaristaForm(false)
+    setEditingDiarista(null)
+    setDiaristaForm(defaultDiaristaForm)
+    setDiaristaError('')
+  }
+
+  const addScheduleDay = () => {
+    const usedDays = diaristaForm.work_schedule.map(s => s.day)
+    const nextDay = WEEKDAYS.find(w => !usedDays.includes(w.value))
+    if (nextDay) {
+      setDiaristaForm({
+        ...diaristaForm,
+        work_schedule: [...diaristaForm.work_schedule, { day: nextDay.value as WorkScheduleDay['day'], type: 'light_cleaning' }],
+      })
+    }
+  }
+
+  const removeScheduleDay = (idx: number) => {
+    setDiaristaForm({
+      ...diaristaForm,
+      work_schedule: diaristaForm.work_schedule.filter((_, i) => i !== idx),
+    })
+  }
+  // Get values from selected diarista
+  const selectedDiarista = allDiaristas.find(d => d.id === selectedDiaristaId)
+  const ironingValue = selectedDiarista?.ironing_value ?? 50
+  const washingValue = selectedDiarista?.washing_value ?? 75
 
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab)
@@ -180,8 +292,8 @@ export default function AdminPage() {
   const presentDays = attendance.filter(a => a.present)
   const hasActivity = presentDays.length > 0 || laundryWeeks.some(w => w.ironed || w.washed)
 
-  const heavyCleaningValue = getConfigValue('heavy_cleaning') || 0
-  const lightCleaningValue = getConfigValue('light_cleaning') || 0
+  const heavyCleaningValue = selectedDiarista?.heavy_cleaning_value ?? 250
+  const lightCleaningValue = selectedDiarista?.light_cleaning_value ?? 150
   const heavyDays = presentDays.filter(a => a.day_type === 'heavy_cleaning')
   const lightDays = presentDays.filter(a => a.day_type === 'light_cleaning')
   const attendanceTotal = (heavyDays.length * heavyCleaningValue) + (lightDays.length * lightCleaningValue)
@@ -197,26 +309,7 @@ export default function AdminPage() {
   const warnings = notes.filter(n => n.is_warning)
   const years = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i)
 
-  const getValue = (key: string) => {
-    if (values[key] !== undefined) return values[key]
-    const v = config.find(c => c.key === key)?.value ?? 0
-    return Number(v).toFixed(2)
-  }
 
-  const handleSave = async (key: string) => {
-    try {
-      setSaving(key)
-      const raw = values[key]
-      const value = raw !== undefined ? parseFloat(raw) : (config.find(c => c.key === key)?.value ?? 0)
-      await updateConfig(key, value)
-      setSaved(key)
-      setTimeout(() => setSaved(null), 2000)
-    } catch (error) {
-      console.error('Error saving config:', error)
-    } finally {
-      setSaving(null)
-    }
-  }
 
   return (
     <div className="min-h-dvh bg-background flex flex-col">
@@ -264,21 +357,33 @@ export default function AdminPage() {
       </div>
 
       {/* Diarista Selector */}
-      {activeDiaristas.length > 1 && (
+      {activeDiaristas.length > 0 && (
         <div className="px-4 pb-3">
-          <Select
-            value={selectedDiaristaId || ''}
-            onValueChange={v => setSelectedDiaristaId(v)}
-          >
-            <SelectTrigger className="h-10 text-sm">
-              <SelectValue placeholder="Selecionar diarista" />
-            </SelectTrigger>
-            <SelectContent>
-              {activeDiaristas.map(d => (
-                <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {activeDiaristas.length === 1 ? (
+            <div className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/50 border border-border">
+              <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center shrink-0 text-white font-bold text-xs">
+                {activeDiaristas[0].name.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold truncate">{activeDiaristas[0].name}</p>
+                <p className="text-[10px] text-muted-foreground">Diarista ativa</p>
+              </div>
+            </div>
+          ) : (
+            <Select
+              value={selectedDiaristaId || ''}
+              onValueChange={v => setSelectedDiaristaId(v)}
+            >
+              <SelectTrigger className="h-10 text-sm">
+                <SelectValue placeholder="Selecionar diarista" />
+              </SelectTrigger>
+              <SelectContent>
+                {activeDiaristas.map(d => (
+                  <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       )}
 
@@ -332,25 +437,25 @@ export default function AdminPage() {
               <FileDown className="h-4 w-4 mr-2" />
               Gerar Relatorio Mensal
             </Button>
-            <MonthlyPaymentSection month={selectedMonth} year={selectedYear} isAdmin={true} hasActivity={hasActivity} diaristaId={selectedDiaristaId} />
-            <AttendanceSection month={selectedMonth} year={selectedYear} readOnly diaristaId={selectedDiaristaId} />
-            <LaundrySection month={selectedMonth} year={selectedYear} isAdmin diaristaId={selectedDiaristaId} />
+            <MonthlyPaymentSection month={selectedMonth} year={selectedYear} isAdmin={true} hasActivity={hasActivity} diaristaId={selectedDiaristaId} diaristaName={selectedDiarista?.name} />
+            <AttendanceSection month={selectedMonth} year={selectedYear} readOnly diaristaId={selectedDiaristaId} workSchedule={selectedDiarista?.work_schedule} />
+            <LaundrySection month={selectedMonth} year={selectedYear} isAdmin diaristaId={selectedDiaristaId} diaristaIroningValue={selectedDiarista?.ironing_value} diaristaWashingValue={selectedDiarista?.washing_value} diaristaTransportValue={selectedDiarista?.transport_value} />
           </>
         )}
 
         {/* PRESENÇA */}
         {activeTab === 'presenca' && (
-          <AttendanceSection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} />
+          <AttendanceSection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} workSchedule={selectedDiarista?.work_schedule} />
         )}
 
         {/* LAVANDERIA */}
         {activeTab === 'lavanderia' && (
-          <LaundrySection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} onDataChange={refetchLaundry} />
+          <LaundrySection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} onDataChange={refetchLaundry} diaristaIroningValue={selectedDiarista?.ironing_value} diaristaWashingValue={selectedDiarista?.washing_value} diaristaTransportValue={selectedDiarista?.transport_value} />
         )}
 
         {/* TRANSPORTE */}
         {activeTab === 'transporte' && (
-          <TransportSection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} onDataChange={refetchLaundry} />
+          <TransportSection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} onDataChange={refetchLaundry} diaristaTransportValue={selectedDiarista?.transport_value} />
         )}
 
         {/* NOTAS */}
@@ -509,7 +614,7 @@ export default function AdminPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="px-4 pb-4">
-                <ContractViewer isAdmin={true} />
+                <ContractViewer isAdmin={true} diaristaId={selectedDiaristaId} diaristaName={selectedDiarista?.name} />
               </CardContent>
             </Card>
             <Card>
@@ -526,51 +631,358 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* CONFIG */}
-        {activeTab === 'config' && (
+        {/* EQUIPE */}
+        {activeTab === 'equipe' && (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 mb-1">
-              <DollarSign className="h-4 w-4 text-primary" />
-              <p className="text-sm font-semibold">Valores dos Serviços</p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" />
+                <p className="text-sm font-semibold">{'Gestao de Diaristas'}</p>
+              </div>
+              <Button size="sm" className="h-9 px-3" onClick={() => { setShowDiaristaForm(true); setEditingDiarista(null); setDiaristaForm(defaultDiaristaForm) }}>
+                <UserPlus className="h-4 w-4 mr-1" />
+                <span className="text-xs">Nova</span>
+              </Button>
             </div>
-            {CONFIG_ITEMS.map((item) => {
-              const isSaving = saving === item.key
-              const isSaved = saved === item.key
-              return (
-                <Card key={item.key}>
-                  <CardContent className="p-4">
-                    <div className="mb-3">
-                      <p className="font-semibold text-sm">{item.label}</p>
-                      <p className="text-[11px] text-muted-foreground">{item.desc}</p>
-                    </div>
-                    <div className="flex gap-2 items-center">
-                      <div className="relative flex-1">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">R$</span>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-2">
+              <Card>
+                <CardContent className="p-3 text-center">
+                  <p className="text-2xl font-bold text-primary">{activeDiaristas.length}</p>
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Ativas</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-3 text-center">
+                  <p className="text-2xl font-bold text-muted-foreground">{allDiaristas.filter(d => !d.active).length}</p>
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Inativas</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Formulario completo */}
+            {showDiaristaForm && (
+              <Card className="border-primary/40">
+                <CardHeader className="pb-2 pt-4 px-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm">{editingDiarista ? 'Editar' : 'Nova'} Diarista</CardTitle>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCancelDiarista}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  <form onSubmit={handleDiaristaSubmit} className="space-y-4">
+                    {/* Dados pessoais */}
+                    <div className="space-y-3">
+                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Dados pessoais</p>
+                      <div>
+                        <Label className="text-xs mb-1.5 block">Nome completo</Label>
                         <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          inputMode="decimal"
-                          value={getValue(item.key)}
-                          onChange={(e) => setValues(prev => ({ ...prev, [item.key]: e.target.value }))}
-                          className="pl-10 h-11 text-base font-semibold"
+                          value={diaristaForm.name}
+                          onChange={e => setDiaristaForm({ ...diaristaForm, name: e.target.value })}
+                          placeholder="Ex: Maria Silva"
+                          required
+                          className="h-10"
                         />
                       </div>
-                      <Button
-                        onClick={() => handleSave(item.key)}
-                        disabled={isSaving}
-                        size="sm"
-                        className={`h-11 px-4 min-w-[80px] transition-all ${isSaved ? 'bg-green-600' : ''}`}
-                      >
-                        {isSaved ? <Check className="h-4 w-4" /> :
-                         isSaving ? <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> :
-                         <><Save className="h-4 w-4 mr-1" />Salvar</>}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs mb-1.5 block">PIN (4+ digitos)</Label>
+                          <Input
+                            value={diaristaForm.pin}
+                            onChange={e => setDiaristaForm({ ...diaristaForm, pin: e.target.value.replace(/\D/g, '') })}
+                            placeholder="1234"
+                            required
+                            maxLength={8}
+                            inputMode="numeric"
+                            className="h-10 font-mono tracking-widest"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs mb-1.5 block">Telefone</Label>
+                          <Input
+                            value={diaristaForm.phone}
+                            onChange={e => setDiaristaForm({ ...diaristaForm, phone: e.target.value })}
+                            placeholder="(11) 99999-9999"
+                            className="h-10"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Separador */}
+                    <div className="h-px bg-border" />
+
+                    {/* Agenda de trabalho */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Dias de trabalho</p>
+                        {diaristaForm.work_schedule.length < 6 && (
+                          <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[11px]" onClick={addScheduleDay}>
+                            <Plus className="h-3 w-3 mr-1" />
+                            Dia
+                          </Button>
+                        )}
+                      </div>
+                      {diaristaForm.work_schedule.map((sched, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <Select
+                            value={sched.day}
+                            onValueChange={v => {
+                              const updated = [...diaristaForm.work_schedule]
+                              updated[idx] = { ...updated[idx], day: v as WorkScheduleDay['day'] }
+                              setDiaristaForm({ ...diaristaForm, work_schedule: updated })
+                            }}
+                          >
+                            <SelectTrigger className="flex-1 h-9 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {WEEKDAYS.map(w => (
+                                <SelectItem key={w.value} value={w.value}>{w.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select
+                            value={sched.type}
+                            onValueChange={v => {
+                              const updated = [...diaristaForm.work_schedule]
+                              updated[idx] = { ...updated[idx], type: v as WorkScheduleDay['type'] }
+                              setDiaristaForm({ ...diaristaForm, work_schedule: updated })
+                            }}
+                          >
+                            <SelectTrigger className="flex-1 h-9 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {CLEANING_TYPES.map(t => (
+                                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {diaristaForm.work_schedule.length > 1 && (
+                            <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-destructive" onClick={() => removeScheduleDay(idx)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Separador */}
+                    <div className="h-px bg-border" />
+
+                    {/* Valores dos servicos */}
+                    <div className="space-y-3">
+                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Valores dos servicos</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-[11px] mb-1 block text-muted-foreground">Limpeza Pesada</Label>
+                          <div className="relative">
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">R$</span>
+                            <Input
+                              type="number" step="0.01" min="0" inputMode="decimal"
+                              value={diaristaForm.heavy_cleaning_value}
+                              onChange={e => setDiaristaForm({ ...diaristaForm, heavy_cleaning_value: e.target.value })}
+                              className="h-9 pl-8 text-sm font-semibold"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-[11px] mb-1 block text-muted-foreground">Limpeza Leve</Label>
+                          <div className="relative">
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">R$</span>
+                            <Input
+                              type="number" step="0.01" min="0" inputMode="decimal"
+                              value={diaristaForm.light_cleaning_value}
+                              onChange={e => setDiaristaForm({ ...diaristaForm, light_cleaning_value: e.target.value })}
+                              className="h-9 pl-8 text-sm font-semibold"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-[11px] mb-1 block text-muted-foreground">Lavagem</Label>
+                          <div className="relative">
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">R$</span>
+                            <Input
+                              type="number" step="0.01" min="0" inputMode="decimal"
+                              value={diaristaForm.washing_value}
+                              onChange={e => setDiaristaForm({ ...diaristaForm, washing_value: e.target.value })}
+                              className="h-9 pl-8 text-sm font-semibold"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-[11px] mb-1 block text-muted-foreground">Passar Roupa</Label>
+                          <div className="relative">
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">R$</span>
+                            <Input
+                              type="number" step="0.01" min="0" inputMode="decimal"
+                              value={diaristaForm.ironing_value}
+                              onChange={e => setDiaristaForm({ ...diaristaForm, ironing_value: e.target.value })}
+                              className="h-9 pl-8 text-sm font-semibold"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-[11px] mb-1 block text-muted-foreground">Transporte (lavanderia/semana)</Label>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">R$</span>
+                          <Input
+                            type="number" step="0.01" min="0" inputMode="decimal"
+                            value={diaristaForm.transport_value}
+                            onChange={e => setDiaristaForm({ ...diaristaForm, transport_value: e.target.value })}
+                            className="h-9 pl-8 text-sm font-semibold"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {diaristaError && (
+                      <p className="text-xs text-destructive font-medium">{diaristaError}</p>
+                    )}
+
+                    <div className="flex gap-2 pt-1">
+                      <Button type="submit" className="flex-1 h-10">
+                        {editingDiarista ? 'Atualizar' : 'Cadastrar'}
+                      </Button>
+                      <Button type="button" variant="outline" onClick={handleCancelDiarista} className="h-10">
+                        Cancelar
                       </Button>
                     </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
+                  </form>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Lista de diaristas ativas */}
+            {activeDiaristas.length === 0 && !showDiaristaForm ? (
+              <div className="text-center py-10 text-muted-foreground">
+                <Users className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                <p className="text-sm">{'Nenhuma diarista cadastrada'}</p>
+                <p className="text-xs mt-1 opacity-60">{'Clique em "Nova" para cadastrar'}</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {activeDiaristas.map(d => {
+                  const schedule = (d.work_schedule || []) as WorkScheduleDay[]
+                  const getDayLabel = (day: string) => WEEKDAYS.find(w => w.value === day)?.label || day
+                  const getTypeLabel = (type: string) => type === 'heavy_cleaning' ? 'Pesada' : 'Leve'
+                  return (
+                    <Card key={d.id} className={cn(selectedDiaristaId === d.id && 'border-primary/50 bg-primary/5')}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center shrink-0 text-white font-bold text-sm mt-0.5">
+                            {d.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-sm truncate">{d.name}</p>
+                              <Badge variant="outline" className="text-[9px] h-4 px-1.5 border-green-500/50 text-green-500">Ativa</Badge>
+                            </div>
+                            <div className="flex items-center gap-3 mt-1">
+                              {d.phone && (
+                                <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                                  <Phone className="h-3 w-3" />{d.phone}
+                                </span>
+                              )}
+                              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                                <Hash className="h-3 w-3" />
+                                PIN: {showPin === d.id ? (
+                                  <span className="font-mono">{d.pin}</span>
+                                ) : (
+                                  <span>{'****'}</span>
+                                )}
+                                <button onClick={() => setShowPin(showPin === d.id ? null : d.id)} className="ml-0.5">
+                                  {showPin === d.id ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                                </button>
+                              </span>
+                            </div>
+                            {/* Agenda */}
+                            {schedule.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 mt-2">
+                                {schedule.map((s, i) => (
+                                  <Badge key={i} variant="secondary" className="text-[10px] h-5 px-2">
+                                    {getDayLabel(s.day)} - {getTypeLabel(s.type)}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                            {/* Valores resumo */}
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+                              <span className="text-[10px] text-muted-foreground">
+                                Pesada: <strong className="text-foreground">R$ {(d.heavy_cleaning_value ?? 0).toFixed(2)}</strong>
+                              </span>
+                              <span className="text-[10px] text-muted-foreground">
+                                Leve: <strong className="text-foreground">R$ {(d.light_cleaning_value ?? 0).toFixed(2)}</strong>
+                              </span>
+                              <span className="text-[10px] text-muted-foreground">
+                                Lav: <strong className="text-foreground">R$ {(d.washing_value ?? 0).toFixed(2)}</strong>
+                              </span>
+                              <span className="text-[10px] text-muted-foreground">
+                                Pass: <strong className="text-foreground">R$ {(d.ironing_value ?? 0).toFixed(2)}</strong>
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-1 shrink-0">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditDiarista(d)}>
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { if (selectedDiaristaId !== d.id) setSelectedDiaristaId(d.id) }}>
+                              <UserCheck className="h-3.5 w-3.5 text-primary" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleToggleDiarista(d.id, false)}>
+                              <UserX className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Diaristas inativas */}
+            {allDiaristas.filter(d => !d.active).length > 0 && (
+              <div className="pt-2">
+                <button
+                  onClick={() => setShowInactive(!showInactive)}
+                  className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <UserX className="h-3.5 w-3.5" />
+                  {showInactive ? 'Ocultar' : 'Mostrar'} inativas ({allDiaristas.filter(d => !d.active).length})
+                </button>
+                {showInactive && (
+                  <div className="space-y-2 mt-2">
+                    {allDiaristas.filter(d => !d.active).map(d => (
+                      <Card key={d.id} className="opacity-60">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0 text-muted-foreground font-bold text-sm">
+                              {d.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold text-sm truncate">{d.name}</p>
+                                <Badge variant="outline" className="text-[9px] h-4 px-1.5 border-destructive/50 text-destructive">Inativa</Badge>
+                              </div>
+                            </div>
+                            <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => handleToggleDiarista(d.id, true)}>
+                              <UserCheck className="h-3.5 w-3.5 mr-1" />
+                              Reativar
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
