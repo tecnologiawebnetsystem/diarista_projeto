@@ -1,0 +1,22 @@
+{
+  "name": "LIMPP DAY",
+  "short_name": "LIMPP DAY",
+  "description": "Gestao Profissional de Servicos de Limpeza",
+  "start_url": "/login",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#E85D1A",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}

@@ -1,0 +1,199 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Tema Dark Profissional - Preto com Azul e Vermelho */
+    
+    /* Base colors - Fundo preto profundo */
+    --background: 0 0% 7%;
+    --foreground: 0 0% 95%;
+    
+    /* Card colors - Cards em preto com leve elevação */
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 95%;
+    
+    /* Popover colors */
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 95%;
+    
+    /* Primary - Laranja escuro vibrante */
+    --primary: 25 95% 48%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Secondary - Laranja muito escuro */
+    --secondary: 25 80% 25%;
+    --secondary-foreground: 25 95% 80%;
+    
+    /* Accent - Vermelho vibrante */
+    --accent: 0 85% 55%;
+    --accent-foreground: 0 0% 100%;
+    
+    /* Destructive - Vermelho intenso */
+    --destructive: 0 85% 55%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Success - Verde neon */
+    --success: 142 80% 50%;
+    --success-foreground: 0 0% 0%;
+    
+    /* Warning - Laranja vibrante */
+    --warning: 33 100% 60%;
+    --warning-foreground: 0 0% 0%;
+    
+    /* Muted colors - Tons de cinza escuro */
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 60%;
+    
+    /* Border and input - Bordas sutis */
+    --border: 0 0% 20%;
+    --input: 0 0% 15%;
+    --ring: 25 95% 48%;
+    
+    /* Radius */
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  html {
+    color-scheme: dark;
+  }
+  
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    background: linear-gradient(135deg, hsl(0 0% 7%) 0%, hsl(0 0% 10%) 100%);
+    min-height: 100dvh;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Safe area insets for mobile notch/camera */
+  .safe-area-inset-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .pb-safe {
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
+  }
+
+  /* Scrollbar oculta em mobile */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  /* Touch targets mínimos para botões de ação principais */
+  button.btn-action, a[role="button"] {
+    min-height: 44px;
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15%       { transform: translateX(-8px); }
+  30%       { transform: translateX(8px); }
+  45%       { transform: translateX(-6px); }
+  60%       { transform: translateX(6px); }
+  75%       { transform: translateX(-3px); }
+  90%       { transform: translateX(3px); }
+}
+
+.animate-shake {
+  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@layer components {
+  /* Tabs de navegação mobile — scroll horizontal */
+  .tabs-scroll-container {
+    display: flex;
+    gap: 6px;
+    padding: 0 16px;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .tabs-scroll-container::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab-pill {
+    flex-shrink: 0;
+    padding: 8px 16px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+    border-width: 1px;
+    border-style: solid;
+    transition: all 0.15s ease;
+    min-height: unset;
+    height: auto;
+    line-height: 1.25;
+    cursor: pointer;
+  }
+
+  .tab-pill:active {
+    transform: scale(0.95);
+  }
+
+  .tab-pill-active {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    border-color: hsl(var(--primary));
+    box-shadow: 0 1px 4px hsl(var(--primary) / 0.4);
+  }
+
+  .tab-pill-inactive {
+    background-color: hsl(var(--card));
+    color: hsl(var(--muted-foreground));
+    border-color: hsl(var(--border));
+  }
+
+  /* Gradient backgrounds - Dark theme */
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(25 95% 48%) 0%, hsl(25 95% 35%) 100%);
+  }
+  
+  .gradient-accent {
+    background: linear-gradient(135deg, hsl(0 85% 55%) 0%, hsl(0 85% 45%) 100%);
+  }
+  
+  .gradient-destructive {
+    background: linear-gradient(135deg, hsl(0 85% 55%) 0%, hsl(0 85% 35%) 100%);
+  }
+  
+  /* Card hover effects - Enhanced for dark */
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1 hover:border-primary/50;
+  }
+  
+  /* Glass effect dark */
+  .glass {
+    @apply bg-black/60 backdrop-blur-xl border border-primary/20;
+  }
+  
+  /* Neon glow effects */
+  .glow-primary {
+    box-shadow: 0 0 20px hsl(25 95% 48% / 0.3);
+  }
+  
+  .glow-accent {
+    box-shadow: 0 0 20px hsl(0 85% 55% / 0.3);
+  }
+}
