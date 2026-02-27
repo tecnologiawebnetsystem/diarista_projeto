@@ -80,14 +80,6 @@ export function MonthlyPaymentSection({ month, year, isAdmin = true, hasActivity
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Valor Mensal */}
-        <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
-          <span className="font-medium">Valor do Mês</span>
-          <span className="text-2xl font-bold text-primary">
-            R$ {monthlySalary.toFixed(2)}
-          </span>
-        </div>
-
         {/* Data de Pagamento Prevista */}
         <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
           <Calendar className="h-5 w-5 text-muted-foreground" />
