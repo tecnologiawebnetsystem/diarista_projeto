@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { LayoutDashboard, CalendarCheck, WashingMachine, FileText, ScrollText, Trophy, AlertTriangle, LogOut, CheckCircle2, XCircle, Briefcase, TrendingUp, CalendarDays, Receipt, FileDown, Bus } from 'lucide-react'
+import { LayoutDashboard, CalendarCheck, WashingMachine, FileText, ScrollText, Trophy, AlertTriangle, LogOut, CheckCircle2, XCircle, Briefcase, TrendingUp, CalendarDays, Receipt, FileDown, Bus, Bell, X } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -19,6 +19,8 @@ import { useAwards } from '@/hooks/use-awards'
 import { useConfig } from '@/hooks/use-config'
 import { ContractViewer } from '@/components/contract-viewer'
 import { NotificationBanner } from '@/components/notification-banner'
+import { useDbNotifications } from '@/hooks/use-db-notifications'
+import { cn } from '@/lib/utils'
 import Link from 'next/link'
 
 const MONTHS = [
@@ -35,6 +37,8 @@ export default function DiaristaPage() {
   const [activeTab, setActiveTab] = useState<'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'anotacoes' | 'contrato'>('resumo')
 
   const { diaristaId } = useAuth()
+  const { notifications: dbNotifications, unreadCount, markAsRead, markAllAsRead } = useDbNotifications(diaristaId)
+  const [showNotifications, setShowNotifications] = useState(false)
   const { payment } = useMonthlyPayments(selectedMonth, selectedYear, diaristaId)
   const { attendance: attendances, refetch: refetchAttendance } = useAttendance(selectedMonth, selectedYear, diaristaId)
   const { laundryWeeks, refetch: refetchLaundry } = useLaundryWeeks(selectedMonth, selectedYear, diaristaId)
@@ -110,11 +114,84 @@ export default function DiaristaPage() {
               <p className="text-[10px] text-muted-foreground">Painel da Diarista</p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => { logout(); router.push('/login') }} className="h-9 w-9 p-0">
-            <LogOut className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="h-9 w-9 p-0 relative"
+            >
+              <Bell className="h-4 w-4" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                  {unreadCount}
+                </span>
+              )}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => { logout(); router.push('/login') }} className="h-9 w-9 p-0">
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
+
+      {/* Notifications Panel */}
+      {showNotifications && (
+        <div className="border-b bg-card">
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Bell className="h-4 w-4 text-primary" />
+                <h2 className="text-sm font-semibold">{'Notificações'}</h2>
+                {unreadCount > 0 && (
+                  <Badge variant="destructive" className="text-[10px] h-5 px-1.5">{unreadCount}</Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-1">
+                {unreadCount > 0 && (
+                  <Button variant="ghost" size="sm" className="h-8 text-[11px] px-2" onClick={markAllAsRead}>
+                    Marcar todas como lidas
+                  </Button>
+                )}
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowNotifications(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            {dbNotifications.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4 text-sm">{'Nenhuma notificação'}</p>
+            ) : (
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {dbNotifications.slice(0, 20).map(n => (
+                  <div
+                    key={n.id}
+                    onClick={() => { if (!n.read) markAsRead(n.id) }}
+                    className={cn(
+                      'p-3 rounded-lg cursor-pointer transition-colors',
+                      n.read ? 'bg-muted/50' : 'bg-primary/10 border border-primary/30'
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          {!n.read && <span className="w-2 h-2 rounded-full bg-primary shrink-0" />}
+                          <p className={cn('text-sm font-semibold truncate', !n.read && 'text-primary')}>
+                            {n.title}
+                          </p>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground leading-relaxed">{n.message}</p>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground shrink-0 mt-0.5">
+                        {new Date(n.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Period Selector */}
       <div className="px-4 pt-4 pb-2">
@@ -174,28 +251,6 @@ export default function DiaristaPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Prêmio — mínimo, só um banner pequeno */}
-      {currentPeriodAward && (
-        <div className="px-4 pb-2">
-          <div className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs ${
-            currentPeriodAward.status === 'disqualified'
-              ? 'bg-destructive/10 text-destructive'
-              : currentPeriodAward.status === 'awarded'
-              ? 'bg-green-500/10 text-green-400'
-              : 'bg-muted text-muted-foreground'
-          }`}>
-            <div className="flex items-center gap-1.5">
-              <Trophy className="h-3 w-3 shrink-0" />
-              <span>Prêmio R$ 300 · {
-                currentPeriodAward.status === 'awarded' ? 'Concedido!' :
-                currentPeriodAward.status === 'disqualified' ? 'Desqualificado' : 'Em andamento'
-              }</span>
-            </div>
-            <span className="font-medium">{currentPeriodAward.warnings_count}/3 adv.</span>
-          </div>
-        </div>
-      )}
 
       {/* Tab Content */}
       <div className="px-4 pb-24 flex-1">

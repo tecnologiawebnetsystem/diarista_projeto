@@ -7,11 +7,18 @@ import {
   Settings, LogOut, TrendingUp, FileText,
   ScrollText, Save, Check, DollarSign,
   LayoutDashboard, CalendarCheck, WashingMachine,
-  ShieldCheck, FileDown, Bus
+  ShieldCheck, FileDown, Bus, Plus, AlertTriangle,
+  CheckCircle, XCircle, Trash2, Edit2, X
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Calendar } from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuth } from '@/contexts/auth-context'
 import { useMonthlyPayments } from '@/hooks/use-monthly-payments'
@@ -21,12 +28,24 @@ import { useConfig } from '@/hooks/use-config'
 import { useNotes } from '@/hooks/use-notes'
 import { useAwards } from '@/hooks/use-awards'
 import { useDiaristas } from '@/hooks/use-diaristas'
+import { useDbNotifications } from '@/hooks/use-db-notifications'
 import { MonthlyPaymentSection } from '@/components/monthly-payment-section'
 import { AttendanceSection } from '@/components/attendance-section'
 import { LaundrySection } from '@/components/laundry-section'
 import { ContractViewer } from '@/components/contract-viewer'
 import { TransportSection } from '@/components/transport-section'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { cn } from '@/lib/utils'
+import type { Note } from '@/types/database'
 import Link from 'next/link'
+
+const NOTE_TYPES = [
+  { value: 'general', label: 'Nota Geral', Icon: FileText, color: 'text-primary' },
+  { value: 'warning', label: 'Observação', Icon: AlertTriangle, color: 'text-warning' },
+  { value: 'extra_work', label: 'Trabalho Extra', Icon: CheckCircle, color: 'text-success' },
+  { value: 'missed_task', label: 'Tarefa Não Realizada', Icon: XCircle, color: 'text-destructive' },
+]
 
 const MONTHS = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -77,7 +96,61 @@ export default function AdminPage() {
   const { payment } = useMonthlyPayments(selectedMonth, selectedYear, selectedDiaristaId)
   const { attendance, refetch: refetchAttendance } = useAttendance(selectedMonth, selectedYear, selectedDiaristaId)
   const { laundryWeeks, refetch: refetchLaundry } = useLaundryWeeks(selectedMonth, selectedYear, selectedDiaristaId)
-  const { notes } = useNotes(selectedMonth, selectedYear, selectedDiaristaId)
+  const { notes, addNote, updateNote, deleteNote } = useNotes(selectedMonth, selectedYear, selectedDiaristaId)
+  const { sendNotification } = useDbNotifications()
+  const [showNoteForm, setShowNoteForm] = useState(false)
+  const [editingNote, setEditingNote] = useState<Note | null>(null)
+  const [noteFormData, setNoteFormData] = useState({
+    date: new Date(),
+    note_type: 'general' as Note['note_type'],
+    content: '',
+    is_warning: false,
+  })
+
+  const getNoteTypeInfo = (type: Note['note_type']) =>
+    NOTE_TYPES.find(t => t.value === type) || NOTE_TYPES[0]
+
+  const handleNoteSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const dateStr = format(noteFormData.date, 'yyyy-MM-dd')
+      const typeInfo = getNoteTypeInfo(noteFormData.note_type)
+      if (editingNote) {
+        await updateNote(editingNote.id, noteFormData.content, noteFormData.is_warning)
+      } else {
+        await addNote(dateStr, noteFormData.note_type, noteFormData.content, noteFormData.is_warning)
+      }
+      // Enviar notificacao para a diarista
+      if (selectedDiaristaId) {
+        const title = editingNote ? 'Anotacao Atualizada' : 'Nova Anotacao'
+        const message = `${typeInfo.label}: ${noteFormData.content.substring(0, 100)}${noteFormData.content.length > 100 ? '...' : ''}`
+        const type = noteFormData.is_warning ? 'warning' as const : 'note' as const
+        await sendNotification(selectedDiaristaId, title, message, type)
+      }
+      setNoteFormData({ date: new Date(), note_type: 'general', content: '', is_warning: false })
+      setShowNoteForm(false)
+      setEditingNote(null)
+    } catch (error) {
+      console.error('Error saving note:', error)
+    }
+  }
+
+  const handleEditNote = (note: Note) => {
+    setEditingNote(note)
+    setNoteFormData({
+      date: new Date(note.date + 'T00:00:00'),
+      note_type: note.note_type,
+      content: note.content,
+      is_warning: note.is_warning,
+    })
+    setShowNoteForm(true)
+  }
+
+  const handleCancelNote = () => {
+    setShowNoteForm(false)
+    setEditingNote(null)
+    setNoteFormData({ date: new Date(), note_type: 'general', content: '', is_warning: false })
+  }
   const { getConfigValue } = useConfig()
 
   const ironingValue = getConfigValue('ironing') || 50
@@ -285,16 +358,140 @@ export default function AdminPage() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-foreground">Anotações</p>
-              {warnings.length > 0 && (
-                <span className="text-xs font-medium text-destructive">{warnings.length} advertência(s)</span>
-              )}
-            </div>
-            <Link href="/notes">
-              <Button className="w-full h-12" variant="outline">
-                <FileText className="h-4 w-4 mr-2" />
-                Abrir Anotações Completas
+              <Button size="sm" className="h-9 px-3" onClick={() => { setShowNoteForm(true); setEditingNote(null) }}>
+                <Plus className="h-4 w-4 mr-1" />
+                <span className="text-xs">Nova</span>
               </Button>
-            </Link>
+            </div>
+
+            {warnings.length > 0 && (
+              <div className={cn(
+                'flex items-center gap-3 p-3 rounded-xl border',
+                warnings.length >= 3 ? 'bg-destructive/10 border-destructive/40' : 'bg-amber-500/10 border-amber-500/40'
+              )}>
+                <AlertTriangle className={cn('h-5 w-5', warnings.length >= 3 ? 'text-destructive' : 'text-amber-500')} />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold">
+                    {warnings.length} {'advertência'}{warnings.length > 1 ? 's' : ''}
+                  </p>
+                </div>
+                <span className={cn('text-2xl font-bold', warnings.length >= 3 ? 'text-destructive' : 'text-amber-500')}>
+                  {warnings.length}/3
+                </span>
+              </div>
+            )}
+
+            {/* Formulario */}
+            {showNoteForm && (
+              <Card className="border-primary/40">
+                <CardHeader className="pb-2 pt-4 px-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm">{editingNote ? 'Editar' : 'Nova'} {'Anotação'}</CardTitle>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCancelNote}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  <form onSubmit={handleNoteSubmit} className="space-y-3">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start h-10 text-sm" disabled={!!editingNote}>
+                          <FileText className="mr-2 h-4 w-4" />
+                          {format(noteFormData.date, 'dd/MM/yyyy', { locale: ptBR })}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={noteFormData.date}
+                          onSelect={(date) => date && setNoteFormData({ ...noteFormData, date })}
+                          locale={ptBR}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+
+                    <Select
+                      value={noteFormData.note_type}
+                      onValueChange={(v) => setNoteFormData({ ...noteFormData, note_type: v as Note['note_type'] })}
+                      disabled={!!editingNote}
+                    >
+                      <SelectTrigger className="h-10 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {NOTE_TYPES.map(t => (
+                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Textarea
+                      value={noteFormData.content}
+                      onChange={(e) => setNoteFormData({ ...noteFormData, content: e.target.value })}
+                      placeholder="Descreva a anotação..."
+                      rows={3}
+                      required
+                      className="text-sm resize-none"
+                    />
+
+                    <div className="flex gap-2">
+                      <Button type="submit" className="flex-1 h-10">
+                        {editingNote ? 'Atualizar' : 'Salvar'}
+                      </Button>
+                      <Button type="button" variant="outline" onClick={handleCancelNote} className="h-10">
+                        Cancelar
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Lista de notas */}
+            {notes.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <FileText className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                <p className="text-sm">{'Nenhuma anotação neste mês'}</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {notes.map((note) => {
+                  const typeInfo = getNoteTypeInfo(note.note_type)
+                  const { Icon } = typeInfo
+                  return (
+                    <Card key={note.id} className={cn(note.is_warning && 'border-amber-500/50 bg-amber-500/5')}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2">
+                            <Icon className={cn('h-4 w-4', typeInfo.color)} />
+                            <span className="text-sm font-semibold">{typeInfo.label}</span>
+                            {note.is_warning && (
+                              <Badge variant="destructive" className="text-[10px] h-4 px-1.5">
+                                {'Advertência'}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex gap-1 shrink-0">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditNote(note)}>
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteNote(note.id)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mb-1">
+                          {format(new Date(note.date + 'T00:00:00'), 'dd/MM/yyyy')}
+                        </p>
+                        <p className="text-sm text-foreground/90 leading-relaxed">{note.content}</p>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
 

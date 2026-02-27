@@ -277,63 +277,72 @@ export default function LoginPage() {
 
   /* ── Tela inicial ── */
   return (
-    <div className="min-h-dvh bg-background flex flex-col select-none">
-      <div className="flex-1 flex flex-col items-center justify-center px-6 pt-16 pb-8 gap-8">
-        <div className="flex flex-col items-center gap-3">
+    <div className="min-h-dvh flex flex-col items-center justify-center select-none px-5 relative overflow-hidden">
+      {/* Background accent */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/[0.04] rounded-full blur-3xl pointer-events-none" />
+
+      <div className="w-full max-w-[340px] relative z-10">
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-10">
           <Image
             src="/logo.jpg"
             alt="LIMPP DAY"
-            width={88}
-            height={88}
+            width={72}
+            height={72}
             priority
-            className="rounded-[22px] shadow-2xl ring-2 ring-primary/20"
+            className="rounded-2xl shadow-lg shadow-black/40"
           />
-          <div className="flex flex-col items-center gap-1 text-center">
-            <h1 className="text-3xl font-extrabold tracking-tight text-primary">LIMPP DAY</h1>
-            <p className="text-xs text-muted-foreground tracking-widest uppercase">{'Gestao de Servicos'}</p>
-          </div>
+          <h1 className="text-[22px] font-extrabold tracking-tight text-foreground mt-5">LIMPP DAY</h1>
+          <p className="text-[10px] text-muted-foreground tracking-[0.25em] uppercase font-semibold mt-1">{'Gestao de Servicos'}</p>
         </div>
 
-        <div className="w-full max-w-sm space-y-3">
+        {/* Widget card */}
+        <div className="rounded-2xl bg-card/80 backdrop-blur-sm border border-border overflow-hidden">
+          {/* Diarista */}
           <button
             onClick={handleDiaristaClick}
             disabled={loadingDiaristas}
-            className="w-full flex items-center gap-4 p-5 rounded-2xl bg-card border border-border active:scale-[0.97] transition-all text-left shadow-sm disabled:opacity-50"
+            className="w-full flex items-center gap-4 px-5 py-5 active:bg-muted/60 transition-colors text-left disabled:opacity-50 group"
           >
-            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shrink-0">
-              <User className="h-6 w-6 text-primary-foreground" />
+            <div className="w-12 h-12 rounded-[14px] gradient-primary flex items-center justify-center shrink-0 shadow-md shadow-primary/20 group-active:scale-95 transition-transform">
+              <User className="h-5 w-5 text-primary-foreground" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-base text-foreground">Diarista</p>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+              <p className="font-bold text-[15px] text-foreground leading-tight">Diarista</p>
+              <p className="text-[12px] text-muted-foreground mt-1 leading-snug">
                 {diaristas.length > 1 ? `${diaristas.length} profissionais cadastradas` : 'Consultar ganhos e pagamentos'}
               </p>
             </div>
-            <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+            <ChevronRight className="h-5 w-5 text-muted-foreground/40 shrink-0 group-active:translate-x-0.5 transition-transform" />
           </button>
 
+          {/* Divider */}
+          <div className="h-px bg-border mx-5" />
+
+          {/* Admin */}
           <button
             onClick={() => { setScreen('admin-pin'); setPin(''); setError(false) }}
-            className="w-full flex items-center gap-4 p-5 rounded-2xl bg-card border border-border active:scale-[0.97] transition-all text-left shadow-sm"
+            className="w-full flex items-center gap-4 px-5 py-5 active:bg-muted/60 transition-colors text-left group"
           >
-            <div className="w-12 h-12 rounded-xl bg-foreground flex items-center justify-center shrink-0">
-              <ShieldCheck className="h-6 w-6 text-background" />
+            <div className="w-12 h-12 rounded-[14px] bg-muted border border-border flex items-center justify-center shrink-0 group-active:scale-95 transition-transform">
+              <ShieldCheck className="h-5 w-5 text-muted-foreground" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-base text-foreground">Administrador</p>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Acesso completo ao sistema</p>
+              <p className="font-bold text-[15px] text-foreground leading-tight">Administrador</p>
+              <p className="text-[12px] text-muted-foreground mt-1 leading-snug">Acesso completo ao sistema</p>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            <div className="flex items-center gap-2 shrink-0">
+              <Lock className="h-3.5 w-3.5 text-muted-foreground/30" />
+              <ChevronRight className="h-5 w-5 text-muted-foreground/40 group-active:translate-x-0.5 transition-transform" />
             </div>
           </button>
         </div>
-      </div>
 
-      <p className="text-center text-[11px] text-muted-foreground pb-8 tracking-wide">
-        {'LIMPP DAY v2.0 — Acesso restrito'}
-      </p>
+        {/* Version */}
+        <p className="text-center text-[10px] text-muted-foreground/40 mt-8 font-medium tracking-wider">
+          {'LIMPP DAY v2.0'}
+        </p>
+      </div>
     </div>
   )
 }
