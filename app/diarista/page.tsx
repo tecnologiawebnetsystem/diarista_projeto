@@ -260,7 +260,7 @@ export default function DiaristaPage() {
       )}
 
       {/* Period Selector */}
-      <div className="px-4 pt-4 pb-2">
+      <div className={cn('px-4 pt-4 pb-2', activeTab === 'perfil' && 'hidden')}>
         <div className="flex gap-2">
           <Select value={selectedMonth.toString()} onValueChange={v => setSelectedMonth(parseInt(v))}>
             <SelectTrigger className="flex-1 h-10 text-sm">
@@ -286,7 +286,7 @@ export default function DiaristaPage() {
       </div>
 
       {/* Total Card */}
-      <div className="px-4 pb-3">
+      <div className={cn('px-4 pb-3', activeTab === 'perfil' && 'hidden')}>
         <Card className="gradient-primary text-white shadow-lg">
           <CardContent className="pt-4 pb-4">
             <div className="flex items-center justify-between">
@@ -708,25 +708,32 @@ export default function DiaristaPage() {
 
         {/* PERFIL */}
         {activeTab === 'perfil' && (
-          <div className="space-y-4">
-            {/* Foto */}
-            <Card>
-              <CardContent className="py-6 flex flex-col items-center gap-4">
-                <div className="relative">
+          <div className="space-y-5">
+
+            {/* Hero profile card */}
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 via-card to-card border border-primary/10">
+              {/* Glow */}
+              <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/10 rounded-full blur-3xl" />
+              <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-primary/5 rounded-full blur-2xl" />
+
+              <div className="relative px-5 pt-8 pb-6 flex flex-col items-center">
+                {/* Avatar com camera */}
+                <div className="relative group">
+                  <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl scale-110 opacity-60" />
                   {currentDiarista?.photo_url ? (
                     <Image
                       src={currentDiarista.photo_url}
                       alt={currentDiarista.name}
-                      width={100}
-                      height={100}
-                      className="rounded-full object-cover w-[100px] h-[100px] border-4 border-primary/20"
+                      width={110}
+                      height={110}
+                      className="relative rounded-full object-cover w-[110px] h-[110px] border-[3px] border-primary/30 shadow-lg shadow-primary/10"
                     />
                   ) : (
-                    <div className="w-[100px] h-[100px] rounded-full gradient-primary flex items-center justify-center text-white font-bold text-3xl border-4 border-primary/20">
+                    <div className="relative w-[110px] h-[110px] rounded-full gradient-primary flex items-center justify-center text-white font-bold text-4xl border-[3px] border-primary/30 shadow-lg shadow-primary/10">
                       {currentDiarista?.name?.charAt(0).toUpperCase() || 'D'}
                     </div>
                   )}
-                  <label className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center cursor-pointer shadow-md hover:bg-primary/90 transition-colors">
+                  <label className="absolute bottom-1 right-1 w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center cursor-pointer shadow-lg hover:scale-105 active:scale-95 transition-transform ring-2 ring-card">
                     {uploadingPhoto ? (
                       <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
                     ) : (
@@ -741,44 +748,66 @@ export default function DiaristaPage() {
                     />
                   </label>
                 </div>
-                <div className="text-center">
-                  <p className="font-bold text-lg">{currentDiarista?.name}</p>
-                  {currentDiarista?.phone && (
-                    <p className="text-sm text-muted-foreground flex items-center justify-center gap-1.5 mt-1">
-                      <Phone className="h-3.5 w-3.5" />
-                      {currentDiarista.phone}
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
 
-            {/* Dados pessoais */}
-            <Card>
-              <CardHeader className="pb-2 pt-4 px-4">
-                <CardTitle className="text-sm flex items-center gap-2">
+                {/* Nome e telefone */}
+                <h2 className="text-xl font-bold text-foreground mt-4 tracking-tight">{currentDiarista?.name || 'Diarista'}</h2>
+                {currentDiarista?.phone && (
+                  <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
+                    <Phone className="h-3.5 w-3.5" />
+                    {currentDiarista.phone}
+                  </p>
+                )}
+
+                {/* Mini stats */}
+                <div className="flex items-center gap-5 mt-5 pt-5 border-t border-border/50 w-full justify-center">
+                  <div className="text-center">
+                    <p className="text-xl font-bold text-primary">{currentDiarista?.work_schedule?.length || 0}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mt-0.5">dias/sem</p>
+                  </div>
+                  <div className="w-px h-8 bg-border/50" />
+                  <div className="text-center">
+                    <p className="text-xl font-bold text-primary">
+                      {new Set(currentDiarista?.work_schedule?.map(s => s.client_id).filter(Boolean)).size}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mt-0.5">clientes</p>
+                  </div>
+                  <div className="w-px h-8 bg-border/50" />
+                  <div className="text-center">
+                    <p className="text-xl font-bold text-primary">{currentPeriodAward?.stars || 0}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mt-0.5">estrelas</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Dados pessoais -- inline edit style */}
+            <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
+              <div className="px-5 py-4 border-b border-border/40 flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                   <User className="h-4 w-4 text-primary" />
-                  Meus Dados
-                </CardTitle>
-                <CardDescription className="text-xs">Atualize suas informacoes pessoais</CardDescription>
-              </CardHeader>
-              <CardContent className="px-4 pb-4 space-y-3">
+                </div>
                 <div>
-                  <Label className="text-xs mb-1.5 block">Nome completo</Label>
+                  <p className="text-sm font-semibold text-foreground">Meus Dados</p>
+                  <p className="text-[11px] text-muted-foreground">Toque para editar</p>
+                </div>
+              </div>
+              <div className="px-5 py-4 space-y-4">
+                <div>
+                  <Label className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium mb-2 block">Nome completo</Label>
                   <Input
                     value={profileName}
                     onChange={e => setProfileName(e.target.value)}
                     placeholder="Seu nome"
-                    className="h-10"
+                    className="h-11 bg-muted/50 border-transparent focus:border-primary/50 focus:bg-card transition-all text-sm font-medium"
                   />
                 </div>
                 <div>
-                  <Label className="text-xs mb-1.5 block">Telefone</Label>
+                  <Label className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium mb-2 block">Telefone</Label>
                   <Input
                     value={profilePhone}
                     onChange={e => setProfilePhone(e.target.value)}
                     placeholder="(11) 99999-9999"
-                    className="h-10"
+                    className="h-11 bg-muted/50 border-transparent focus:border-primary/50 focus:bg-card transition-all text-sm font-medium"
                   />
                 </div>
 
@@ -789,87 +818,111 @@ export default function DiaristaPage() {
                 <Button
                   onClick={handleSaveProfile}
                   disabled={savingProfile || !profileName.trim()}
-                  className={cn('w-full h-10 transition-all', profileSaved && 'bg-green-600 hover:bg-green-600')}
+                  className={cn(
+                    'w-full h-11 rounded-xl font-semibold text-sm transition-all',
+                    profileSaved ? 'bg-green-600 hover:bg-green-600 shadow-lg shadow-green-600/20' : 'shadow-lg shadow-primary/20'
+                  )}
                 >
                   {profileSaved ? (
-                    <><Check className="h-4 w-4 mr-2" />Salvo</>
+                    <><Check className="h-4 w-4 mr-2" />Salvo com sucesso</>
                   ) : savingProfile ? (
                     <div className="h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
                   ) : (
                     <><Save className="h-4 w-4 mr-2" />Salvar Alteracoes</>
                   )}
                 </Button>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            {/* Info da agenda */}
-            <Card>
-              <CardHeader className="pb-2 pt-4 px-4">
-                <CardTitle className="text-sm flex items-center gap-2">
+            {/* Agenda semanal */}
+            <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
+              <div className="px-5 py-4 border-b border-border/40 flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                   <CalendarCheck className="h-4 w-4 text-primary" />
-                  Minha Agenda
-                </CardTitle>
-                <CardDescription className="text-xs">Definida pelo administrador</CardDescription>
-              </CardHeader>
-              <CardContent className="px-4 pb-4">
-                {currentDiarista?.work_schedule && currentDiarista.work_schedule.length > 0 ? (
-                  <div className="space-y-2">
-                    {currentDiarista.work_schedule.map((s, i) => {
-                      const WDAY: Record<string, string> = { monday: 'Segunda-feira', tuesday: 'Terca-feira', wednesday: 'Quarta-feira', thursday: 'Quinta-feira', friday: 'Sexta-feira', saturday: 'Sabado', sunday: 'Domingo' }
-                      const clientForSchedule = getClientName(s.client_id)
-                      return (
-                        <div key={i} className="p-3 bg-muted rounded-lg">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">{WDAY[s.day] || s.day}</span>
-                            <Badge variant="outline" className={cn('text-[10px]', s.type === 'heavy_cleaning' ? 'border-destructive text-destructive' : 'border-primary text-primary')}>
-                              {s.type === 'heavy_cleaning' ? 'Limpeza Pesada' : 'Limpeza Leve'}
-                            </Badge>
-                          </div>
-                          {clientForSchedule && (
-                            <p className="text-[11px] text-primary font-medium flex items-center gap-1 mt-1.5">
-                              <Building2 className="h-3 w-3 shrink-0" />{clientForSchedule}
-                            </p>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">Nenhuma agenda definida</p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Valores */}
-            <Card>
-              <CardHeader className="pb-2 pt-4 px-4">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-primary" />
-                  Meus Valores
-                </CardTitle>
-                <CardDescription className="text-xs">Valores definidos pelo administrador</CardDescription>
-              </CardHeader>
-              <CardContent className="px-4 pb-4">
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="p-3 bg-muted rounded-lg text-center">
-                    <p className="text-lg font-bold text-foreground">R$ {(currentDiarista?.heavy_cleaning_value ?? 250).toFixed(2)}</p>
-                    <p className="text-[10px] text-muted-foreground">Limpeza Pesada</p>
-                  </div>
-                  <div className="p-3 bg-muted rounded-lg text-center">
-                    <p className="text-lg font-bold text-foreground">R$ {(currentDiarista?.light_cleaning_value ?? 150).toFixed(2)}</p>
-                    <p className="text-[10px] text-muted-foreground">Limpeza Leve</p>
-                  </div>
-                  <div className="p-3 bg-muted rounded-lg text-center">
-                    <p className="text-lg font-bold text-foreground">R$ {(currentDiarista?.washing_value ?? 75).toFixed(2)}</p>
-                    <p className="text-[10px] text-muted-foreground">Lavagem</p>
-                  </div>
-                  <div className="p-3 bg-muted rounded-lg text-center">
-                    <p className="text-lg font-bold text-foreground">R$ {(currentDiarista?.ironing_value ?? 50).toFixed(2)}</p>
-                    <p className="text-[10px] text-muted-foreground">Passar Roupa</p>
-                  </div>
                 </div>
-              </CardContent>
-            </Card>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Minha Agenda</p>
+                  <p className="text-[11px] text-muted-foreground">Definida pelo administrador</p>
+                </div>
+              </div>
+              <div className="divide-y divide-border/30">
+                {currentDiarista?.work_schedule && currentDiarista.work_schedule.length > 0 ? (
+                  currentDiarista.work_schedule.map((s, i) => {
+                    const WDAY: Record<string, string> = { monday: 'Seg', tuesday: 'Ter', wednesday: 'Qua', thursday: 'Qui', friday: 'Sex', saturday: 'Sab', sunday: 'Dom' }
+                    const WDAY_FULL: Record<string, string> = { monday: 'Segunda', tuesday: 'Terca', wednesday: 'Quarta', thursday: 'Quinta', friday: 'Sexta', saturday: 'Sabado', sunday: 'Domingo' }
+                    const clientForSchedule = getClientName(s.client_id)
+                    const isHeavy = s.type === 'heavy_cleaning'
+                    return (
+                      <div key={i} className="px-5 py-3.5 flex items-center gap-3">
+                        <div className={cn(
+                          'w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold shrink-0',
+                          isHeavy ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'
+                        )}>
+                          {WDAY[s.day]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground">{WDAY_FULL[s.day] || s.day}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className={cn('text-[10px] font-semibold uppercase tracking-wider', isHeavy ? 'text-destructive' : 'text-primary')}>
+                              {isHeavy ? 'Pesada' : 'Leve'}
+                            </span>
+                            {clientForSchedule && (
+                              <>
+                                <span className="text-muted-foreground/30">{'|'}</span>
+                                <span className="text-[11px] text-muted-foreground flex items-center gap-1 truncate">
+                                  <Building2 className="h-3 w-3 shrink-0 text-primary/60" />{clientForSchedule}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-8">Nenhuma agenda definida</p>
+                )}
+              </div>
+            </div>
+
+            {/* Valores -- visual limpo */}
+            <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
+              <div className="px-5 py-4 border-b border-border/40 flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Tabela de Valores</p>
+                  <p className="text-[11px] text-muted-foreground">Definidos pelo administrador</p>
+                </div>
+              </div>
+              <div className="p-4">
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: 'Limpeza Pesada', value: currentDiarista?.heavy_cleaning_value ?? 250, color: 'text-destructive' },
+                    { label: 'Limpeza Leve', value: currentDiarista?.light_cleaning_value ?? 150, color: 'text-primary' },
+                    { label: 'Lavagem', value: currentDiarista?.washing_value ?? 75, color: 'text-primary' },
+                    { label: 'Passar Roupa', value: currentDiarista?.ironing_value ?? 50, color: 'text-primary' },
+                  ].map((item, i) => (
+                    <div key={i} className="rounded-xl bg-muted/50 p-3.5 text-center border border-border/30">
+                      <p className={cn('text-lg font-bold', item.color)}>
+                        {'R$ '}{item.value.toFixed(2)}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mt-1">{item.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Logout button */}
+            <button
+              onClick={() => { logout(); router.push('/login') }}
+              className="w-full py-3.5 rounded-2xl border border-destructive/20 text-destructive text-sm font-medium hover:bg-destructive/5 transition-colors flex items-center justify-center gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Sair da conta
+            </button>
           </div>
         )}
 
