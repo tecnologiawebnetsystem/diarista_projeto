@@ -37,7 +37,7 @@ const CONFIG_ITEMS = [
   { key: 'light_cleaning', label: 'Limpeza Leve', desc: 'Quinta-feira' },
   { key: 'washing', label: 'Lavagem de Roupa', desc: 'Por semana' },
   { key: 'ironing', label: 'Passar Roupa', desc: 'Por semana' },
-  { key: 'transport', label: 'Transporte', desc: 'Por visita de lavanderia' },
+  { key: 'transport', label: 'Transporte', desc: 'Por semana de lavanderia' },
 ]
 
 type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'notas' | 'contrato' | 'config'
