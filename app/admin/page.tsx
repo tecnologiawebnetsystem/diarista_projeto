@@ -236,8 +236,8 @@ export default function AdminPage() {
               Gerar Relatorio Mensal
             </Button>
             <MonthlyPaymentSection month={selectedMonth} year={selectedYear} isAdmin={true} hasActivity={hasActivity} diaristaId={selectedDiaristaId} />
-            <AttendanceSection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} />
-            <LaundrySection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} />
+            <AttendanceSection month={selectedMonth} year={selectedYear} readOnly diaristaId={selectedDiaristaId} />
+            <LaundrySection month={selectedMonth} year={selectedYear} isAdmin diaristaId={selectedDiaristaId} />
           </>
         )}
 
