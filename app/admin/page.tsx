@@ -8,7 +8,8 @@ import {
   ScrollText, LayoutDashboard, CalendarCheck, WashingMachine,
   ShieldCheck, FileDown, Bus, Plus, AlertTriangle,
   CheckCircle, XCircle, Trash2, Edit2, X,
-  Users, Phone, Hash, UserPlus, UserX, UserCheck, Eye, EyeOff
+  Users, Phone, Hash, UserPlus, UserX, UserCheck, Eye, EyeOff,
+  MapPin, Building2
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -27,6 +28,7 @@ import { useLaundryWeeks } from '@/hooks/use-laundry-weeks'
 import { useNotes } from '@/hooks/use-notes'
 import { useAwards } from '@/hooks/use-awards'
 import { useDiaristas } from '@/hooks/use-diaristas'
+import { useClients } from '@/hooks/use-clients'
 import { useDbNotifications } from '@/hooks/use-db-notifications'
 import { MonthlyPaymentSection } from '@/components/monthly-payment-section'
 import { AttendanceSection } from '@/components/attendance-section'
@@ -36,7 +38,7 @@ import { TransportSection } from '@/components/transport-section'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
-import type { Note, Diarista, WorkScheduleDay } from '@/types/database'
+import type { Note, Diarista, WorkScheduleDay, Client, LaundryAssignment } from '@/types/database'
 import Link from 'next/link'
 
 const NOTE_TYPES = [
@@ -65,7 +67,7 @@ const CLEANING_TYPES = [
   { value: 'light_cleaning', label: 'Limpeza Leve' },
 ] as const
 
-type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'notas' | 'contrato' | 'equipe'
+type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'notas' | 'contrato' | 'equipe' | 'clientes'
 
 const NAV_ITEMS: { key: Tab; label: string; Icon: React.ElementType }[] = [
   { key: 'resumo',      label: 'Dashboard',   Icon: LayoutDashboard },
@@ -75,12 +77,18 @@ const NAV_ITEMS: { key: Tab; label: string; Icon: React.ElementType }[] = [
   { key: 'notas',       label: 'Notas',        Icon: FileText },
   { key: 'contrato',    label: 'Contrato',     Icon: ScrollText },
   { key: 'equipe',      label: 'Equipe',       Icon: Users },
+  { key: 'clientes',    label: 'Clientes',     Icon: Building2 },
 ]
 
 export default function AdminPage() {
   const router = useRouter()
   const { role, isLoading, logout, selectedDiaristaId, setSelectedDiaristaId } = useAuth()
   const { diaristas: allDiaristas, activeDiaristas, loading: loadingDiaristas, addDiarista, updateDiarista, deleteDiarista, refetch: refetchDiaristas } = useDiaristas()
+  const { clients: allClients, activeClients, addClient, updateClient, deleteClient, refetch: refetchClients } = useClients()
+  const [showClientForm, setShowClientForm] = useState(false)
+  const [editingClient, setEditingClient] = useState<string | null>(null)
+  const [clientForm, setClientForm] = useState({ name: '', address: '', neighborhood: '', phone: '', notes: '' })
+  const [clientError, setClientError] = useState('')
   const [showDiaristaForm, setShowDiaristaForm] = useState(false)
   const [editingDiarista, setEditingDiarista] = useState<string | null>(null)
   const [diaristaForm, setDiaristaForm] = useState({
@@ -91,6 +99,7 @@ export default function AdminPage() {
       { day: 'monday' as const, type: 'heavy_cleaning' as const },
       { day: 'thursday' as const, type: 'light_cleaning' as const },
     ] as WorkScheduleDay[],
+    laundry_assignments: [] as LaundryAssignment[],
   })
   const [showPin, setShowPin] = useState<string | null>(null)
   const [diaristaError, setDiaristaError] = useState('')
@@ -176,6 +185,47 @@ export default function AdminPage() {
       { day: 'monday' as const, type: 'heavy_cleaning' as const },
       { day: 'thursday' as const, type: 'light_cleaning' as const },
     ] as WorkScheduleDay[],
+    laundry_assignments: [] as LaundryAssignment[],
+  }
+
+  // Client CRUD handlers
+  const handleClientSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setClientError('')
+    if (!clientForm.name.trim()) { setClientError('Nome obrigatorio'); return }
+    try {
+      if (editingClient) {
+        await updateClient(editingClient, clientForm)
+      } else {
+        await addClient(clientForm)
+      }
+      setClientForm({ name: '', address: '', neighborhood: '', phone: '', notes: '' })
+      setShowClientForm(false)
+      setEditingClient(null)
+      refetchClients()
+    } catch {
+      setClientError('Erro ao salvar cliente')
+    }
+  }
+
+  const handleEditClient = (c: Client) => {
+    setEditingClient(c.id)
+    setClientForm({
+      name: c.name,
+      address: c.address || '',
+      neighborhood: c.neighborhood || '',
+      phone: c.phone || '',
+      notes: c.notes || '',
+    })
+    setShowClientForm(true)
+    setClientError('')
+  }
+
+  const handleCancelClient = () => {
+    setShowClientForm(false)
+    setEditingClient(null)
+    setClientForm({ name: '', address: '', neighborhood: '', phone: '', notes: '' })
+    setClientError('')
   }
 
   // Diarista CRUD
@@ -201,6 +251,7 @@ export default function AdminPage() {
         ironing_value: parseFloat(diaristaForm.ironing_value) || 0,
         transport_value: parseFloat(diaristaForm.transport_value) || 0,
         work_schedule: diaristaForm.work_schedule,
+        laundry_assignments: diaristaForm.laundry_assignments,
       }
       if (editingDiarista) {
         await updateDiarista(editingDiarista, payload)
@@ -229,6 +280,7 @@ export default function AdminPage() {
       ironing_value: (d.ironing_value ?? 50).toString(),
       transport_value: (d.transport_value ?? 30).toString(),
       work_schedule: d.work_schedule || defaultDiaristaForm.work_schedule,
+      laundry_assignments: d.laundry_assignments || [],
     })
     setShowDiaristaForm(true)
     setDiaristaError('')
@@ -631,6 +683,181 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* CLIENTES */}
+        {activeTab === 'clientes' && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-primary" />
+                <p className="text-sm font-semibold">{'Gestao de Clientes'}</p>
+              </div>
+              <Button size="sm" className="h-9 px-3" onClick={() => { setShowClientForm(true); setEditingClient(null); setClientForm({ name: '', address: '', neighborhood: '', phone: '', notes: '' }) }}>
+                <Plus className="h-4 w-4 mr-1" />
+                <span className="text-xs">Novo</span>
+              </Button>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-2">
+              <Card>
+                <CardContent className="p-3 text-center">
+                  <p className="text-2xl font-bold text-primary">{activeClients.length}</p>
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Ativos</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-3 text-center">
+                  <p className="text-2xl font-bold text-muted-foreground">{allClients.filter(c => !c.active).length}</p>
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Inativos</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Formulario */}
+            {showClientForm && (
+              <Card className="border-primary/40">
+                <CardHeader className="pb-2 pt-4 px-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm">{editingClient ? 'Editar' : 'Novo'} Cliente</CardTitle>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCancelClient}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  <form onSubmit={handleClientSubmit} className="space-y-3">
+                    <div>
+                      <Label className="text-xs mb-1.5 block">Nome do cliente</Label>
+                      <Input
+                        value={clientForm.name}
+                        onChange={e => setClientForm({ ...clientForm, name: e.target.value })}
+                        placeholder="Ex: Familia Silva"
+                        required
+                        className="h-10"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs mb-1.5 block">Endereco</Label>
+                      <Input
+                        value={clientForm.address}
+                        onChange={e => setClientForm({ ...clientForm, address: e.target.value })}
+                        placeholder="Rua, numero, complemento"
+                        className="h-10"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs mb-1.5 block">Bairro</Label>
+                        <Input
+                          value={clientForm.neighborhood}
+                          onChange={e => setClientForm({ ...clientForm, neighborhood: e.target.value })}
+                          placeholder="Bairro"
+                          className="h-10"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs mb-1.5 block">Telefone</Label>
+                        <Input
+                          value={clientForm.phone}
+                          onChange={e => setClientForm({ ...clientForm, phone: e.target.value })}
+                          placeholder="(11) 99999-9999"
+                          className="h-10"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs mb-1.5 block">Observacoes</Label>
+                      <Textarea
+                        value={clientForm.notes}
+                        onChange={e => setClientForm({ ...clientForm, notes: e.target.value })}
+                        placeholder="Notas sobre o cliente, instrucoes especiais..."
+                        className="min-h-[60px] text-sm"
+                      />
+                    </div>
+
+                    {clientError && <p className="text-xs text-destructive font-medium">{clientError}</p>}
+
+                    <div className="flex gap-2 pt-1">
+                      <Button type="submit" className="flex-1 h-10">
+                        {editingClient ? 'Atualizar' : 'Cadastrar'}
+                      </Button>
+                      <Button type="button" variant="outline" onClick={handleCancelClient} className="h-10">
+                        Cancelar
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Lista clientes */}
+            {activeClients.length === 0 && !showClientForm ? (
+              <div className="text-center py-10 text-muted-foreground">
+                <Building2 className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                <p className="text-sm">{'Nenhum cliente cadastrado'}</p>
+                <p className="text-xs mt-1 opacity-60">{'Clique em "Novo" para cadastrar'}</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {activeClients.map(c => {
+                  // Diaristas vinculadas a este cliente
+                  const linkedDiaristas = activeDiaristas.filter(d =>
+                    d.work_schedule?.some(s => s.client_id === c.id) ||
+                    d.laundry_assignments?.some(la => la.client_id === c.id)
+                  )
+                  return (
+                    <Card key={c.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                            <Building2 className="h-5 w-5 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm truncate">{c.name}</p>
+                            {c.address && (
+                              <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                                <MapPin className="h-3 w-3 shrink-0" />{c.address}
+                              </p>
+                            )}
+                            {c.neighborhood && (
+                              <p className="text-[11px] text-muted-foreground mt-0.5">{c.neighborhood}</p>
+                            )}
+                            {c.phone && (
+                              <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                                <Phone className="h-3 w-3 shrink-0" />{c.phone}
+                              </p>
+                            )}
+                            {linkedDiaristas.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {linkedDiaristas.map(d => (
+                                  <Badge key={d.id} variant="outline" className="text-[10px] h-5 px-2 border-primary/30 text-primary">
+                                    {d.name}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                            {c.notes && (
+                              <p className="text-[10px] text-muted-foreground mt-1.5 italic">{c.notes}</p>
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-1 shrink-0">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditClient(c)}>
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteClient(c.id)}>
+                              <XCircle className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* EQUIPE */}
         {activeTab === 'equipe' && (
           <div className="space-y-3">
@@ -727,46 +954,67 @@ export default function AdminPage() {
                         )}
                       </div>
                       {diaristaForm.work_schedule.map((sched, idx) => (
-                        <div key={idx} className="flex items-center gap-2">
+                        <div key={idx} className="space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <Select
+                              value={sched.day}
+                              onValueChange={v => {
+                                const updated = [...diaristaForm.work_schedule]
+                                updated[idx] = { ...updated[idx], day: v as WorkScheduleDay['day'] }
+                                setDiaristaForm({ ...diaristaForm, work_schedule: updated })
+                              }}
+                            >
+                              <SelectTrigger className="flex-1 h-9 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {WEEKDAYS.map(w => (
+                                  <SelectItem key={w.value} value={w.value}>{w.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Select
+                              value={sched.type}
+                              onValueChange={v => {
+                                const updated = [...diaristaForm.work_schedule]
+                                updated[idx] = { ...updated[idx], type: v as WorkScheduleDay['type'] }
+                                setDiaristaForm({ ...diaristaForm, work_schedule: updated })
+                              }}
+                            >
+                              <SelectTrigger className="flex-1 h-9 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {CLEANING_TYPES.map(t => (
+                                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {diaristaForm.work_schedule.length > 1 && (
+                              <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-destructive" onClick={() => removeScheduleDay(idx)}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </div>
                           <Select
-                            value={sched.day}
+                            value={sched.client_id || '_none'}
                             onValueChange={v => {
                               const updated = [...diaristaForm.work_schedule]
-                              updated[idx] = { ...updated[idx], day: v as WorkScheduleDay['day'] }
+                              updated[idx] = { ...updated[idx], client_id: v === '_none' ? null : v }
                               setDiaristaForm({ ...diaristaForm, work_schedule: updated })
                             }}
                           >
-                            <SelectTrigger className="flex-1 h-9 text-xs">
-                              <SelectValue />
+                            <SelectTrigger className="h-8 text-[11px] text-muted-foreground">
+                              <MapPin className="h-3 w-3 mr-1.5 shrink-0" />
+                              <SelectValue placeholder="Selecionar cliente" />
                             </SelectTrigger>
                             <SelectContent>
-                              {WEEKDAYS.map(w => (
-                                <SelectItem key={w.value} value={w.value}>{w.label}</SelectItem>
+                              <SelectItem value="_none">Sem cliente vinculado</SelectItem>
+                              {activeClients.map(c => (
+                                <SelectItem key={c.id} value={c.id}>{c.name}{c.neighborhood ? ` - ${c.neighborhood}` : ''}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                          <Select
-                            value={sched.type}
-                            onValueChange={v => {
-                              const updated = [...diaristaForm.work_schedule]
-                              updated[idx] = { ...updated[idx], type: v as WorkScheduleDay['type'] }
-                              setDiaristaForm({ ...diaristaForm, work_schedule: updated })
-                            }}
-                          >
-                            <SelectTrigger className="flex-1 h-9 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {CLEANING_TYPES.map(t => (
-                                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {diaristaForm.work_schedule.length > 1 && (
-                            <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-destructive" onClick={() => removeScheduleDay(idx)}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
                         </div>
                       ))}
                     </div>
@@ -841,6 +1089,89 @@ export default function AdminPage() {
                       </div>
                     </div>
 
+                    {/* Separador */}
+                    <div className="h-px bg-border" />
+
+                    {/* Lavanderia por cliente */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Lavanderia por cliente</p>
+                        {activeClients.length > 0 && (
+                          <Button
+                            type="button" variant="ghost" size="sm" className="h-7 px-2 text-[11px]"
+                            onClick={() => {
+                              const usedIds = diaristaForm.laundry_assignments.map(la => la.client_id)
+                              const nextClient = activeClients.find(c => !usedIds.includes(c.id))
+                              if (nextClient) {
+                                setDiaristaForm({
+                                  ...diaristaForm,
+                                  laundry_assignments: [...diaristaForm.laundry_assignments, { client_id: nextClient.id, services: ['washing', 'ironing'] }],
+                                })
+                              }
+                            }}
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Cliente
+                          </Button>
+                        )}
+                      </div>
+                      {diaristaForm.laundry_assignments.length === 0 && (
+                        <p className="text-xs text-muted-foreground text-center py-2">Nenhum cliente vinculado a lavanderia</p>
+                      )}
+                      {diaristaForm.laundry_assignments.map((la, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <Select
+                            value={la.client_id}
+                            onValueChange={v => {
+                              const updated = [...diaristaForm.laundry_assignments]
+                              updated[idx] = { ...updated[idx], client_id: v }
+                              setDiaristaForm({ ...diaristaForm, laundry_assignments: updated })
+                            }}
+                          >
+                            <SelectTrigger className="flex-1 h-9 text-xs">
+                              <SelectValue placeholder="Cliente" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {activeClients.map(c => (
+                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              className={cn('px-2 py-1 rounded text-[10px] font-medium border transition-colors', la.services.includes('washing') ? 'bg-primary/10 border-primary text-primary' : 'bg-muted border-border text-muted-foreground')}
+                              onClick={() => {
+                                const updated = [...diaristaForm.laundry_assignments]
+                                const has = la.services.includes('washing')
+                                updated[idx] = { ...updated[idx], services: has ? la.services.filter(s => s !== 'washing') : [...la.services, 'washing'] }
+                                setDiaristaForm({ ...diaristaForm, laundry_assignments: updated })
+                              }}
+                            >
+                              Lavar
+                            </button>
+                            <button
+                              type="button"
+                              className={cn('px-2 py-1 rounded text-[10px] font-medium border transition-colors', la.services.includes('ironing') ? 'bg-primary/10 border-primary text-primary' : 'bg-muted border-border text-muted-foreground')}
+                              onClick={() => {
+                                const updated = [...diaristaForm.laundry_assignments]
+                                const has = la.services.includes('ironing')
+                                updated[idx] = { ...updated[idx], services: has ? la.services.filter(s => s !== 'ironing') : [...la.services, 'ironing'] }
+                                setDiaristaForm({ ...diaristaForm, laundry_assignments: updated })
+                              }}
+                            >
+                              Passar
+                            </button>
+                          </div>
+                          <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-destructive" onClick={() => {
+                            setDiaristaForm({ ...diaristaForm, laundry_assignments: diaristaForm.laundry_assignments.filter((_, i) => i !== idx) })
+                          }}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+
                     {diaristaError && (
                       <p className="text-xs text-destructive font-medium">{diaristaError}</p>
                     )}
@@ -904,11 +1235,15 @@ export default function AdminPage() {
                             {/* Agenda */}
                             {schedule.length > 0 && (
                               <div className="flex flex-wrap gap-1.5 mt-2">
-                                {schedule.map((s, i) => (
-                                  <Badge key={i} variant="secondary" className="text-[10px] h-5 px-2">
-                                    {getDayLabel(s.day)} - {getTypeLabel(s.type)}
-                                  </Badge>
-                                ))}
+                                {schedule.map((s, i) => {
+                                  const client = s.client_id ? activeClients.find(c => c.id === s.client_id) : null
+                                  return (
+                                    <Badge key={i} variant="secondary" className="text-[10px] h-auto py-0.5 px-2">
+                                      {getDayLabel(s.day)} - {getTypeLabel(s.type)}
+                                      {client && <span className="ml-1 text-primary font-normal">({client.name})</span>}
+                                    </Badge>
+                                  )
+                                })}
                               </div>
                             )}
                             {/* Valores resumo */}
@@ -990,12 +1325,12 @@ export default function AdminPage() {
 
       {/* Bottom Navigation Bar */}
       <div className="fixed bottom-0 left-0 right-0 z-20 bg-card border-t border-border" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="flex items-stretch h-16">
+        <div className="flex items-stretch h-16 overflow-x-auto scrollbar-hide">
           {NAV_ITEMS.map(({ key, label, Icon }) => (
             <button
               key={key}
               onClick={() => handleTabChange(key)}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 relative transition-colors ${
+              className={`flex-1 min-w-[56px] flex flex-col items-center justify-center gap-0.5 relative transition-colors ${
                 activeTab === key ? 'text-primary' : 'text-muted-foreground'
               }`}
             >

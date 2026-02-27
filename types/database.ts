@@ -1,6 +1,24 @@
+export interface Client {
+  id: string
+  name: string
+  address?: string | null
+  neighborhood?: string | null
+  phone?: string | null
+  notes?: string | null
+  active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface WorkScheduleDay {
   day: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday'
   type: 'heavy_cleaning' | 'light_cleaning'
+  client_id?: string | null
+}
+
+export interface LaundryAssignment {
+  client_id: string
+  services: ('washing' | 'ironing')[]
 }
 
 export interface Diarista {
@@ -16,6 +34,7 @@ export interface Diarista {
   ironing_value: number
   transport_value: number
   work_schedule: WorkScheduleDay[]
+  laundry_assignments?: LaundryAssignment[]
   created_at: string
   updated_at: string
 }
@@ -142,6 +161,11 @@ export interface PaymentHistory {
 export interface Database {
   public: {
     Tables: {
+      clients: {
+        Row: Client
+        Insert: Omit<Client, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<Client, 'id' | 'created_at' | 'updated_at'>>
+      }
       diaristas: {
         Row: Diarista
         Insert: Omit<Diarista, 'id' | 'created_at' | 'updated_at'>
