@@ -43,7 +43,7 @@ const CONFIG_ITEMS = [
 type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'notas' | 'contrato' | 'config'
 
 const NAV_ITEMS: { key: Tab; label: string; Icon: React.ElementType }[] = [
-  { key: 'resumo',     label: 'Resumo',    Icon: LayoutDashboard },
+  { key: 'resumo',     label: 'Dashboard',  Icon: LayoutDashboard },
   { key: 'presenca',   label: 'Presença',  Icon: CalendarCheck },
   { key: 'lavanderia', label: 'Lavanderia',Icon: WashingMachine },
   { key: 'notas',      label: 'Notas',     Icon: FileText },
