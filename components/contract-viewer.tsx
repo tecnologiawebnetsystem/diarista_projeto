@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { ScrollText, X, Shield, Clock, DollarSign, AlertTriangle, Smartphone, Shirt, ChevronRight, Users, CheckCircle2, Lock } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 
-const clauses = [
+const clauses: { icon: React.ElementType; title: string; items: ReactNode[] }[] = [
   {
     icon: Shield,
     title: 'Cláusula 1 - Fundamentação e Quitação',
@@ -21,10 +21,10 @@ const clauses = [
     title: 'Cláusula 2 - Cronograma, Valores e Agenda',
     items: [
       'DIÁRIAS: Segunda-feira R$ 250,00 (Limpeza Pesada) e Quinta-feira R$ 150,00 (Manutenção).',
-      'FERIADOS: Caso a segunda-feira seja feriado, o valor de R$ 250,00 será pago integralmente.',
-      'FERIADOS: Caso a quinta-feira seja feriado, o valor de R$ 150,00 NÃO será pago integralmente.',
-      'Alteração pela CONTRATADA: aviso mínimo de 02 dias de antecedência. Na Segunda: se sem disponibilidade da CONTRATADA, R$ 250,00 é devido integralmente. Na Quinta: sem disponibilidade da CONTRATADA, valor não é devido.',
-      'Alteração pelo CONTRATANTE: aviso mínimo de 02 dias de antecedência. Na Segunda: se sem disponibilidade da CONTRATADA, R$ 250,00 é devido integralmente. Na Quinta: sem disponibilidade da CONTRATADA, valor não é devido.',
+      <>{'FERIADOS: Caso a segunda-feira seja feriado, o valor de R$ 250,00 '}<span className="text-green-500 font-semibold">{'será pago integralmente'}</span>{'.'}</>,
+      <>{'FERIADOS: Caso a quinta-feira seja feriado, o valor de R$ 150,00 '}<span className="text-destructive font-semibold">{'NÃO será pago integralmente'}</span>{'.'}</>,
+      <>{'Alteração pela CONTRATADA: aviso mínimo de 02 dias de antecedência. Na Segunda: se sem disponibilidade da CONTRATADA, '}<span className="text-green-500 font-semibold">{'R$ 250,00 é devido integralmente'}</span>{'. Na Quinta: sem disponibilidade da CONTRATADA, '}<span className="text-destructive font-semibold">{'valor não é devido'}</span>{'.'}</>,
+      <>{'Alteração pelo CONTRATANTE: aviso mínimo de 02 dias de antecedência. Na Segunda: se sem disponibilidade da CONTRATADA, '}<span className="text-green-500 font-semibold">{'R$ 250,00 é devido integralmente'}</span>{'. Na Quinta: sem disponibilidade da CONTRATADA, '}<span className="text-destructive font-semibold">{'valor não é devido'}</span>{'.'}</>,
     ],
   },
   {
