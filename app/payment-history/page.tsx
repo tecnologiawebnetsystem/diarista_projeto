@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeft, DollarSign, Clock, CheckCircle, Receipt, Filter } from 'lucide-react'
+import { ArrowLeft, DollarSign, Clock, CheckCircle, Receipt, Filter, Briefcase, WashingMachine, Bus } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -120,12 +120,14 @@ export default function PaymentHistoryPage() {
                     <div className="flex items-center gap-3">
                       <div className={cn(
                         'w-10 h-10 rounded-xl flex items-center justify-center',
-                        record.type === 'salary' ? 'bg-primary/10' : 'bg-accent/10'
+                        record.type === 'attendance' ? 'bg-primary/10' : record.type === 'transport' ? 'bg-amber-500/10' : 'bg-accent/10'
                       )}>
-                        <DollarSign className={cn(
-                          'h-5 w-5',
-                          record.type === 'salary' ? 'text-primary' : 'text-accent'
-                        )} />
+                        {record.type === 'attendance'
+                          ? <Briefcase className="h-5 w-5 text-primary" />
+                          : record.type === 'transport'
+                          ? <Bus className="h-5 w-5 text-amber-600" />
+                          : <WashingMachine className="h-5 w-5 text-accent" />
+                        }
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-foreground">{record.description}</p>
