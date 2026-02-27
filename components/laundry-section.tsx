@@ -29,12 +29,12 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId }: Lau
     if (week) {
       await updateLaundryService(week.id, checked, week.washed)
     } else if (checked) {
-      // Criar semana nova via supabase e recarregar pelo hook
-      await supabase.from('laundry_weeks')
-        .insert([{ week_number: weekNumber, month, year, value: ironingValue, ironed: true, washed: false, transport_fee: transportValue }])
-        .select()
-        .single()
-      // Força refetch para sincronizar o estado corretamente
+      const insertData: Record<string, unknown> = {
+        week_number: weekNumber, month, year, value: ironingValue,
+        ironed: true, washed: false, transport_fee: transportValue
+      }
+      if (diaristaId) insertData.diarista_id = diaristaId
+      await supabase.from('laundry_weeks').insert([insertData]).select().single()
       await refetch()
     }
   }
@@ -44,12 +44,12 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId }: Lau
     if (week) {
       await updateLaundryService(week.id, week.ironed, checked)
     } else if (checked) {
-      // Criar semana nova via supabase e recarregar pelo hook
-      await supabase.from('laundry_weeks')
-        .insert([{ week_number: weekNumber, month, year, value: washingValue, ironed: false, washed: true, transport_fee: transportValue }])
-        .select()
-        .single()
-      // Força refetch para sincronizar o estado corretamente
+      const insertData: Record<string, unknown> = {
+        week_number: weekNumber, month, year, value: washingValue,
+        ironed: false, washed: true, transport_fee: transportValue
+      }
+      if (diaristaId) insertData.diarista_id = diaristaId
+      await supabase.from('laundry_weeks').insert([insertData]).select().single()
       await refetch()
     }
   }
@@ -116,8 +116,8 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId }: Lau
       </CardHeader>
       <CardContent className="px-4 pb-4 space-y-3">
 
-        {/* Estado vazio */}
-        {weeksWithServices.length === 0 && (
+        {/* Estado vazio — só mostra no modo leitura (isAdmin) ou quando não há semanas não registradas */}
+        {weeksWithServices.length === 0 && isAdmin && (
           <p className="text-center text-muted-foreground py-4 text-sm">
             Nenhum serviço registrado neste mês
           </p>
@@ -188,16 +188,18 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId }: Lau
           )
         })}
 
-        {/* Botões para adicionar semanas — só para diarista */}
+        {/* Botões para adicionar semanas — modo interativo */}
         {!isAdmin && unregisteredWeeks.length > 0 && (
-          <div className="space-y-1.5">
-            <p className="text-[11px] text-muted-foreground font-medium">Adicionar semana:</p>
+          <div className="space-y-2">
+            <p className="text-[11px] text-muted-foreground font-medium">
+              {weeksWithServices.length === 0 ? 'Selecione a semana para registrar serviço:' : 'Adicionar semana:'}
+            </p>
             <div className="flex flex-wrap gap-2">
               {unregisteredWeeks.map(w => (
                 <button
                   key={w}
                   onClick={() => handleIronedChange(w, true)}
-                  className="px-4 py-2 rounded-full border border-dashed border-border text-xs text-muted-foreground active:scale-95 transition-all hover:border-primary hover:text-primary"
+                  className="px-4 py-2.5 rounded-xl border-2 border-dashed border-border text-sm text-muted-foreground active:scale-95 transition-all hover:border-primary hover:text-primary"
                 >
                   + Semana {w}
                 </button>
