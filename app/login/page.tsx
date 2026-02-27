@@ -45,18 +45,53 @@ export default function LoginPage() {
     }
   }
 
-  const handleDiaristaClick = () => {
+  const handleDiaristaClick = async () => {
+    // Se ainda esta carregando, espera terminar
+    if (loadingDiaristas) return
+
+    // Se nao carregou nenhuma diarista, tenta recarregar
+    if (diaristas.length === 0) {
+      setLoadingDiaristas(true)
+      try {
+        const { data } = await supabase
+          .from('diaristas')
+          .select('*')
+          .eq('active', true)
+          .order('name')
+        if (data && data.length > 0) {
+          const loaded = data as unknown as Diarista[]
+          setDiaristas(loaded)
+          if (loaded.length === 1) {
+            setSelectedDiarista(loaded[0])
+            setScreen('diarista-pin')
+            setPin('')
+            setError(false)
+          } else {
+            setScreen('diarista-select')
+          }
+        } else {
+          // Sem diaristas cadastradas
+          setScreen('diarista-pin')
+          setPin('')
+          setError(false)
+        }
+      } catch {
+        setScreen('diarista-pin')
+        setPin('')
+        setError(false)
+      } finally {
+        setLoadingDiaristas(false)
+      }
+      return
+    }
+
     if (diaristas.length === 1) {
       setSelectedDiarista(diaristas[0])
       setScreen('diarista-pin')
       setPin('')
       setError(false)
-    } else if (diaristas.length > 1) {
-      setScreen('diarista-select')
     } else {
-      setScreen('diarista-pin')
-      setPin('')
-      setError(false)
+      setScreen('diarista-select')
     }
   }
 
@@ -369,15 +404,17 @@ export default function LoginPage() {
           {/* Diarista */}
           <button
             onClick={handleDiaristaClick}
-            disabled={loadingDiaristas}
-            className="w-full flex items-center gap-4 px-5 py-[22px] active:bg-muted/50 transition-all text-left disabled:opacity-50 group"
+            className="w-full flex items-center gap-4 px-5 py-[22px] active:bg-muted/50 transition-all text-left group"
           >
             <div className="w-[52px] h-[52px] rounded-[16px] gradient-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/25 group-active:scale-95 transition-transform">
               <User className="h-6 w-6 text-primary-foreground" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-bold text-[15px] text-foreground leading-tight">Diarista</p>
-              <p className="text-[12px] text-muted-foreground mt-1 leading-snug">
+              <p className="text-[12px] text-muted-foreground mt-1 leading-snug flex items-center gap-1.5">
+                {loadingDiaristas && (
+                  <span className="w-3 h-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin shrink-0" />
+                )}
                 {loadingDiaristas
                   ? 'Carregando...'
                   : diaristas.length > 0
