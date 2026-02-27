@@ -26,16 +26,26 @@ export async function GET(request: NextRequest) {
     const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0]
     const endDate = new Date(year, month, 0).toISOString().split('T')[0]
 
-    // Config
+    // Config (fallback)
     const { data: configData } = await supabase.from('config').select('key, value')
     const cfg: Record<string, number> = {}
     configData?.forEach(item => { cfg[item.key] = item.value })
 
-    // Diarista info
+    // Diarista info + valores individuais
     let diaristaName = 'Diarista'
+    let diaristaValues: Record<string, number> = {}
     if (diaristaId) {
-      const { data: d } = await supabase.from('diaristas').select('name').eq('id', diaristaId).single()
-      if (d) diaristaName = d.name
+      const { data: d } = await supabase.from('diaristas').select('*').eq('id', diaristaId).single()
+      if (d) {
+        diaristaName = d.name
+        diaristaValues = {
+          heavy_cleaning: d.heavy_cleaning_value,
+          light_cleaning: d.light_cleaning_value,
+          washing: d.washing_value,
+          ironing: d.ironing_value,
+          transport: d.transport_value,
+        }
+      }
     }
 
     // Pagamento mensal
@@ -58,11 +68,11 @@ export async function GET(request: NextRequest) {
     if (diaristaId) notesQuery = notesQuery.eq('diarista_id', diaristaId)
     const { data: notesData } = await notesQuery
 
-    // Calculos
-    const ironingValue = cfg.ironing || 50
-    const washingValue = cfg.washing || 75
-    const heavyCleaningValue = cfg.heavy_cleaning || 0
-    const lightCleaningValue = cfg.light_cleaning || 0
+    // Calculos - prioriza valores da diarista, fallback para config global
+    const ironingValue = diaristaValues.ironing ?? cfg.ironing ?? 50
+    const washingValue = diaristaValues.washing ?? cfg.washing ?? 75
+    const heavyCleaningValue = diaristaValues.heavy_cleaning ?? cfg.heavy_cleaning ?? 250
+    const lightCleaningValue = diaristaValues.light_cleaning ?? cfg.light_cleaning ?? 150
 
     const heavyDays = (attendanceData || []).filter((a: { day_type: string; present: boolean }) => a.day_type === 'heavy_cleaning' && a.present).length
     const lightDays = (attendanceData || []).filter((a: { day_type: string; present: boolean }) => a.day_type === 'light_cleaning' && a.present).length

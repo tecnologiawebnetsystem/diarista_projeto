@@ -17,6 +17,8 @@ import { useLaundryWeeks } from '@/hooks/use-laundry-weeks'
 import { useNotes } from '@/hooks/use-notes'
 import { useAwards } from '@/hooks/use-awards'
 import { useConfig } from '@/hooks/use-config'
+import { useDiaristas } from '@/hooks/use-diaristas'
+import type { WorkScheduleDay } from '@/types/database'
 import { ContractViewer } from '@/components/contract-viewer'
 import { NotificationBanner } from '@/components/notification-banner'
 import { useDbNotifications } from '@/hooks/use-db-notifications'
@@ -37,6 +39,8 @@ export default function DiaristaPage() {
   const [activeTab, setActiveTab] = useState<'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'anotacoes' | 'contrato'>('resumo')
 
   const { diaristaId } = useAuth()
+  const { diaristas: allDiaristas } = useDiaristas()
+  const currentDiarista = allDiaristas.find(d => d.id === diaristaId)
   const { notifications: dbNotifications, unreadCount, markAsRead, markAllAsRead } = useDbNotifications(diaristaId)
   const [showNotifications, setShowNotifications] = useState(false)
   const { payment } = useMonthlyPayments(selectedMonth, selectedYear, diaristaId)
@@ -62,8 +66,8 @@ export default function DiaristaPage() {
     )
   }
 
-  const ironingValue = getConfigValue('ironing') || 50
-  const washingValue = getConfigValue('washing') || 75
+  const ironingValue = currentDiarista?.ironing_value ?? getConfigValue('ironing') ?? 50
+  const washingValue = currentDiarista?.washing_value ?? getConfigValue('washing') ?? 75
 
   const handleTabChange = (tab: typeof activeTab) => {
     setActiveTab(tab)
@@ -77,8 +81,8 @@ export default function DiaristaPage() {
   const presentDays = attendances.filter(a => a.present)
   const hasActivity = presentDays.length > 0 || laundryWeeks.some(w => w.ironed || w.washed)
 
-  const heavyCleaningValue = getConfigValue('heavy_cleaning') || 0
-  const lightCleaningValue = getConfigValue('light_cleaning') || 0
+  const heavyCleaningValue = currentDiarista?.heavy_cleaning_value ?? getConfigValue('heavy_cleaning') ?? 250
+  const lightCleaningValue = currentDiarista?.light_cleaning_value ?? getConfigValue('light_cleaning') ?? 150
   const heavyDays = presentDays.filter(a => a.day_type === 'heavy_cleaning')
   const lightDays = presentDays.filter(a => a.day_type === 'light_cleaning')
   const attendanceTotal = (heavyDays.length * heavyCleaningValue) + (lightDays.length * lightCleaningValue)
@@ -336,7 +340,14 @@ export default function DiaristaPage() {
                 <Briefcase className="h-4 w-4 text-primary" />
                 Dias Trabalhados
               </CardTitle>
-              <CardDescription className="text-xs">Segunda = Pesada · Quinta = Leve</CardDescription>
+              <CardDescription className="text-xs">
+                {(() => {
+                  const WDAY_LABELS: Record<string, string> = { monday: 'Seg', tuesday: 'Ter', wednesday: 'Qua', thursday: 'Qui', friday: 'Sex', saturday: 'Sab', sunday: 'Dom' }
+                  const schedule = currentDiarista?.work_schedule || []
+                  if (schedule.length === 0) return 'Conforme agenda definida'
+                  return schedule.map(s => `${WDAY_LABELS[s.day] || s.day} = ${s.type === 'heavy_cleaning' ? 'Pesada' : 'Leve'}`).join(' · ')
+                })()}
+              </CardDescription>
             </CardHeader>
             <CardContent className="px-4 pb-4">
               {attendances.length === 0 ? (
