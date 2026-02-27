@@ -61,23 +61,24 @@ export default function DiaristaPage() {
   const ironingValue = getConfigValue('ironing') || 50
   const washingValue = getConfigValue('washing') || 75
 
-  // Só mostra salário se houver atividade registrada no mês
+  // Só mostra valores se houver atividade registrada no mês
   const presentDays = attendances.filter(a => a.present)
   const hasActivity = presentDays.length > 0 || laundryWeeks.some(w => w.ironed || w.washed)
-  const monthlySalary = (hasActivity && payment?.paid_at) ? (payment?.monthly_value || 0) : 0
-  const monthlySalaryDisplay = hasActivity ? (payment?.monthly_value || 0) : 0
+
+  const heavyCleaningValue = getConfigValue('heavy_cleaning') || 0
+  const lightCleaningValue = getConfigValue('light_cleaning') || 0
+  const heavyDays = presentDays.filter(a => a.day_type === 'heavy_cleaning')
+  const lightDays = presentDays.filter(a => a.day_type === 'light_cleaning')
+  const attendanceTotal = (heavyDays.length * heavyCleaningValue) + (lightDays.length * lightCleaningValue)
 
   const laundryTotal = laundryWeeks.reduce((sum, week) => {
     const services = (week.ironed ? ironingValue : 0) + (week.washed ? washingValue : 0)
     const transport = (week.ironed || week.washed) ? week.transport_fee : 0
     return sum + services + transport
   }, 0)
-  const grandTotal = monthlySalary + laundryTotal
+  const grandTotal = attendanceTotal + laundryTotal
   const warnings = notes.filter(n => n.is_warning)
   const years = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i)
-
-  const heavyDays = attendances.filter(a => a.day_type === 'heavy_cleaning' && a.present)
-  const lightDays = attendances.filter(a => a.day_type === 'light_cleaning' && a.present)
 
   return (
     <div className="min-h-dvh bg-background flex flex-col">
@@ -140,21 +141,8 @@ export default function DiaristaPage() {
                 <TrendingUp className="h-3.5 w-3.5 opacity-80" />
                 <p className="text-xs opacity-80">Seus Ganhos no Mês</p>
               </div>
-              <p className="text-4xl font-bold mb-2">R$ {grandTotal.toFixed(2)}</p>
-              {hasActivity ? (
-                <div className="flex justify-center gap-5 text-xs">
-                  <div>
-                    <p className="opacity-70 mb-0.5">Salário {payment?.paid_at ? 'Pago' : 'Pendente'}</p>
-                    <p className="text-sm font-semibold">R$ {monthlySalaryDisplay.toFixed(2)}</p>
-                    {!payment?.paid_at && <p className="opacity-50 text-[10px]">aguardando pagamento</p>}
-                  </div>
-                  <div className="w-px bg-white/20" />
-                  <div>
-                    <p className="opacity-70 mb-0.5">Lavanderia</p>
-                    <p className="text-sm font-semibold">R$ {laundryTotal.toFixed(2)}</p>
-                  </div>
-                </div>
-              ) : (
+              <p className="text-4xl font-bold mb-1">R$ {grandTotal.toFixed(2)}</p>
+              {!hasActivity && (
                 <p className="text-xs opacity-60">Nenhuma atividade registrada neste mês</p>
               )}
             </div>
