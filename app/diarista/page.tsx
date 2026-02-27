@@ -252,28 +252,6 @@ export default function DiaristaPage() {
         </Card>
       </div>
 
-      {/* Prêmio — mínimo, só um banner pequeno */}
-      {currentPeriodAward && (
-        <div className="px-4 pb-2">
-          <div className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs ${
-            currentPeriodAward.status === 'disqualified'
-              ? 'bg-destructive/10 text-destructive'
-              : currentPeriodAward.status === 'awarded'
-              ? 'bg-green-500/10 text-green-400'
-              : 'bg-muted text-muted-foreground'
-          }`}>
-            <div className="flex items-center gap-1.5">
-              <Trophy className="h-3 w-3 shrink-0" />
-              <span>Prêmio R$ 300 · {
-                currentPeriodAward.status === 'awarded' ? 'Concedido!' :
-                currentPeriodAward.status === 'disqualified' ? 'Desqualificado' : 'Em andamento'
-              }</span>
-            </div>
-            <span className="font-medium">{currentPeriodAward.warnings_count}/3 adv.</span>
-          </div>
-        </div>
-      )}
-
       {/* Tab Content */}
       <div className="px-4 pb-24 flex-1">
 
