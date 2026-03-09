@@ -30,6 +30,7 @@ import { useAwards } from '@/hooks/use-awards'
 import { useDiaristas } from '@/hooks/use-diaristas'
 import { useClients } from '@/hooks/use-clients'
 import { PaymentsSection } from '@/components/admin/payments-section'
+import { RetroactivePaymentForm } from '@/components/admin/retroactive-payment-form'
 
 import { AlertsSection } from '@/components/admin/alerts-section'
 import { SettingsSection } from '@/components/admin/settings-section'
@@ -112,6 +113,7 @@ export default function AdminPage() {
   const [showPin, setShowPin] = useState<string | null>(null)
   const [diaristaError, setDiaristaError] = useState('')
   const [showInactive, setShowInactive] = useState(false)
+  const [showRetroactivePayment, setShowRetroactivePayment] = useState(false)
   const currentDate = new Date()
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear())
@@ -891,11 +893,35 @@ export default function AdminPage() {
 
         {/* PAGAMENTOS */}
         {activeTab === 'pagamentos' && (
-          <PaymentsSection
+          <div className="space-y-4">
+            {/* Botao para registrar pagamento anterior */}
+            <Button
+              variant="outline"
+              className="w-full h-11 border-dashed border-primary/50 text-primary hover:bg-primary/5"
+              onClick={() => setShowRetroactivePayment(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Registrar Pagamento Anterior
+            </Button>
+            
+            <PaymentsSection
+              diaristas={allDiaristas}
+              selectedDiaristaId={selectedDiaristaId}
+              month={selectedMonth}
+              year={selectedYear}
+            />
+          </div>
+        )}
+        
+        {/* Modal para pagamento retroativo */}
+        {showRetroactivePayment && (
+          <RetroactivePaymentForm
             diaristas={allDiaristas}
-            selectedDiaristaId={selectedDiaristaId}
-            month={selectedMonth}
-            year={selectedYear}
+            onClose={() => setShowRetroactivePayment(false)}
+            onSuccess={() => {
+              // Recarrega a pagina para atualizar os dados
+              window.location.reload()
+            }}
           />
         )}
 
