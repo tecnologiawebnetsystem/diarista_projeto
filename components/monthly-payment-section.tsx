@@ -79,24 +79,24 @@ export function MonthlyPaymentSection({ month, year, isAdmin = true, hasActivity
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Data de Pagamento Prevista */}
+        {/* Data de Pagamento Prevista - 5º dia útil do MÊS SEGUINTE */}
         <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
           <Calendar className="h-5 w-5 text-muted-foreground" />
           <div>
             <p className="text-sm font-medium">Data Prevista (5º dia útil)</p>
             <p className="text-sm text-muted-foreground">
-              {format(dueDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+              {MONTHS_FULL[month === 12 ? 0 : month]}/{month === 12 ? year + 1 : year}
             </p>
           </div>
         </div>
 
-        {/* Mes Referencia - mes anterior ao atual */}
+        {/* Mes Referencia - mes ATUAL de trabalho */}
         <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
           <FileText className="h-5 w-5 text-muted-foreground" />
           <div>
             <p className="text-sm font-medium">Mês Referência</p>
             <p className="text-sm text-muted-foreground">
-              {MONTHS_FULL[month === 1 ? 11 : month - 2]}/{month === 1 ? year - 1 : year}
+              {MONTHS_FULL[month - 1]}/{year}
             </p>
           </div>
         </div>
