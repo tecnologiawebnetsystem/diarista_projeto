@@ -87,7 +87,17 @@ export default function DiaristaPage() {
   }
 
   const ironingValue = currentDiarista?.ironing_value ?? 50
-  const washingValue = currentDiarista?.washing_value ?? 75
+  // washing_value agora é o valor MENSAL, precisa calcular por semana
+  const monthlyWashingValue = currentDiarista?.washing_value ?? 300
+  // Calcula semanas do mês atual
+  const getWeeksInMonth = (m: number, y: number) => {
+    const lastDay = new Date(y, m, 0).getDate()
+    let weeks = 0, currentDay = 1
+    while (currentDay <= lastDay) { weeks++; currentDay += 7 }
+    return weeks
+  }
+  const weeksInCurrentMonth = getWeeksInMonth(selectedMonth, selectedYear)
+  const washingValue = monthlyWashingValue / weeksInCurrentMonth
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]

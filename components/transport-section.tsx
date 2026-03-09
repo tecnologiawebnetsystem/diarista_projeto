@@ -12,6 +12,7 @@ interface TransportWeek {
   month: number
   year: number
   transport_fee: number
+  transport_paid_amount: number // Valor parcial pago (0, metade ou total)
   receipt_url?: string | null
   paid_at?: string | null
   ironed?: boolean
@@ -95,6 +96,7 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
             month: existing.month,
             year: existing.year,
             transport_fee: existing.transport_fee || transportValue,
+            transport_paid_amount: existing.transport_paid_amount || 0,
             receipt_url: existing.receipt_url,
             paid_at: existing.paid_at,
             ironed: existing.ironed,
@@ -108,6 +110,7 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
             month,
             year,
             transport_fee: transportValue,
+            transport_paid_amount: 0,
             receipt_url: null,
             paid_at: null,
             ironed: false,
@@ -130,14 +133,31 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
   }, [fetchTransportWeeks])
 
   const totalTransport = transportWeeks.length * transportValue
-  const totalPaid = transportWeeks
-    .filter(w => w.paid_at)
-    .reduce((sum, w) => sum + (w.transport_fee || transportValue), 0)
+  // Soma os valores parciais pagos de cada semana
+  const totalPaid = transportWeeks.reduce((sum, w) => sum + (w.transport_paid_amount || 0), 0)
   const totalPending = totalTransport - totalPaid
 
-  const handleTogglePaid = async (week: TransportWeek) => {
+  // Paga um valor parcial ou total do transporte
+  const handlePayTransport = async (week: TransportWeek, amount: number) => {
     try {
-      const isPaid = !!week.paid_at
+      const halfValue = transportValue / 2
+      let newPaidAmount = 0
+      
+      // Se clicar no mesmo valor que ja esta pago, zera (toggle)
+      if (week.transport_paid_amount === amount) {
+        newPaidAmount = 0
+      } else if (amount === halfValue) {
+        // Se ja pagou metade e clica em metade novamente, paga completo
+        if (week.transport_paid_amount === halfValue) {
+          newPaidAmount = transportValue
+        } else {
+          newPaidAmount = halfValue
+        }
+      } else {
+        newPaidAmount = amount
+      }
+      
+      const isPaid = newPaidAmount >= transportValue
 
       if (week.id.startsWith('new-')) {
         // Cria novo registro no banco
@@ -152,7 +172,8 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
             ironed: false,
             washed: false,
             transport_fee: transportValue,
-            paid_at: new Date().toISOString()
+            transport_paid_amount: newPaidAmount,
+            paid_at: isPaid ? new Date().toISOString() : null
           }])
           .select()
           .single()
@@ -164,7 +185,8 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
               ...w,
               id: data.id,
               paid_at: data.paid_at,
-              transport_fee: data.transport_fee
+              transport_fee: data.transport_fee,
+              transport_paid_amount: data.transport_paid_amount || newPaidAmount
             } : w
           ))
         }
@@ -172,7 +194,10 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
         // Atualiza registro existente
         const { data, error } = await supabase
           .from('laundry_weeks')
-          .update({ paid_at: isPaid ? null : new Date().toISOString() })
+          .update({ 
+            transport_paid_amount: newPaidAmount,
+            paid_at: isPaid ? new Date().toISOString() : null 
+          })
           .eq('id', week.id)
           .select()
           .single()
@@ -180,14 +205,18 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
         if (error) throw error
         if (data) {
           setTransportWeeks(prev => prev.map(w => 
-            w.id === week.id ? { ...w, paid_at: data.paid_at } : w
+            w.id === week.id ? { 
+              ...w, 
+              paid_at: data.paid_at,
+              transport_paid_amount: data.transport_paid_amount || newPaidAmount
+            } : w
           ))
         }
       }
 
       onDataChange?.()
     } catch (error) {
-      console.error('Error toggling transport paid:', error)
+      console.error('Error paying transport:', error)
     }
   }
 
@@ -314,13 +343,16 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
 
         {/* Semanas */}
         {transportWeeks.map((week) => {
-          const isPaid = !!week.paid_at
+          const isPaidFull = week.transport_paid_amount >= transportValue
+          const isPaidHalf = week.transport_paid_amount > 0 && week.transport_paid_amount < transportValue
           const isExpanded = expandedWeek === week.week_number
           const hasLaundry = week.ironed || week.washed
           const weekInfo = weeksOfMonth.find(w => w.weekNumber === week.week_number)
           const weekLabel = weekInfo 
             ? `${weekInfo.startDay}-${weekInfo.endDay} ${monthAbbr}` 
             : `Semana ${week.week_number}`
+          const halfValue = transportValue / 2
+          const paidAmount = week.transport_paid_amount || 0
 
           return (
             <div key={week.id} className="rounded-xl border border-border overflow-hidden">
@@ -330,21 +362,30 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
                 className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 transition-colors active:bg-muted/50"
               >
                 <div className="flex items-center gap-2">
-                  {isPaid ? (
+                  {isPaidFull ? (
                     <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                  ) : isPaidHalf ? (
+                    <div className="h-4 w-4 rounded-full border-2 border-yellow-500 flex items-center justify-center shrink-0">
+                      <div className="h-1.5 w-1.5 rounded-full bg-yellow-500" />
+                    </div>
                   ) : (
                     <Circle className="h-4 w-4 text-muted-foreground shrink-0" />
                   )}
                   <span className="text-sm font-semibold">{weekLabel}</span>
-                  {isPaid && (
+                  {isPaidFull && (
                     <span className="text-[10px] bg-green-500/15 text-green-500 px-2 py-0.5 rounded-full font-medium">
                       Pago
                     </span>
                   )}
+                  {isPaidHalf && (
+                    <span className="text-[10px] bg-yellow-500/15 text-yellow-500 px-2 py-0.5 rounded-full font-medium">
+                      Parcial
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`text-sm font-bold ${isPaid ? 'text-green-500' : 'text-primary'}`}>
-                    R$ {(week.transport_fee || transportValue).toFixed(2)}
+                  <span className={`text-sm font-bold ${isPaidFull ? 'text-green-500' : isPaidHalf ? 'text-yellow-500' : 'text-primary'}`}>
+                    R$ {paidAmount.toFixed(2)} / {transportValue.toFixed(2)}
                   </span>
                   {isExpanded ? (
                     <ChevronUp className="h-4 w-4 text-muted-foreground" />
@@ -365,24 +406,65 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
                     </div>
                   )}
 
-                  {/* Botao Pago/Pendente */}
-                  <button
-                    onClick={() => handleTogglePaid(week)}
-                    className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all active:scale-[0.98] ${
-                      isPaid
-                        ? 'border-green-500 bg-green-500/10 text-green-500'
-                        : 'border-border bg-background text-muted-foreground'
-                    }`}
-                  >
-                    {isPaid ? (
-                      <CheckCircle2 className="h-4 w-4" />
-                    ) : (
-                      <Circle className="h-4 w-4" />
+                  {/* Botoes de pagamento parcial */}
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-muted-foreground font-medium">Registrar pagamento:</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {/* Botao Ida */}
+                      <button
+                        onClick={() => handlePayTransport(week, halfValue)}
+                        className={`flex flex-col items-center justify-center gap-1 px-3 py-2.5 rounded-lg border-2 transition-all active:scale-[0.98] ${
+                          paidAmount >= halfValue && paidAmount < transportValue
+                            ? 'border-yellow-500 bg-yellow-500/10 text-yellow-500'
+                            : paidAmount >= transportValue
+                            ? 'border-green-500/50 bg-green-500/5 text-green-500/50'
+                            : 'border-border bg-background text-muted-foreground hover:border-yellow-500/50'
+                        }`}
+                      >
+                        <span className="text-[10px] font-medium uppercase">Ida</span>
+                        <span className="text-sm font-bold">R$ {halfValue.toFixed(2)}</span>
+                      </button>
+                      
+                      {/* Botao Volta */}
+                      <button
+                        onClick={() => handlePayTransport(week, halfValue)}
+                        className={`flex flex-col items-center justify-center gap-1 px-3 py-2.5 rounded-lg border-2 transition-all active:scale-[0.98] ${
+                          paidAmount >= transportValue
+                            ? 'border-green-500 bg-green-500/10 text-green-500'
+                            : paidAmount >= halfValue
+                            ? 'border-border bg-background text-muted-foreground hover:border-yellow-500/50'
+                            : 'border-border/50 bg-muted/30 text-muted-foreground/50'
+                        }`}
+                        disabled={paidAmount < halfValue && paidAmount !== transportValue}
+                      >
+                        <span className="text-[10px] font-medium uppercase">Volta</span>
+                        <span className="text-sm font-bold">R$ {halfValue.toFixed(2)}</span>
+                      </button>
+                      
+                      {/* Botao Completo */}
+                      <button
+                        onClick={() => handlePayTransport(week, transportValue)}
+                        className={`flex flex-col items-center justify-center gap-1 px-3 py-2.5 rounded-lg border-2 transition-all active:scale-[0.98] ${
+                          paidAmount >= transportValue
+                            ? 'border-green-500 bg-green-500/10 text-green-500'
+                            : 'border-border bg-background text-muted-foreground hover:border-green-500/50'
+                        }`}
+                      >
+                        <span className="text-[10px] font-medium uppercase">Completo</span>
+                        <span className="text-sm font-bold">R$ {transportValue.toFixed(2)}</span>
+                      </button>
+                    </div>
+                    
+                    {/* Status atual */}
+                    {paidAmount > 0 && (
+                      <div className="flex items-center justify-between text-xs pt-1">
+                        <span className="text-muted-foreground">Pago:</span>
+                        <span className={`font-bold ${isPaidFull ? 'text-green-500' : 'text-yellow-500'}`}>
+                          R$ {paidAmount.toFixed(2)}
+                        </span>
+                      </div>
                     )}
-                    <span className="text-sm font-medium">
-                      {isPaid ? 'Pago' : 'Marcar como Pago'}
-                    </span>
-                  </button>
+                  </div>
 
                   {/* Upload comprovante */}
                   <ReceiptUpload

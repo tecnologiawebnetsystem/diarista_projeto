@@ -102,7 +102,7 @@ export function SettingsSection() {
 
   const configGroups = [
     { title: 'Valores de Limpeza', keys: ['default_heavy_cleaning_value', 'default_light_cleaning_value'], icon: DollarSign },
-    { title: 'Valores de Lavanderia', keys: ['default_washing_value', 'default_ironing_value'], icon: DollarSign },
+    { title: 'Valores de Lavanderia (mensal)', keys: ['default_washing_value', 'default_ironing_value'], icon: DollarSign },
     { title: 'Transporte', keys: ['default_transport_value'], icon: DollarSign },
   ]
 

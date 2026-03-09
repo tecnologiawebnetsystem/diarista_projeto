@@ -70,7 +70,14 @@ export async function GET(request: NextRequest) {
 
     // Calculos - prioriza valores da diarista, fallback para config global
     const ironingValue = diaristaValues.ironing ?? cfg.ironing ?? 50
-    const washingValue = diaristaValues.washing ?? cfg.washing ?? 75
+    // washing_value agora é o valor MENSAL
+    const monthlyWashingValue = diaristaValues.washing ?? cfg.washing ?? 300
+    // Calcula semanas do mês
+    const lastDayOfMonth = new Date(year, month, 0).getDate()
+    let weeksInMonth = 0, currentDay = 1
+    while (currentDay <= lastDayOfMonth) { weeksInMonth++; currentDay += 7 }
+    const washingValuePerWeek = monthlyWashingValue / weeksInMonth
+    
     const heavyCleaningValue = diaristaValues.heavy_cleaning ?? cfg.heavy_cleaning ?? 250
     const lightCleaningValue = diaristaValues.light_cleaning ?? cfg.light_cleaning ?? 150
 
@@ -80,7 +87,7 @@ export async function GET(request: NextRequest) {
     const attendanceTotal = (heavyDays * heavyCleaningValue) + (lightDays * lightCleaningValue)
 
     const laundryTotal = (laundryData || []).reduce((sum, w) => {
-      return sum + (w.ironed ? ironingValue : 0) + (w.washed ? washingValue : 0)
+      return sum + (w.ironed ? ironingValue : 0) + (w.washed ? washingValuePerWeek : 0)
     }, 0)
 
     // Transporte agora é independente de lavanderia - conta todas as semanas
