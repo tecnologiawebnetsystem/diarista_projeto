@@ -26,16 +26,31 @@ interface TransportSectionProps {
   diaristaTransportValue?: number
 }
 
-// Calcula quantas semanas tem no mes
-function getWeeksInMonth(month: number, year: number): number {
-  const firstDay = new Date(year, month - 1, 1)
-  const lastDay = new Date(year, month, 0)
-  const daysInMonth = lastDay.getDate()
+// Retorna as semanas do mes com suas datas de inicio e fim
+function getWeeksOfMonth(month: number, year: number): { weekNumber: number; startDay: number; endDay: number }[] {
+  const lastDay = new Date(year, month, 0).getDate() // Ultimo dia do mes
+  const weeks: { weekNumber: number; startDay: number; endDay: number }[] = []
   
-  // Calcula o numero de semanas (considerando que cada semana comeca na segunda)
-  const firstDayOfWeek = firstDay.getDay() || 7 // Domingo = 7
-  const adjustedDays = daysInMonth + (firstDayOfWeek - 1)
-  return Math.ceil(adjustedDays / 7)
+  let currentDay = 1
+  let weekNumber = 1
+  
+  while (currentDay <= lastDay) {
+    const startDay = currentDay
+    const endDay = Math.min(currentDay + 6, lastDay)
+    
+    weeks.push({ weekNumber, startDay, endDay })
+    
+    currentDay = endDay + 1
+    weekNumber++
+  }
+  
+  return weeks
+}
+
+// Formata o nome do mes abreviado
+function getMonthAbbr(month: number): string {
+  const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+  return months[month - 1]
 }
 
 export function TransportSection({ month, year, diaristaId, onDataChange, diaristaTransportValue }: TransportSectionProps) {
@@ -44,7 +59,9 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null)
   const transportValue = diaristaTransportValue ?? 30
 
-  const weeksCount = getWeeksInMonth(month, year)
+  const weeksOfMonth = getWeeksOfMonth(month, year)
+  const weeksCount = weeksOfMonth.length
+  const monthAbbr = getMonthAbbr(month)
 
   // Busca ou cria os registros de transporte para cada semana do mes
   const fetchTransportWeeks = useCallback(async () => {
@@ -300,6 +317,10 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
           const isPaid = !!week.paid_at
           const isExpanded = expandedWeek === week.week_number
           const hasLaundry = week.ironed || week.washed
+          const weekInfo = weeksOfMonth.find(w => w.weekNumber === week.week_number)
+          const weekLabel = weekInfo 
+            ? `${weekInfo.startDay}-${weekInfo.endDay} ${monthAbbr}` 
+            : `Semana ${week.week_number}`
 
           return (
             <div key={week.id} className="rounded-xl border border-border overflow-hidden">
@@ -314,7 +335,7 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
                   ) : (
                     <Circle className="h-4 w-4 text-muted-foreground shrink-0" />
                   )}
-                  <span className="text-sm font-semibold">Semana {week.week_number}</span>
+                  <span className="text-sm font-semibold">{weekLabel}</span>
                   {isPaid && (
                     <span className="text-[10px] bg-green-500/15 text-green-500 px-2 py-0.5 rounded-full font-medium">
                       Pago
