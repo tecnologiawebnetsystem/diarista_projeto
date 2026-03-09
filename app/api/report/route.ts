@@ -83,10 +83,11 @@ export async function GET(request: NextRequest) {
       return sum + (w.ironed ? ironingValue : 0) + (w.washed ? washingValue : 0)
     }, 0)
 
+    // Transporte agora é independente de lavanderia - conta todas as semanas
     const transportTotal = (laundryData || []).reduce((sum, w) => {
-      return sum + ((w.ironed || w.washed) ? (w.transport_fee || 0) : 0)
+      return sum + (w.transport_fee || 0)
     }, 0)
-    const transportPaidTotal = (laundryData || []).filter((w: { ironed: boolean; washed: boolean; paid_at: string | null }) => (w.ironed || w.washed) && w.paid_at).reduce((sum, w) => sum + (w.transport_fee || 0), 0)
+    const transportPaidTotal = (laundryData || []).filter((w: { paid_at: string | null }) => w.paid_at).reduce((sum, w) => sum + (w.transport_fee || 0), 0)
 
     const warnings = (notesData || []).filter((n: { is_warning: boolean }) => n.is_warning).length
     const grandTotal = attendanceTotal + laundryTotal
