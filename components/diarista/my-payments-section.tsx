@@ -37,6 +37,7 @@ interface TransportPayment {
   year: number
   totalPaid: number
   weeksPaid: number
+  receiptUrls: string[]
 }
 
 interface MyPaymentsSectionProps {
@@ -90,9 +91,12 @@ export function MyPaymentsSection({ diaristaId, month, year }: MyPaymentsSection
       const totalTransportPaid = paidWeeks.reduce((sum: number, w: { transport_paid_amount?: number }) => 
         sum + (w.transport_paid_amount || 0), 0
       )
+      const receiptUrls = paidWeeks
+        .map((w: { receipt_url?: string | null }) => w.receipt_url)
+        .filter((url: string | null | undefined): url is string => !!url)
       
       if (totalTransportPaid > 0) {
-        setTransportPayments([{ month, year, totalPaid: totalTransportPaid, weeksPaid: paidWeeks.length }])
+        setTransportPayments([{ month, year, totalPaid: totalTransportPaid, weeksPaid: paidWeeks.length, receiptUrls }])
       } else {
         setTransportPayments([])
       }
@@ -274,9 +278,23 @@ export function MyPaymentsSection({ diaristaId, month, year }: MyPaymentsSection
                   {'R$ '}{tp.totalPaid.toFixed(2)}
                 </p>
               </div>
-              <div className="flex items-center gap-2 mt-2 text-[10px] text-muted-foreground">
-                <CheckCircle className="h-3 w-3 text-green-500" />
-                <span>{tp.weeksPaid} semana(s) paga(s)</span>
+              <div className="flex items-center justify-between mt-2">
+                <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  <span>{tp.weeksPaid} semana(s) paga(s)</span>
+                </div>
+                {tp.receiptUrls.length > 0 && (
+                  <a
+                    href={tp.receiptUrls[0]}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-primary text-[11px] font-medium hover:underline"
+                  >
+                    <Receipt className="h-3.5 w-3.5" />
+                    Ver Recibo
+                    <ChevronRight className="h-3 w-3" />
+                  </a>
+                )}
               </div>
             </div>
           </div>
