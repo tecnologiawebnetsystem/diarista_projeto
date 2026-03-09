@@ -90,13 +90,13 @@ export function MonthlyPaymentSection({ month, year, isAdmin = true, hasActivity
           </div>
         </div>
 
-        {/* Mes Referencia */}
+        {/* Mes Referencia - mes anterior ao atual */}
         <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
           <FileText className="h-5 w-5 text-muted-foreground" />
           <div>
             <p className="text-sm font-medium">Mês Referência</p>
             <p className="text-sm text-muted-foreground">
-              {MONTHS_FULL[month - 1]}/{year}
+              {MONTHS_FULL[month === 1 ? 11 : month - 2]}/{month === 1 ? year - 1 : year}
             </p>
           </div>
         </div>
