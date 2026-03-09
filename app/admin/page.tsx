@@ -376,6 +376,13 @@ export default function AdminPage() {
     return sum + services
   }, 0)
   const grandTotal = attendanceTotal + laundryTotal
+  
+  // Debug: verificar se o transporte está sendo incluído
+  console.log('[v0] attendanceTotal:', attendanceTotal)
+  console.log('[v0] laundryTotal:', laundryTotal)
+  console.log('[v0] grandTotal (sem transporte):', grandTotal)
+  console.log('[v0] laundryWeeks:', laundryWeeks.map(w => ({ ironed: w.ironed, washed: w.washed, transport_fee: w.transport_fee })))
+  
   const transportPaidTotal = laundryWeeks
     .filter(w => (w.ironed || w.washed) && w.paid_at)
     .reduce((sum, w) => sum + (w.transport_fee || 0), 0)
