@@ -7,7 +7,9 @@ import { Badge } from '@/components/ui/badge'
 import { useMonthlyPayments } from '@/hooks/use-monthly-payments'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Calendar, Clock, CheckCircle2, XCircle, DollarSign } from 'lucide-react'
+import { Calendar, Clock, CheckCircle2, XCircle, DollarSign, FileText } from 'lucide-react'
+
+const MONTHS_FULL = ['Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 import { ReceiptUpload } from '@/components/receipt-upload'
 
 interface MonthlyPaymentSectionProps {
@@ -84,6 +86,17 @@ export function MonthlyPaymentSection({ month, year, isAdmin = true, hasActivity
             <p className="text-sm font-medium">Data Prevista (5º dia útil)</p>
             <p className="text-sm text-muted-foreground">
               {format(dueDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+            </p>
+          </div>
+        </div>
+
+        {/* Mes Referencia */}
+        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+          <FileText className="h-5 w-5 text-muted-foreground" />
+          <div>
+            <p className="text-sm font-medium">Mês Referência</p>
+            <p className="text-sm text-muted-foreground">
+              {MONTHS_FULL[month - 1]}/{year}
             </p>
           </div>
         </div>
