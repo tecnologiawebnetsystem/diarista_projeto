@@ -585,13 +585,13 @@ export async function GET(request: NextRequest) {
         </thead>
         <tbody>
           ${laundryData.map((w: { week_number: number; washed: boolean; ironed: boolean; transport_fee: number; paid_at: string | null }) => {
-            const services = (w.ironed ? ironingValue : 0) + (w.washed ? washingValue : 0)
+            const services = (w.ironed ? ironingValue : 0) + (w.washed ? washingValuePerWeek : 0)
             const hasServices = w.ironed || w.washed
             const tPaid = hasServices && !!w.paid_at
             return `
             <tr>
               <td class="font-bold">Semana ${w.week_number}</td>
-              <td>${w.washed ? `<span class="badge badge-info">R$ ${washingValue.toFixed(2)}</span>` : '<span style="color:#D6D3D1">-</span>'}</td>
+              <td>${w.washed ? `<span class="badge badge-info">R$ ${washingValuePerWeek.toFixed(2)}</span>` : '<span style="color:#D6D3D1">-</span>'}</td>
               <td>${w.ironed ? `<span class="badge badge-info">R$ ${ironingValue.toFixed(2)}</span>` : '<span style="color:#D6D3D1">-</span>'}</td>
               <td>${hasServices ? `R$ ${(w.transport_fee || 0).toFixed(2)} <span class="badge ${tPaid ? 'badge-paid' : 'badge-pending'}">${tPaid ? 'Pago' : 'Pendente'}</span>` : '<span style="color:#D6D3D1">-</span>'}</td>
               <td class="text-right font-bold">R$ ${services.toFixed(2)}</td>
