@@ -9,7 +9,7 @@ import {
   ShieldCheck, FileDown, Bus, Plus, AlertTriangle,
   CheckCircle, XCircle, Trash2, Edit2, X,
   Users, Phone, Hash, UserPlus, UserX, UserCheck, Eye, EyeOff,
-  MapPin, Building2, DollarSign, Bell, Settings
+  MapPin, Building2, DollarSign, Settings
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -32,7 +32,7 @@ import { useClients } from '@/hooks/use-clients'
 import { PaymentsSection } from '@/components/admin/payments-section'
 import { RetroactivePaymentForm } from '@/components/admin/retroactive-payment-form'
 
-import { AlertsSection } from '@/components/admin/alerts-section'
+
 import { SettingsSection } from '@/components/admin/settings-section'
 import { useDbNotifications } from '@/hooks/use-db-notifications'
 import { MonthlyPaymentSection } from '@/components/monthly-payment-section'
@@ -72,7 +72,7 @@ const CLEANING_TYPES = [
   { value: 'light_cleaning', label: 'Limpeza Leve' },
 ] as const
 
-type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'notas' | 'contrato' | 'equipe' | 'clientes' | 'pagamentos' | 'alertas' | 'config'
+type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'notas' | 'contrato' | 'equipe' | 'clientes' | 'pagamentos' | 'config'
 
 const NAV_ITEMS: { key: Tab; label: string; Icon: React.ElementType }[] = [
   { key: 'resumo',      label: 'Dashboard',    Icon: LayoutDashboard },
@@ -81,7 +81,7 @@ const NAV_ITEMS: { key: Tab; label: string; Icon: React.ElementType }[] = [
   { key: 'transporte',  label: 'Transporte',   Icon: Bus },
   { key: 'pagamentos',  label: 'Pagamentos',   Icon: DollarSign },
   { key: 'notas',       label: 'Notas',        Icon: FileText },
-  { key: 'alertas',     label: 'Alertas',      Icon: Bell },
+
   { key: 'contrato',    label: 'Contrato',     Icon: ScrollText },
   { key: 'equipe',      label: 'Equipe',       Icon: Users },
   { key: 'clientes',    label: 'Clientes',     Icon: Building2 },
@@ -922,17 +922,6 @@ export default function AdminPage() {
               // Recarrega a pagina para atualizar os dados
               window.location.reload()
             }}
-          />
-        )}
-
-        {/* ALERTAS */}
-        {activeTab === 'alertas' && (
-          <AlertsSection
-            diaristas={allDiaristas}
-            notes={notes}
-            pendingPayments={pendingPaymentsCount}
-            month={selectedMonth}
-            year={selectedYear}
           />
         )}
 
