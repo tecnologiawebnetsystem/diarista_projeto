@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { LayoutDashboard, CalendarCheck, WashingMachine, FileText, ScrollText, Trophy, AlertTriangle, LogOut, CheckCircle2, XCircle, Briefcase, TrendingUp, CalendarDays, CalendarRange, Receipt, FileDown, Bus, Bell, X, User, Camera, Phone, Save, Check, MapPin, Building2, DollarSign } from 'lucide-react'
+import { LayoutDashboard, CalendarCheck, WashingMachine, FileText, ScrollText, Trophy, AlertTriangle, LogOut, CheckCircle2, XCircle, Briefcase, TrendingUp, CalendarDays, Receipt, FileDown, Bus, Bell, X, User, Camera, Phone, Save, Check, MapPin, Building2, DollarSign } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,7 +22,7 @@ import { useDiaristas } from '@/hooks/use-diaristas'
 import { useClients } from '@/hooks/use-clients'
 import { ContractViewer } from '@/components/contract-viewer'
 import { MyPaymentsSection } from '@/components/diarista/my-payments-section'
-import { MyCalendarSection } from '@/components/diarista/my-calendar-section'
+
 import { NotificationBanner } from '@/components/notification-banner'
 import { useDbNotifications } from '@/hooks/use-db-notifications'
 import { cn } from '@/lib/utils'
@@ -39,7 +39,7 @@ export default function DiaristaPage() {
   const currentDate = new Date()
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear())
-  const [activeTab, setActiveTab] = useState<'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'anotacoes' | 'contrato' | 'perfil' | 'pagamentos' | 'calendario'>('resumo')
+  const [activeTab, setActiveTab] = useState<'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'anotacoes' | 'contrato' | 'perfil' | 'pagamentos'>('resumo')
 
   const { diaristaId } = useAuth()
   const { diaristas: allDiaristas, updateDiarista, refetch: refetchDiaristas } = useDiaristas()
@@ -263,7 +263,7 @@ export default function DiaristaPage() {
       )}
 
       {/* Period Selector */}
-      <div className={cn('px-4 pt-4 pb-2', (activeTab === 'perfil' || activeTab === 'calendario') && 'hidden')}>
+      <div className={cn('px-4 pt-4 pb-2', activeTab === 'perfil' && 'hidden')}>
         <div className="flex gap-2">
           <Select value={selectedMonth.toString()} onValueChange={v => setSelectedMonth(parseInt(v))}>
             <SelectTrigger className="flex-1 h-10 text-sm">
@@ -289,7 +289,7 @@ export default function DiaristaPage() {
       </div>
 
       {/* Total Card */}
-      <div className={cn('px-4 pb-3', (activeTab === 'perfil' || activeTab === 'calendario') && 'hidden')}>
+      <div className={cn('px-4 pb-3', activeTab === 'perfil' && 'hidden')}>
         <Card className="gradient-primary text-white shadow-lg">
           <CardContent className="pt-4 pb-4">
             <div className="flex items-center justify-between">
@@ -714,18 +714,6 @@ export default function DiaristaPage() {
           <MyPaymentsSection diaristaId={diaristaId} month={selectedMonth} year={selectedYear} />
         )}
 
-        {/* CALENDARIO */}
-        {activeTab === 'calendario' && currentDiarista && (
-          <MyCalendarSection
-            diarista={currentDiarista}
-            clients={activeClients}
-            month={selectedMonth}
-            year={selectedYear}
-            onChangeMonth={(m, y) => { setSelectedMonth(m); setSelectedYear(y) }}
-            attendances={attendances.map(a => ({ date: a.date, present: a.present, day_type: a.day_type }))}
-          />
-        )}
-
         {/* PERFIL */}
         {activeTab === 'perfil' && (
           <div className="space-y-5">
@@ -953,7 +941,6 @@ export default function DiaristaPage() {
         <div className="flex items-stretch h-16 overflow-x-auto scrollbar-hide">
           {([
             { key: 'resumo',      label: 'Inicio',      Icon: LayoutDashboard },
-            { key: 'calendario',  label: 'Agenda',      Icon: CalendarRange },
             { key: 'presenca',    label: 'Presenca',    Icon: CalendarCheck },
             { key: 'lavanderia',  label: 'Lavanderia',  Icon: WashingMachine },
             { key: 'transporte',  label: 'Transporte',  Icon: Bus },

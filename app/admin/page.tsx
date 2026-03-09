@@ -9,7 +9,7 @@ import {
   ShieldCheck, FileDown, Bus, Plus, AlertTriangle,
   CheckCircle, XCircle, Trash2, Edit2, X,
   Users, Phone, Hash, UserPlus, UserX, UserCheck, Eye, EyeOff,
-  MapPin, Building2, DollarSign, CalendarRange, Bell, Settings
+  MapPin, Building2, DollarSign, Bell, Settings
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -30,7 +30,7 @@ import { useAwards } from '@/hooks/use-awards'
 import { useDiaristas } from '@/hooks/use-diaristas'
 import { useClients } from '@/hooks/use-clients'
 import { PaymentsSection } from '@/components/admin/payments-section'
-import { CalendarSection } from '@/components/admin/calendar-section'
+
 import { AlertsSection } from '@/components/admin/alerts-section'
 import { SettingsSection } from '@/components/admin/settings-section'
 import { useDbNotifications } from '@/hooks/use-db-notifications'
@@ -71,11 +71,10 @@ const CLEANING_TYPES = [
   { value: 'light_cleaning', label: 'Limpeza Leve' },
 ] as const
 
-type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'notas' | 'contrato' | 'equipe' | 'clientes' | 'pagamentos' | 'calendario' | 'alertas' | 'config'
+type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'notas' | 'contrato' | 'equipe' | 'clientes' | 'pagamentos' | 'alertas' | 'config'
 
 const NAV_ITEMS: { key: Tab; label: string; Icon: React.ElementType }[] = [
   { key: 'resumo',      label: 'Dashboard',    Icon: LayoutDashboard },
-  { key: 'calendario',  label: 'Agenda',       Icon: CalendarRange },
   { key: 'presenca',    label: 'Presenca',     Icon: CalendarCheck },
   { key: 'lavanderia',  label: 'Lavanderia',   Icon: WashingMachine },
   { key: 'transporte',  label: 'Transporte',   Icon: Bus },
@@ -887,17 +886,6 @@ export default function AdminPage() {
             selectedDiaristaId={selectedDiaristaId}
             month={selectedMonth}
             year={selectedYear}
-          />
-        )}
-
-        {/* CALENDARIO */}
-        {activeTab === 'calendario' && (
-          <CalendarSection
-            diaristas={activeDiaristas}
-            clients={activeClients}
-            month={selectedMonth}
-            year={selectedYear}
-            onChangeMonth={(m, y) => { setSelectedMonth(m); setSelectedYear(y) }}
           />
         )}
 
