@@ -9,7 +9,7 @@ import {
   ShieldCheck, FileDown, Bus, Plus, AlertTriangle,
   CheckCircle, XCircle, Trash2, Edit2, X,
   Users, Phone, Hash, UserPlus, UserX, UserCheck, Eye, EyeOff,
-  MapPin, Building2, DollarSign, CalendarRange, Bell, Settings
+  MapPin, Building2, DollarSign, Bell, Settings
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -30,7 +30,7 @@ import { useAwards } from '@/hooks/use-awards'
 import { useDiaristas } from '@/hooks/use-diaristas'
 import { useClients } from '@/hooks/use-clients'
 import { PaymentsSection } from '@/components/admin/payments-section'
-import { CalendarSection } from '@/components/admin/calendar-section'
+
 import { AlertsSection } from '@/components/admin/alerts-section'
 import { SettingsSection } from '@/components/admin/settings-section'
 import { useDbNotifications } from '@/hooks/use-db-notifications'
@@ -71,11 +71,10 @@ const CLEANING_TYPES = [
   { value: 'light_cleaning', label: 'Limpeza Leve' },
 ] as const
 
-type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'notas' | 'contrato' | 'equipe' | 'clientes' | 'pagamentos' | 'calendario' | 'alertas' | 'config'
+type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'notas' | 'contrato' | 'equipe' | 'clientes' | 'pagamentos' | 'alertas' | 'config'
 
 const NAV_ITEMS: { key: Tab; label: string; Icon: React.ElementType }[] = [
   { key: 'resumo',      label: 'Dashboard',    Icon: LayoutDashboard },
-  { key: 'calendario',  label: 'Agenda',       Icon: CalendarRange },
   { key: 'presenca',    label: 'Presenca',     Icon: CalendarCheck },
   { key: 'lavanderia',  label: 'Lavanderia',   Icon: WashingMachine },
   { key: 'transporte',  label: 'Transporte',   Icon: Bus },
@@ -103,7 +102,7 @@ export default function AdminPage() {
   const [diaristaForm, setDiaristaForm] = useState({
     name: '', pin: '', phone: '',
     heavy_cleaning_value: '250', light_cleaning_value: '150',
-    washing_value: '75', ironing_value: '50', transport_value: '30',
+    washing_value: '300', ironing_value: '50', transport_value: '30',
     work_schedule: [
       { day: 'monday' as const, type: 'heavy_cleaning' as const },
       { day: 'thursday' as const, type: 'light_cleaning' as const },
@@ -201,7 +200,7 @@ export default function AdminPage() {
   const defaultDiaristaForm = {
     name: '', pin: '', phone: '',
     heavy_cleaning_value: '250', light_cleaning_value: '150',
-    washing_value: '75', ironing_value: '50', transport_value: '30',
+    washing_value: '300', ironing_value: '50', transport_value: '30',
     work_schedule: [
       { day: 'monday' as const, type: 'heavy_cleaning' as const },
       { day: 'thursday' as const, type: 'light_cleaning' as const },
@@ -339,7 +338,17 @@ export default function AdminPage() {
   // Get values from selected diarista
   const selectedDiarista = allDiaristas.find(d => d.id === selectedDiaristaId)
   const ironingValue = selectedDiarista?.ironing_value ?? 50
-  const washingValue = selectedDiarista?.washing_value ?? 75
+  // washing_value agora é o valor MENSAL, precisa calcular por semana
+  const monthlyWashingValue = selectedDiarista?.washing_value ?? 300
+  // Calcula semanas do mês atual
+  const getWeeksInMonth = (m: number, y: number) => {
+    const lastDay = new Date(y, m, 0).getDate()
+    let weeks = 0, currentDay = 1
+    while (currentDay <= lastDay) { weeks++; currentDay += 7 }
+    return weeks
+  }
+  const weeksInCurrentMonth = getWeeksInMonth(selectedMonth, selectedYear)
+  const washingValuePerWeek = monthlyWashingValue / weeksInCurrentMonth
 
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab)
@@ -372,12 +381,13 @@ export default function AdminPage() {
   const attendanceTotal = (heavyDays.length * heavyCleaningValue) + (lightDays.length * lightCleaningValue)
 
   const laundryTotal = laundryWeeks.reduce((sum, week) => {
-    const services = (week.ironed ? ironingValue : 0) + (week.washed ? washingValue : 0)
+    const services = (week.ironed ? ironingValue : 0) + (week.washed ? washingValuePerWeek : 0)
     return sum + services
   }, 0)
   const grandTotal = attendanceTotal + laundryTotal
+  // Transporte agora é independente de lavanderia - conta todas as semanas pagas
   const transportPaidTotal = laundryWeeks
-    .filter(w => (w.ironed || w.washed) && w.paid_at)
+    .filter(w => w.paid_at)
     .reduce((sum, w) => sum + (w.transport_fee || 0), 0)
   const warnings = notes.filter(n => n.is_warning)
   const years = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i)
@@ -889,17 +899,6 @@ export default function AdminPage() {
           />
         )}
 
-        {/* CALENDARIO */}
-        {activeTab === 'calendario' && (
-          <CalendarSection
-            diaristas={activeDiaristas}
-            clients={activeClients}
-            month={selectedMonth}
-            year={selectedYear}
-            onChangeMonth={(m, y) => { setSelectedMonth(m); setSelectedYear(y) }}
-          />
-        )}
-
         {/* ALERTAS */}
         {activeTab === 'alertas' && (
           <AlertsSection
@@ -1109,7 +1108,7 @@ export default function AdminPage() {
                           </div>
                         </div>
                         <div>
-                          <Label className="text-[11px] mb-1 block text-muted-foreground">Lavagem</Label>
+                          <Label className="text-[11px] mb-1 block text-muted-foreground">Lavagem (mensal)</Label>
                           <div className="relative">
                             <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">R$</span>
                             <Input

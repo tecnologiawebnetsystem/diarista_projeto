@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { LayoutDashboard, CalendarCheck, WashingMachine, FileText, ScrollText, Trophy, AlertTriangle, LogOut, CheckCircle2, XCircle, Briefcase, TrendingUp, CalendarDays, CalendarRange, Receipt, FileDown, Bus, Bell, X, User, Camera, Phone, Save, Check, MapPin, Building2, DollarSign } from 'lucide-react'
+import { LayoutDashboard, CalendarCheck, WashingMachine, FileText, ScrollText, Trophy, AlertTriangle, LogOut, CheckCircle2, XCircle, Briefcase, TrendingUp, CalendarDays, Receipt, FileDown, Bus, Bell, X, User, Camera, Phone, Save, Check, MapPin, Building2, DollarSign } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,7 +22,7 @@ import { useDiaristas } from '@/hooks/use-diaristas'
 import { useClients } from '@/hooks/use-clients'
 import { ContractViewer } from '@/components/contract-viewer'
 import { MyPaymentsSection } from '@/components/diarista/my-payments-section'
-import { MyCalendarSection } from '@/components/diarista/my-calendar-section'
+
 import { NotificationBanner } from '@/components/notification-banner'
 import { useDbNotifications } from '@/hooks/use-db-notifications'
 import { cn } from '@/lib/utils'
@@ -39,7 +39,7 @@ export default function DiaristaPage() {
   const currentDate = new Date()
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear())
-  const [activeTab, setActiveTab] = useState<'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'anotacoes' | 'contrato' | 'perfil' | 'pagamentos' | 'calendario'>('resumo')
+  const [activeTab, setActiveTab] = useState<'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'anotacoes' | 'contrato' | 'perfil' | 'pagamentos'>('resumo')
 
   const { diaristaId } = useAuth()
   const { diaristas: allDiaristas, updateDiarista, refetch: refetchDiaristas } = useDiaristas()
@@ -87,7 +87,17 @@ export default function DiaristaPage() {
   }
 
   const ironingValue = currentDiarista?.ironing_value ?? 50
-  const washingValue = currentDiarista?.washing_value ?? 75
+  // washing_value agora é o valor MENSAL, precisa calcular por semana
+  const monthlyWashingValue = currentDiarista?.washing_value ?? 300
+  // Calcula semanas do mês atual
+  const getWeeksInMonth = (m: number, y: number) => {
+    const lastDay = new Date(y, m, 0).getDate()
+    let weeks = 0, currentDay = 1
+    while (currentDay <= lastDay) { weeks++; currentDay += 7 }
+    return weeks
+  }
+  const weeksInCurrentMonth = getWeeksInMonth(selectedMonth, selectedYear)
+  const washingValue = monthlyWashingValue / weeksInCurrentMonth
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -151,8 +161,9 @@ export default function DiaristaPage() {
     return sum + services
   }, 0)
   const grandTotal = attendanceTotal + laundryTotal
+  // Transporte agora é independente de lavanderia - conta todas as semanas pagas
   const transportPaidTotal = laundryWeeks
-    .filter(w => (w.ironed || w.washed) && w.paid_at)
+    .filter(w => w.paid_at)
     .reduce((sum, w) => sum + (w.transport_fee || 0), 0)
   const warnings = notes.filter(n => n.is_warning)
   const years = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i)
@@ -262,7 +273,7 @@ export default function DiaristaPage() {
       )}
 
       {/* Period Selector */}
-      <div className={cn('px-4 pt-4 pb-2', (activeTab === 'perfil' || activeTab === 'calendario') && 'hidden')}>
+      <div className={cn('px-4 pt-4 pb-2', activeTab === 'perfil' && 'hidden')}>
         <div className="flex gap-2">
           <Select value={selectedMonth.toString()} onValueChange={v => setSelectedMonth(parseInt(v))}>
             <SelectTrigger className="flex-1 h-10 text-sm">
@@ -288,7 +299,7 @@ export default function DiaristaPage() {
       </div>
 
       {/* Total Card */}
-      <div className={cn('px-4 pb-3', (activeTab === 'perfil' || activeTab === 'calendario') && 'hidden')}>
+      <div className={cn('px-4 pb-3', activeTab === 'perfil' && 'hidden')}>
         <Card className="gradient-primary text-white shadow-lg">
           <CardContent className="pt-4 pb-4">
             <div className="flex items-center justify-between">
@@ -561,79 +572,139 @@ export default function DiaristaPage() {
             <CardHeader className="pb-2 pt-4 px-4">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Bus className="h-4 w-4 text-primary" />
-                Transporte
+                Transporte Semanal
               </CardTitle>
-              <CardDescription className="text-xs">Pagamentos de transporte por semana</CardDescription>
+              <CardDescription className="text-xs">Acompanhe seus pagamentos de transporte</CardDescription>
             </CardHeader>
             <CardContent className="px-4 pb-4">
               {(() => {
-                const transportWeeks = laundryWeeks.filter(w => (w.ironed || w.washed))
-                if (transportWeeks.length === 0) {
-                  return (
-                    <p className="text-center text-muted-foreground py-8 text-sm">
-                      Nenhum transporte registrado neste mes
-                    </p>
-                  )
+                // Calcula as semanas do mes com datas
+                const transportValue = currentDiarista?.transport_value ?? 30
+                const lastDay = new Date(selectedYear, selectedMonth, 0).getDate()
+                const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+                const monthAbbr = monthNames[selectedMonth - 1]
+                
+                // Gera as semanas do mes
+                const weeksOfMonth: { weekNumber: number; startDay: number; endDay: number }[] = []
+                let currentDay = 1
+                let weekNum = 1
+                while (currentDay <= lastDay) {
+                  const startDay = currentDay
+                  const endDay = Math.min(currentDay + 6, lastDay)
+                  weeksOfMonth.push({ weekNumber: weekNum, startDay, endDay })
+                  currentDay = endDay + 1
+                  weekNum++
                 }
-                const paidWeeks = transportWeeks.filter(w => w.paid_at)
-                const pendingWeeks = transportWeeks.filter(w => !w.paid_at)
-                const totalPaid = paidWeeks.reduce((s, w) => s + (w.transport_fee || 0), 0)
-                const totalPending = pendingWeeks.reduce((s, w) => s + (w.transport_fee || 0), 0)
+                
+                // Calcula totais baseado no valor pago parcial
+                const totalTransport = weeksOfMonth.length * transportValue
+                const totalPaid = laundryWeeks.reduce((sum, w) => sum + (w.transport_paid_amount || 0), 0)
+                const totalPending = totalTransport - totalPaid
+                
                 return (
-                  <div className="space-y-3">
-                    {/* Resumo */}
-                    <div className="flex gap-2">
-                      <div className="flex-1 bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-center">
-                        <p className="text-lg font-bold text-green-500">R$ {totalPaid.toFixed(2)}</p>
-                        <p className="text-[10px] text-muted-foreground">Recebido</p>
+                  <div className="space-y-4">
+                    {/* Resumo com visual melhorado */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-center">
+                        <p className="text-2xl font-bold text-green-500">R$ {totalPaid.toFixed(2)}</p>
+                        <p className="text-xs text-green-500/80 mt-1">Recebido</p>
                       </div>
-                      <div className="flex-1 bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-center">
-                        <p className="text-lg font-bold text-amber-500">R$ {totalPending.toFixed(2)}</p>
-                        <p className="text-[10px] text-muted-foreground">Pendente</p>
+                      <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-center">
+                        <p className="text-2xl font-bold text-amber-500">R$ {totalPending.toFixed(2)}</p>
+                        <p className="text-xs text-amber-500/80 mt-1">Pendente</p>
+                      </div>
+                    </div>
+                    
+                    {/* Barra de progresso */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-[10px] text-muted-foreground">
+                        <span>Progresso do mes</span>
+                        <span>{Math.round((totalPaid / totalTransport) * 100)}%</span>
+                      </div>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all"
+                          style={{ width: `${(totalPaid / totalTransport) * 100}%` }}
+                        />
                       </div>
                     </div>
 
                     {/* Lista de semanas */}
                     <div className="space-y-2">
-                      {transportWeeks.map(week => {
-                        const isPaid = !!week.paid_at
+                      <p className="text-xs font-medium text-muted-foreground">Detalhamento por semana</p>
+                      {weeksOfMonth.map(weekInfo => {
+                        const week = laundryWeeks.find(w => w.week_number === weekInfo.weekNumber)
+                        const paidAmount = week?.transport_paid_amount || 0
+                        const isPaidFull = paidAmount >= transportValue
+                        const isPaidHalf = paidAmount > 0 && paidAmount < transportValue
+                        const halfValue = transportValue / 2
+                        const weekLabel = `${weekInfo.startDay}-${weekInfo.endDay} ${monthAbbr}`
+                        
                         return (
-                          <div key={week.id} className="p-3 bg-muted rounded-lg">
+                          <div key={weekInfo.weekNumber} className="p-3 bg-muted/50 rounded-xl border border-border/50">
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <Bus className="h-4 w-4 text-muted-foreground" />
+                              <div className="flex items-center gap-3">
+                                {/* Icone de status */}
+                                <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                                  isPaidFull 
+                                    ? 'bg-green-500/20 text-green-500' 
+                                    : isPaidHalf 
+                                    ? 'bg-yellow-500/20 text-yellow-500'
+                                    : 'bg-muted text-muted-foreground'
+                                }`}>
+                                  <Bus className="h-5 w-5" />
+                                </div>
                                 <div>
-                                  <p className="text-sm font-semibold">Semana {week.week_number}</p>
-                                  <p className="text-[10px] text-muted-foreground">
-                                    {week.ironed && week.washed ? 'Lavou e Passou' : week.ironed ? 'Passou roupa' : 'Lavou roupa'}
-                                  </p>
+                                  <p className="text-sm font-semibold">{weekLabel}</p>
+                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                    {isPaidFull ? (
+                                      <span className="text-[10px] bg-green-500/20 text-green-500 px-2 py-0.5 rounded-full font-medium">
+                                        Completo
+                                      </span>
+                                    ) : isPaidHalf ? (
+                                      <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded-full font-medium">
+                                        {paidAmount >= halfValue ? 'Ida paga' : 'Parcial'}
+                                      </span>
+                                    ) : (
+                                      <span className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full font-medium">
+                                        Pendente
+                                      </span>
+                                    )}
+                                    {week?.receipt_url && (
+                                      <a
+                                        href={week.receipt_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
+                                      >
+                                        <Receipt className="h-3 w-3" />
+                                        Comprovante
+                                      </a>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                               <div className="text-right">
-                                <p className={`text-sm font-bold ${isPaid ? 'text-green-500' : 'text-amber-500'}`}>
-                                  R$ {(week.transport_fee || 0).toFixed(2)}
+                                <p className={`text-base font-bold ${
+                                  isPaidFull ? 'text-green-500' : isPaidHalf ? 'text-yellow-500' : 'text-muted-foreground'
+                                }`}>
+                                  R$ {paidAmount.toFixed(2)}
                                 </p>
-                                <Badge
-                                  variant={isPaid ? 'default' : 'outline'}
-                                  className={`text-[10px] ${isPaid ? 'bg-green-600' : 'border-amber-500 text-amber-500'}`}
-                                >
-                                  {isPaid ? 'Recebido' : 'Pendente'}
-                                </Badge>
+                                <p className="text-[10px] text-muted-foreground">
+                                  de R$ {transportValue.toFixed(2)}
+                                </p>
                               </div>
                             </div>
-                            {isPaid && week.receipt_url && (
-                              <div className="mt-2 pt-2 border-t border-border/50">
-                                <a
-                                  href={week.receipt_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1.5 text-[11px] text-primary hover:underline"
-                                >
-                                  <Receipt className="h-3 w-3" />
-                                  Ver comprovante
-                                </a>
-                              </div>
-                            )}
+                            
+                            {/* Indicador visual ida/volta */}
+                            <div className="flex gap-2 mt-3">
+                              <div className={`flex-1 h-1.5 rounded-full ${paidAmount >= halfValue ? 'bg-green-500' : 'bg-muted'}`} />
+                              <div className={`flex-1 h-1.5 rounded-full ${paidAmount >= transportValue ? 'bg-green-500' : 'bg-muted'}`} />
+                            </div>
+                            <div className="flex justify-between mt-1">
+                              <span className={`text-[9px] ${paidAmount >= halfValue ? 'text-green-500' : 'text-muted-foreground'}`}>Ida</span>
+                              <span className={`text-[9px] ${paidAmount >= transportValue ? 'text-green-500' : 'text-muted-foreground'}`}>Volta</span>
+                            </div>
                           </div>
                         )
                       })}
@@ -711,18 +782,6 @@ export default function DiaristaPage() {
         {/* PAGAMENTOS */}
         {activeTab === 'pagamentos' && diaristaId && (
           <MyPaymentsSection diaristaId={diaristaId} month={selectedMonth} year={selectedYear} />
-        )}
-
-        {/* CALENDARIO */}
-        {activeTab === 'calendario' && currentDiarista && (
-          <MyCalendarSection
-            diarista={currentDiarista}
-            clients={activeClients}
-            month={selectedMonth}
-            year={selectedYear}
-            onChangeMonth={(m, y) => { setSelectedMonth(m); setSelectedYear(y) }}
-            attendances={attendances.map(a => ({ date: a.date, present: a.present, day_type: a.day_type }))}
-          />
         )}
 
         {/* PERFIL */}
@@ -952,7 +1011,6 @@ export default function DiaristaPage() {
         <div className="flex items-stretch h-16 overflow-x-auto scrollbar-hide">
           {([
             { key: 'resumo',      label: 'Inicio',      Icon: LayoutDashboard },
-            { key: 'calendario',  label: 'Agenda',      Icon: CalendarRange },
             { key: 'presenca',    label: 'Presenca',    Icon: CalendarCheck },
             { key: 'lavanderia',  label: 'Lavanderia',  Icon: WashingMachine },
             { key: 'transporte',  label: 'Transporte',  Icon: Bus },

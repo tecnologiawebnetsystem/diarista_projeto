@@ -1,10 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useLaundryWeeks } from '@/hooks/use-laundry-weeks'
 import { ReceiptUpload } from '@/components/receipt-upload'
 import { Bus, CheckCircle2, Circle, ChevronDown, ChevronUp } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+
+interface TransportWeek {
+  id: string
+  week_number: number
+  month: number
+  year: number
+  transport_fee: number
+  transport_paid_amount: number // Valor parcial pago (0, metade ou total)
+  receipt_url?: string | null
+  paid_at?: string | null
+  ironed?: boolean
+  washed?: boolean
+}
 
 interface TransportSectionProps {
   month: number
@@ -14,33 +27,275 @@ interface TransportSectionProps {
   diaristaTransportValue?: number
 }
 
+// Retorna as semanas do mes com suas datas de inicio e fim
+function getWeeksOfMonth(month: number, year: number): { weekNumber: number; startDay: number; endDay: number }[] {
+  const lastDay = new Date(year, month, 0).getDate() // Ultimo dia do mes
+  const weeks: { weekNumber: number; startDay: number; endDay: number }[] = []
+  
+  let currentDay = 1
+  let weekNumber = 1
+  
+  while (currentDay <= lastDay) {
+    const startDay = currentDay
+    const endDay = Math.min(currentDay + 6, lastDay)
+    
+    weeks.push({ weekNumber, startDay, endDay })
+    
+    currentDay = endDay + 1
+    weekNumber++
+  }
+  
+  return weeks
+}
+
+// Formata o nome do mes abreviado
+function getMonthAbbr(month: number): string {
+  const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+  return months[month - 1]
+}
+
 export function TransportSection({ month, year, diaristaId, onDataChange, diaristaTransportValue }: TransportSectionProps) {
-  const { laundryWeeks, loading, markTransportPaid, updateTransportReceipt, refetch } = useLaundryWeeks(month, year, diaristaId)
-  const transportValue = diaristaTransportValue ?? 30
+  const [transportWeeks, setTransportWeeks] = useState<TransportWeek[]>([])
+  const [loading, setLoading] = useState(true)
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null)
+  const transportValue = diaristaTransportValue ?? 30
 
-  // Só mostra semanas que têm algum serviço de lavanderia
-  const weeksWithServices = laundryWeeks.filter(w => w.ironed || w.washed)
+  const weeksOfMonth = getWeeksOfMonth(month, year)
+  const weeksCount = weeksOfMonth.length
+  const monthAbbr = getMonthAbbr(month)
 
-  const totalTransport = weeksWithServices.reduce((sum, w) => sum + (w.transport_fee || 0), 0)
-  const totalPaid = weeksWithServices
-    .filter(w => w.paid_at)
-    .reduce((sum, w) => sum + (w.transport_fee || 0), 0)
+  // Busca ou cria os registros de transporte para cada semana do mes
+  const fetchTransportWeeks = useCallback(async () => {
+    if (!month || !year || !diaristaId) {
+      setLoading(false)
+      return
+    }
+
+    try {
+      setLoading(true)
+
+      // Busca registros existentes na laundry_weeks
+      const { data: existingWeeks, error } = await supabase
+        .from('laundry_weeks')
+        .select('*')
+        .eq('month', month)
+        .eq('year', year)
+        .eq('diarista_id', diaristaId)
+        .order('week_number', { ascending: true })
+
+      if (error) throw error
+
+      // Monta a lista de semanas, criando placeholders para as que nao existem
+      const weeks: TransportWeek[] = []
+      for (let i = 1; i <= weeksCount; i++) {
+        const existing = existingWeeks?.find(w => w.week_number === i)
+        if (existing) {
+          weeks.push({
+            id: existing.id,
+            week_number: existing.week_number,
+            month: existing.month,
+            year: existing.year,
+            transport_fee: existing.transport_fee || transportValue,
+            transport_paid_amount: existing.transport_paid_amount || 0,
+            receipt_url: existing.receipt_url,
+            paid_at: existing.paid_at,
+            ironed: existing.ironed,
+            washed: existing.washed
+          })
+        } else {
+          // Semana ainda nao existe no banco - sera criada quando marcar como pago
+          weeks.push({
+            id: `new-${i}`,
+            week_number: i,
+            month,
+            year,
+            transport_fee: transportValue,
+            transport_paid_amount: 0,
+            receipt_url: null,
+            paid_at: null,
+            ironed: false,
+            washed: false
+          })
+        }
+      }
+
+      setTransportWeeks(weeks)
+    } catch (error) {
+      console.error('Error fetching transport weeks:', error)
+      setTransportWeeks([])
+    } finally {
+      setLoading(false)
+    }
+  }, [month, year, diaristaId, weeksCount, transportValue])
+
+  useEffect(() => {
+    fetchTransportWeeks()
+  }, [fetchTransportWeeks])
+
+  const totalTransport = transportWeeks.length * transportValue
+  // Soma os valores parciais pagos de cada semana
+  const totalPaid = transportWeeks.reduce((sum, w) => sum + (w.transport_paid_amount || 0), 0)
   const totalPending = totalTransport - totalPaid
 
-  const handleTogglePaid = async (id: string, currentlyPaid: boolean) => {
-    await markTransportPaid(id, !currentlyPaid)
-    onDataChange?.()
+  // Paga um valor parcial ou total do transporte
+  const handlePayTransport = async (week: TransportWeek, amount: number) => {
+    try {
+      const halfValue = transportValue / 2
+      let newPaidAmount = 0
+      
+      // Se clicar no mesmo valor que ja esta pago, zera (toggle)
+      if (week.transport_paid_amount === amount) {
+        newPaidAmount = 0
+      } else if (amount === halfValue) {
+        // Se ja pagou metade e clica em metade novamente, paga completo
+        if (week.transport_paid_amount === halfValue) {
+          newPaidAmount = transportValue
+        } else {
+          newPaidAmount = halfValue
+        }
+      } else {
+        newPaidAmount = amount
+      }
+      
+      const isPaid = newPaidAmount >= transportValue
+
+      if (week.id.startsWith('new-')) {
+        // Cria novo registro no banco
+        const { data, error } = await supabase
+          .from('laundry_weeks')
+          .insert([{
+            week_number: week.week_number,
+            month,
+            year,
+            diarista_id: diaristaId,
+            value: 0,
+            ironed: false,
+            washed: false,
+            transport_fee: transportValue,
+            transport_paid_amount: newPaidAmount,
+            paid_at: isPaid ? new Date().toISOString() : null
+          }])
+          .select()
+          .single()
+
+        if (error) throw error
+        if (data) {
+          setTransportWeeks(prev => prev.map(w => 
+            w.week_number === week.week_number ? {
+              ...w,
+              id: data.id,
+              paid_at: data.paid_at,
+              transport_fee: data.transport_fee,
+              transport_paid_amount: data.transport_paid_amount || newPaidAmount
+            } : w
+          ))
+        }
+      } else {
+        // Atualiza registro existente
+        const { data, error } = await supabase
+          .from('laundry_weeks')
+          .update({ 
+            transport_paid_amount: newPaidAmount,
+            paid_at: isPaid ? new Date().toISOString() : null 
+          })
+          .eq('id', week.id)
+          .select()
+          .single()
+
+        if (error) throw error
+        if (data) {
+          setTransportWeeks(prev => prev.map(w => 
+            w.id === week.id ? { 
+              ...w, 
+              paid_at: data.paid_at,
+              transport_paid_amount: data.transport_paid_amount || newPaidAmount
+            } : w
+          ))
+        }
+      }
+
+      onDataChange?.()
+    } catch (error) {
+      console.error('Error paying transport:', error)
+    }
   }
 
-  const handleUploadReceipt = async (id: string, url: string) => {
-    await updateTransportReceipt(id, url)
-    onDataChange?.()
+  const handleUploadReceipt = async (week: TransportWeek, url: string) => {
+    try {
+      if (week.id.startsWith('new-')) {
+        // Cria novo registro no banco com o comprovante
+        const { data, error } = await supabase
+          .from('laundry_weeks')
+          .insert([{
+            week_number: week.week_number,
+            month,
+            year,
+            diarista_id: diaristaId,
+            value: 0,
+            ironed: false,
+            washed: false,
+            transport_fee: transportValue,
+            receipt_url: url
+          }])
+          .select()
+          .single()
+
+        if (error) throw error
+        if (data) {
+          setTransportWeeks(prev => prev.map(w => 
+            w.week_number === week.week_number ? {
+              ...w,
+              id: data.id,
+              receipt_url: data.receipt_url,
+              transport_fee: data.transport_fee
+            } : w
+          ))
+        }
+      } else {
+        // Atualiza registro existente
+        const { data, error } = await supabase
+          .from('laundry_weeks')
+          .update({ receipt_url: url })
+          .eq('id', week.id)
+          .select()
+          .single()
+
+        if (error) throw error
+        if (data) {
+          setTransportWeeks(prev => prev.map(w => 
+            w.id === week.id ? { ...w, receipt_url: data.receipt_url } : w
+          ))
+        }
+      }
+
+      onDataChange?.()
+    } catch (error) {
+      console.error('Error uploading transport receipt:', error)
+    }
   }
 
-  const handleRemoveReceipt = async (id: string) => {
-    await updateTransportReceipt(id, null)
-    onDataChange?.()
+  const handleRemoveReceipt = async (week: TransportWeek) => {
+    try {
+      if (week.id.startsWith('new-')) return
+
+      const { data, error } = await supabase
+        .from('laundry_weeks')
+        .update({ receipt_url: null })
+        .eq('id', week.id)
+        .select()
+        .single()
+
+      if (error) throw error
+      if (data) {
+        setTransportWeeks(prev => prev.map(w => 
+          w.id === week.id ? { ...w, receipt_url: null } : w
+        ))
+      }
+
+      onDataChange?.()
+    } catch (error) {
+      console.error('Error removing transport receipt:', error)
+    }
   }
 
   if (loading) {
@@ -75,30 +330,29 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
       <CardContent className="px-4 pb-4 space-y-3">
 
         {/* Resumo */}
-        {weeksWithServices.length > 0 && (
-          <div className="flex gap-2">
-            <div className="flex-1 bg-green-500/10 rounded-lg p-2.5 text-center">
-              <p className="text-lg font-bold text-green-500">R$ {totalPaid.toFixed(2)}</p>
-              <p className="text-[10px] text-muted-foreground">Pago</p>
-            </div>
-            <div className="flex-1 bg-destructive/10 rounded-lg p-2.5 text-center">
-              <p className="text-lg font-bold text-destructive">R$ {totalPending.toFixed(2)}</p>
-              <p className="text-[10px] text-muted-foreground">Pendente</p>
-            </div>
+        <div className="flex gap-2">
+          <div className="flex-1 bg-green-500/10 rounded-lg p-2.5 text-center">
+            <p className="text-lg font-bold text-green-500">R$ {totalPaid.toFixed(2)}</p>
+            <p className="text-[10px] text-muted-foreground">Pago</p>
           </div>
-        )}
-
-        {/* Estado vazio */}
-        {weeksWithServices.length === 0 && (
-          <p className="text-center text-muted-foreground py-4 text-sm">
-            Nenhum servico de lavanderia registrado neste mes
-          </p>
-        )}
+          <div className="flex-1 bg-destructive/10 rounded-lg p-2.5 text-center">
+            <p className="text-lg font-bold text-destructive">R$ {totalPending.toFixed(2)}</p>
+            <p className="text-[10px] text-muted-foreground">Pendente</p>
+          </div>
+        </div>
 
         {/* Semanas */}
-        {weeksWithServices.map((week) => {
-          const isPaid = !!week.paid_at
+        {transportWeeks.map((week) => {
+          const isPaidFull = week.transport_paid_amount >= transportValue
+          const isPaidHalf = week.transport_paid_amount > 0 && week.transport_paid_amount < transportValue
           const isExpanded = expandedWeek === week.week_number
+          const hasLaundry = week.ironed || week.washed
+          const weekInfo = weeksOfMonth.find(w => w.weekNumber === week.week_number)
+          const weekLabel = weekInfo 
+            ? `${weekInfo.startDay}-${weekInfo.endDay} ${monthAbbr}` 
+            : `Semana ${week.week_number}`
+          const halfValue = transportValue / 2
+          const paidAmount = week.transport_paid_amount || 0
 
           return (
             <div key={week.id} className="rounded-xl border border-border overflow-hidden">
@@ -108,21 +362,30 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
                 className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 transition-colors active:bg-muted/50"
               >
                 <div className="flex items-center gap-2">
-                  {isPaid ? (
+                  {isPaidFull ? (
                     <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                  ) : isPaidHalf ? (
+                    <div className="h-4 w-4 rounded-full border-2 border-yellow-500 flex items-center justify-center shrink-0">
+                      <div className="h-1.5 w-1.5 rounded-full bg-yellow-500" />
+                    </div>
                   ) : (
                     <Circle className="h-4 w-4 text-muted-foreground shrink-0" />
                   )}
-                  <span className="text-sm font-semibold">Semana {week.week_number}</span>
-                  {isPaid && (
+                  <span className="text-sm font-semibold">{weekLabel}</span>
+                  {isPaidFull && (
                     <span className="text-[10px] bg-green-500/15 text-green-500 px-2 py-0.5 rounded-full font-medium">
                       Pago
                     </span>
                   )}
+                  {isPaidHalf && (
+                    <span className="text-[10px] bg-yellow-500/15 text-yellow-500 px-2 py-0.5 rounded-full font-medium">
+                      Parcial
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`text-sm font-bold ${isPaid ? 'text-green-500' : 'text-primary'}`}>
-                    R$ {(week.transport_fee || transportValue).toFixed(2)}
+                  <span className={`text-sm font-bold ${isPaidFull ? 'text-green-500' : isPaidHalf ? 'text-yellow-500' : 'text-primary'}`}>
+                    R$ {paidAmount.toFixed(2)} / {transportValue.toFixed(2)}
                   </span>
                   {isExpanded ? (
                     <ChevronUp className="h-4 w-4 text-muted-foreground" />
@@ -135,36 +398,79 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
               {/* Conteudo expandido */}
               {isExpanded && (
                 <div className="px-4 py-3 space-y-3 border-t border-border">
-                  {/* Servicos da semana */}
-                  <div className="text-[11px] text-muted-foreground space-y-0.5">
-                    {week.ironed && <p>Passou roupa</p>}
-                    {week.washed && <p>Lavou roupa</p>}
-                  </div>
+                  {/* Servicos da semana (se houver) */}
+                  {hasLaundry && (
+                    <div className="text-[11px] text-muted-foreground space-y-0.5 pb-2 border-b border-border">
+                      {week.ironed && <p>Passou roupa</p>}
+                      {week.washed && <p>Lavou roupa</p>}
+                    </div>
+                  )}
 
-                  {/* Botao Pago/Pendente */}
-                  <button
-                    onClick={() => handleTogglePaid(week.id, isPaid)}
-                    className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all active:scale-[0.98] ${
-                      isPaid
-                        ? 'border-green-500 bg-green-500/10 text-green-500'
-                        : 'border-border bg-background text-muted-foreground'
-                    }`}
-                  >
-                    {isPaid ? (
-                      <CheckCircle2 className="h-4 w-4" />
-                    ) : (
-                      <Circle className="h-4 w-4" />
+                  {/* Botoes de pagamento parcial */}
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-muted-foreground font-medium">Registrar pagamento:</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {/* Botao Ida */}
+                      <button
+                        onClick={() => handlePayTransport(week, halfValue)}
+                        className={`flex flex-col items-center justify-center gap-1 px-3 py-2.5 rounded-lg border-2 transition-all active:scale-[0.98] ${
+                          paidAmount >= halfValue && paidAmount < transportValue
+                            ? 'border-yellow-500 bg-yellow-500/10 text-yellow-500'
+                            : paidAmount >= transportValue
+                            ? 'border-green-500/50 bg-green-500/5 text-green-500/50'
+                            : 'border-border bg-background text-muted-foreground hover:border-yellow-500/50'
+                        }`}
+                      >
+                        <span className="text-[10px] font-medium uppercase">Ida</span>
+                        <span className="text-sm font-bold">R$ {halfValue.toFixed(2)}</span>
+                      </button>
+                      
+                      {/* Botao Volta */}
+                      <button
+                        onClick={() => handlePayTransport(week, halfValue)}
+                        className={`flex flex-col items-center justify-center gap-1 px-3 py-2.5 rounded-lg border-2 transition-all active:scale-[0.98] ${
+                          paidAmount >= transportValue
+                            ? 'border-green-500 bg-green-500/10 text-green-500'
+                            : paidAmount >= halfValue
+                            ? 'border-border bg-background text-muted-foreground hover:border-yellow-500/50'
+                            : 'border-border/50 bg-muted/30 text-muted-foreground/50'
+                        }`}
+                        disabled={paidAmount < halfValue && paidAmount !== transportValue}
+                      >
+                        <span className="text-[10px] font-medium uppercase">Volta</span>
+                        <span className="text-sm font-bold">R$ {halfValue.toFixed(2)}</span>
+                      </button>
+                      
+                      {/* Botao Completo */}
+                      <button
+                        onClick={() => handlePayTransport(week, transportValue)}
+                        className={`flex flex-col items-center justify-center gap-1 px-3 py-2.5 rounded-lg border-2 transition-all active:scale-[0.98] ${
+                          paidAmount >= transportValue
+                            ? 'border-green-500 bg-green-500/10 text-green-500'
+                            : 'border-border bg-background text-muted-foreground hover:border-green-500/50'
+                        }`}
+                      >
+                        <span className="text-[10px] font-medium uppercase">Completo</span>
+                        <span className="text-sm font-bold">R$ {transportValue.toFixed(2)}</span>
+                      </button>
+                    </div>
+                    
+                    {/* Status atual */}
+                    {paidAmount > 0 && (
+                      <div className="flex items-center justify-between text-xs pt-1">
+                        <span className="text-muted-foreground">Pago:</span>
+                        <span className={`font-bold ${isPaidFull ? 'text-green-500' : 'text-yellow-500'}`}>
+                          R$ {paidAmount.toFixed(2)}
+                        </span>
+                      </div>
                     )}
-                    <span className="text-sm font-medium">
-                      {isPaid ? 'Pago' : 'Marcar como Pago'}
-                    </span>
-                  </button>
+                  </div>
 
                   {/* Upload comprovante */}
                   <ReceiptUpload
                     currentUrl={week.receipt_url}
-                    onUpload={(url) => handleUploadReceipt(week.id, url)}
-                    onRemove={() => handleRemoveReceipt(week.id)}
+                    onUpload={(url) => handleUploadReceipt(week, url)}
+                    onRemove={() => handleRemoveReceipt(week)}
                     label="Comprovante de Transporte"
                     compact={!!week.receipt_url}
                   />

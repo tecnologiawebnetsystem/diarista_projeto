@@ -70,7 +70,14 @@ export async function GET(request: NextRequest) {
 
     // Calculos - prioriza valores da diarista, fallback para config global
     const ironingValue = diaristaValues.ironing ?? cfg.ironing ?? 50
-    const washingValue = diaristaValues.washing ?? cfg.washing ?? 75
+    // washing_value agora é o valor MENSAL
+    const monthlyWashingValue = diaristaValues.washing ?? cfg.washing ?? 300
+    // Calcula semanas do mês
+    const lastDayOfMonth = new Date(year, month, 0).getDate()
+    let weeksInMonth = 0, currentDay = 1
+    while (currentDay <= lastDayOfMonth) { weeksInMonth++; currentDay += 7 }
+    const washingValuePerWeek = monthlyWashingValue / weeksInMonth
+    
     const heavyCleaningValue = diaristaValues.heavy_cleaning ?? cfg.heavy_cleaning ?? 250
     const lightCleaningValue = diaristaValues.light_cleaning ?? cfg.light_cleaning ?? 150
 
@@ -80,13 +87,14 @@ export async function GET(request: NextRequest) {
     const attendanceTotal = (heavyDays * heavyCleaningValue) + (lightDays * lightCleaningValue)
 
     const laundryTotal = (laundryData || []).reduce((sum, w) => {
-      return sum + (w.ironed ? ironingValue : 0) + (w.washed ? washingValue : 0)
+      return sum + (w.ironed ? ironingValue : 0) + (w.washed ? washingValuePerWeek : 0)
     }, 0)
 
+    // Transporte agora é independente de lavanderia - conta todas as semanas
     const transportTotal = (laundryData || []).reduce((sum, w) => {
-      return sum + ((w.ironed || w.washed) ? (w.transport_fee || 0) : 0)
+      return sum + (w.transport_fee || 0)
     }, 0)
-    const transportPaidTotal = (laundryData || []).filter((w: { ironed: boolean; washed: boolean; paid_at: string | null }) => (w.ironed || w.washed) && w.paid_at).reduce((sum, w) => sum + (w.transport_fee || 0), 0)
+    const transportPaidTotal = (laundryData || []).filter((w: { paid_at: string | null }) => w.paid_at).reduce((sum, w) => sum + (w.transport_fee || 0), 0)
 
     const warnings = (notesData || []).filter((n: { is_warning: boolean }) => n.is_warning).length
     const grandTotal = attendanceTotal + laundryTotal
@@ -577,13 +585,13 @@ export async function GET(request: NextRequest) {
         </thead>
         <tbody>
           ${laundryData.map((w: { week_number: number; washed: boolean; ironed: boolean; transport_fee: number; paid_at: string | null }) => {
-            const services = (w.ironed ? ironingValue : 0) + (w.washed ? washingValue : 0)
+            const services = (w.ironed ? ironingValue : 0) + (w.washed ? washingValuePerWeek : 0)
             const hasServices = w.ironed || w.washed
             const tPaid = hasServices && !!w.paid_at
             return `
             <tr>
               <td class="font-bold">Semana ${w.week_number}</td>
-              <td>${w.washed ? `<span class="badge badge-info">R$ ${washingValue.toFixed(2)}</span>` : '<span style="color:#D6D3D1">-</span>'}</td>
+              <td>${w.washed ? `<span class="badge badge-info">R$ ${washingValuePerWeek.toFixed(2)}</span>` : '<span style="color:#D6D3D1">-</span>'}</td>
               <td>${w.ironed ? `<span class="badge badge-info">R$ ${ironingValue.toFixed(2)}</span>` : '<span style="color:#D6D3D1">-</span>'}</td>
               <td>${hasServices ? `R$ ${(w.transport_fee || 0).toFixed(2)} <span class="badge ${tPaid ? 'badge-paid' : 'badge-pending'}">${tPaid ? 'Pago' : 'Pendente'}</span>` : '<span style="color:#D6D3D1">-</span>'}</td>
               <td class="text-right font-bold">R$ ${services.toFixed(2)}</td>

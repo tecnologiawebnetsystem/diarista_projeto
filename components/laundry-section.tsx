@@ -16,11 +16,31 @@ interface LaundrySectionProps {
   diaristaTransportValue?: number
 }
 
+// Calcula quantas semanas tem no mes
+function getWeeksInMonth(month: number, year: number): number {
+  const lastDay = new Date(year, month, 0).getDate()
+  let weeks = 0
+  let currentDay = 1
+  while (currentDay <= lastDay) {
+    weeks++
+    currentDay += 7
+  }
+  return weeks
+}
+
 export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDataChange, diaristaIroningValue, diaristaWashingValue, diaristaTransportValue }: LaundrySectionProps) {
   const { laundryWeeks, loading, updateLaundryService, refetch } = useLaundryWeeks(month, year, diaristaId)
 
+  // Calcula o numero de semanas do mes
+  const weeksInMonth = getWeeksInMonth(month, year)
+  
+  // Valor mensal de lavagem (washing_value agora é mensal)
+  const monthlyWashingValue = diaristaWashingValue ?? 300
+  
+  // Calcula o valor por semana baseado no valor mensal dividido pelo numero de semanas
+  const washingValuePerWeek = monthlyWashingValue / weeksInMonth
+  
   const ironingValue = diaristaIroningValue ?? 50
-  const washingValue = diaristaWashingValue ?? 75
   const transportValue = diaristaTransportValue ?? 30
 
   // Só mostra semanas que têm serviços cadastrados (igual ao AttendanceSection)
@@ -48,7 +68,7 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
       await updateLaundryService(week.id, week.ironed, checked)
     } else if (checked) {
       const insertData: Record<string, unknown> = {
-        week_number: weekNumber, month, year, value: washingValue,
+        week_number: weekNumber, month, year, value: washingValuePerWeek,
         ironed: false, washed: true, transport_fee: transportValue
       }
       if (diaristaId) insertData.diarista_id = diaristaId
@@ -61,7 +81,7 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
   const getWeekTotal = (weekNumber: number) => {
     const week = laundryWeeks.find(w => w.week_number === weekNumber)
     if (!week) return 0
-    return (week.ironed ? ironingValue : 0) + (week.washed ? washingValue : 0)
+    return (week.ironed ? ironingValue : 0) + (week.washed ? washingValuePerWeek : 0)
   }
 
   const isIroned = (weekNumber: number) => {
@@ -75,7 +95,7 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
   }
 
   const totalLaundry = laundryWeeks.reduce((sum, week) => {
-    return sum + (week.ironed ? ironingValue : 0) + (week.washed ? washingValue : 0)
+    return sum + (week.ironed ? ironingValue : 0) + (week.washed ? washingValuePerWeek : 0)
   }, 0)
 
   if (loading) {
@@ -173,7 +193,7 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
                     {washed ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <Circle className="h-4 w-4 shrink-0" />}
                     <div className="text-left">
                       <p className="text-xs font-medium leading-tight">Lavou roupa</p>
-                      <p className="text-[11px] opacity-70">R$ {washingValue.toFixed(2)}</p>
+                      <p className="text-[11px] opacity-70">R$ {washingValuePerWeek.toFixed(2)}</p>
                     </div>
                   </button>
                 </div>

@@ -61,6 +61,7 @@ export interface LaundryWeek {
   ironed: boolean
   washed: boolean
   transport_fee: number
+  transport_paid_amount?: number // Valor parcial pago (0, metade ou total)
   receipt_url?: string | null
   paid_at?: string | null
   diarista_id?: string | null
