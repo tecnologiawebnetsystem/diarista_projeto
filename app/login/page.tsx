@@ -9,18 +9,16 @@ import { supabase } from '@/lib/supabase'
 import type { Diarista } from '@/types/database'
 
 const ADMIN_PIN_LENGTH = 6
-const DIARISTA_PIN_LENGTH = 4
 
 export default function LoginPage() {
   const router = useRouter()
   const { loginAsDiarista, loginAsAdmin } = useAuth()
-  const [screen, setScreen] = useState<'home' | 'admin-pin' | 'diarista-select' | 'diarista-pin'>('home')
+  const [screen, setScreen] = useState<'home' | 'admin-pin' | 'diarista-select'>('home')
   const [pin, setPin] = useState('')
   const [error, setError] = useState(false)
   const [loading, setLoading] = useState(false)
   const [shake, setShake] = useState(false)
   const [diaristas, setDiaristas] = useState<Diarista[]>([])
-  const [selectedDiarista, setSelectedDiarista] = useState<Diarista | null>(null)
   const [loadingDiaristas, setLoadingDiaristas] = useState(false)
 
   useEffect(() => {
@@ -62,23 +60,15 @@ export default function LoginPage() {
           const loaded = data as unknown as Diarista[]
           setDiaristas(loaded)
           if (loaded.length === 1) {
-            setSelectedDiarista(loaded[0])
-            setScreen('diarista-pin')
-            setPin('')
-            setError(false)
+            // Apenas 1 diarista - entra direto
+            loginAsDiarista(loaded[0])
+            router.push('/diarista')
           } else {
             setScreen('diarista-select')
           }
-        } else {
-          // Sem diaristas cadastradas
-          setScreen('diarista-pin')
-          setPin('')
-          setError(false)
         }
       } catch {
-        setScreen('diarista-pin')
-        setPin('')
-        setError(false)
+        // Erro ao carregar
       } finally {
         setLoadingDiaristas(false)
       }
@@ -86,20 +76,18 @@ export default function LoginPage() {
     }
 
     if (diaristas.length === 1) {
-      setSelectedDiarista(diaristas[0])
-      setScreen('diarista-pin')
-      setPin('')
-      setError(false)
+      // Apenas 1 diarista - entra direto
+      loginAsDiarista(diaristas[0])
+      router.push('/diarista')
     } else {
       setScreen('diarista-select')
     }
   }
 
   const handleSelectDiarista = (d: Diarista) => {
-    setSelectedDiarista(d)
-    setScreen('diarista-pin')
-    setPin('')
-    setError(false)
+    // Seleciona e entra direto sem PIN
+    loginAsDiarista(d)
+    router.push('/diarista')
   }
 
   const triggerShake = () => {
@@ -123,39 +111,6 @@ export default function LoginPage() {
         triggerShake()
         setPin('')
         setLoading(false)
-      }
-    }
-  }
-
-  const handleDiaristaKey = async (key: string) => {
-    if (loading) return
-    setError(false)
-    if (key === 'del') { setPin(p => p.slice(0, -1)); return }
-    const next = pin + key
-    setPin(next)
-    if (next.length === DIARISTA_PIN_LENGTH) {
-      setLoading(true)
-      if (selectedDiarista) {
-        if (selectedDiarista.pin === next) {
-          loginAsDiarista(selectedDiarista)
-          router.push('/diarista')
-        } else {
-          setError(true)
-          triggerShake()
-          setPin('')
-          setLoading(false)
-        }
-      } else {
-        const found = diaristas.find(d => d.pin === next && d.active)
-        if (found) {
-          loginAsDiarista(found)
-          router.push('/diarista')
-        } else {
-          setError(true)
-          triggerShake()
-          setPin('')
-          setLoading(false)
-        }
       }
     }
   }
@@ -271,45 +226,6 @@ export default function LoginPage() {
           <div className="w-16 h-16 rounded-2xl bg-muted border border-border flex items-center justify-center">
             <ShieldCheck className="h-7 w-7 text-muted-foreground" />
           </div>
-        }
-      />
-    )
-  }
-
-  /* ── Diarista PIN ── */
-  if (screen === 'diarista-pin') {
-    return (
-      <PinScreen
-        title={selectedDiarista ? selectedDiarista.name : 'Acesso Diarista'}
-        subtitle={`Digite seu PIN de ${DIARISTA_PIN_LENGTH} digitos`}
-        pinLength={DIARISTA_PIN_LENGTH}
-        onKey={handleDiaristaKey}
-        onBack={() => {
-          if (selectedDiarista && diaristas.length > 1) {
-            setScreen('diarista-select')
-          } else {
-            setScreen('home')
-          }
-          setPin('')
-          setError(false)
-          setSelectedDiarista(null)
-        }}
-        icon={
-          selectedDiarista?.photo_url ? (
-            <Image
-              src={selectedDiarista.photo_url}
-              alt={selectedDiarista.name}
-              width={64}
-              height={64}
-              className="w-16 h-16 rounded-full object-cover border-2 border-primary/30 shadow-lg shadow-primary/20"
-            />
-          ) : (
-            <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center shadow-lg shadow-primary/30">
-              <span className="text-2xl font-bold text-primary-foreground">
-                {selectedDiarista?.name?.charAt(0).toUpperCase() || 'D'}
-              </span>
-            </div>
-          )
         }
       />
     )
