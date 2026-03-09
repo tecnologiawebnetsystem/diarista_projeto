@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import { DollarSign, CheckCircle, Clock, AlertCircle, Upload, Receipt, Filter, ChevronRight, Calendar, FileText, ExternalLink } from 'lucide-react'
+import { DollarSign, CheckCircle, Clock, AlertCircle, Upload, Receipt, Filter, ChevronRight, Calendar, FileText, ExternalLink, Bus } from 'lucide-react'
 import type { Diarista } from '@/types/database'
 
 interface Payment {
@@ -54,10 +54,20 @@ interface CurrentMonthTotal {
   grandTotal: number
 }
 
+interface TransportPayment {
+  diaristaId: string
+  diaristaName: string
+  month: number
+  year: number
+  totalPaid: number
+  weeksPaid: number
+}
+
 export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: PaymentsSectionProps) {
   const [payments, setPayments] = useState<Payment[]>([])
   const [monthlyPayments, setMonthlyPayments] = useState<MonthlyPayment[]>([])
   const [currentMonthTotals, setCurrentMonthTotals] = useState<CurrentMonthTotal[]>([])
+  const [transportPayments, setTransportPayments] = useState<TransportPayment[]>([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'paid'>('all')
   const [updatingId, setUpdatingId] = useState<string | null>(null)
@@ -136,11 +146,42 @@ export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: 
       }
       
       setCurrentMonthTotals(totals)
+      
+      // Busca transporte pago para cada diarista
+      const transportPaid: TransportPayment[] = []
+      for (const diarista of targetDiaristas) {
+        const { data: laundryWeeksData } = await supabase
+          .from('laundry_weeks')
+          .select('*')
+          .eq('diarista_id', diarista.id)
+          .eq('month', month)
+          .eq('year', year)
+        
+        const paidWeeks = (laundryWeeksData || []).filter((w: { transport_paid_amount?: number }) => 
+          (w.transport_paid_amount || 0) > 0
+        )
+        const totalPaid = paidWeeks.reduce((sum: number, w: { transport_paid_amount?: number }) => 
+          sum + (w.transport_paid_amount || 0), 0
+        )
+        
+        if (totalPaid > 0) {
+          transportPaid.push({
+            diaristaId: diarista.id,
+            diaristaName: diarista.name,
+            month,
+            year,
+            totalPaid,
+            weeksPaid: paidWeeks.length
+          })
+        }
+      }
+      setTransportPayments(transportPaid)
     } catch (err) {
       console.error('[v0] Error fetching payments:', err)
       setPayments([])
       setMonthlyPayments([])
       setCurrentMonthTotals([])
+      setTransportPayments([])
     }
     setLoading(false)
   }, [month, year, selectedDiaristaId, diaristas])
@@ -330,8 +371,46 @@ export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: 
               )
             })}
             
+            {/* Transporte Pago */}
+            {transportPayments.map(tp => (
+              <div
+                key={`transport-${tp.diaristaId}-${tp.month}-${tp.year}`}
+                className="p-3 rounded-xl border border-blue-500/30 bg-blue-500/5"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-blue-500/10">
+                    <Bus className="h-5 w-5 text-blue-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold">{tp.diaristaName}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                            <Bus className="h-3 w-3" />
+                            Transporte
+                          </span>
+                          <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                            <FileText className="h-3 w-3" />
+                            {MONTHS_FULL[tp.month - 1]}/{tp.year}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-base font-bold shrink-0 text-blue-500">
+                        R$ {tp.totalPaid.toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2 text-[10px] text-muted-foreground">
+                      <CheckCircle className="h-3 w-3 text-green-500" />
+                      <span>{tp.weeksPaid} semana(s) paga(s)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            
             {/* Mensagem se nao houver nada */}
-            {currentMonthTotals.length === 0 && monthlyPayments.length === 0 && !loading && (
+            {currentMonthTotals.length === 0 && monthlyPayments.length === 0 && transportPayments.length === 0 && !loading && (
               <div className="text-center py-6 text-muted-foreground">
                 <p className="text-sm">Nenhum pagamento registrado</p>
               </div>

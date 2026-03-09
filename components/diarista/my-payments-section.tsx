@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import { DollarSign, CheckCircle, Clock, Receipt, ChevronRight, Calendar } from 'lucide-react'
+import { DollarSign, CheckCircle, Clock, Receipt, ChevronRight, Calendar, Bus, FileText } from 'lucide-react'
 
 interface Payment {
   id: string
@@ -32,6 +32,13 @@ interface MonthlyPaymentRecord {
   notes: string | null
 }
 
+interface TransportPayment {
+  month: number
+  year: number
+  totalPaid: number
+  weeksPaid: number
+}
+
 interface MyPaymentsSectionProps {
   diaristaId: string
   month: number
@@ -44,6 +51,7 @@ const MONTHS_FULL = ['Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho', 
 export function MyPaymentsSection({ diaristaId, month, year }: MyPaymentsSectionProps) {
   const [payments, setPayments] = useState<Payment[]>([])
   const [monthlyPayments, setMonthlyPayments] = useState<MonthlyPaymentRecord[]>([])
+  const [transportPayments, setTransportPayments] = useState<TransportPayment[]>([])
   const [loading, setLoading] = useState(true)
 
   const fetchPayments = useCallback(async () => {
@@ -67,9 +75,31 @@ export function MyPaymentsSection({ diaristaId, month, year }: MyPaymentsSection
         .order('year', { ascending: false })
         .order('month', { ascending: false })
       setMonthlyPayments((monthlyData as unknown as MonthlyPaymentRecord[]) || [])
+      
+      // Busca transporte pago do mes atual
+      const { data: laundryWeeksData } = await supabase
+        .from('laundry_weeks')
+        .select('*')
+        .eq('diarista_id', diaristaId)
+        .eq('month', month)
+        .eq('year', year)
+      
+      const paidWeeks = (laundryWeeksData || []).filter((w: { transport_paid_amount?: number }) => 
+        (w.transport_paid_amount || 0) > 0
+      )
+      const totalTransportPaid = paidWeeks.reduce((sum: number, w: { transport_paid_amount?: number }) => 
+        sum + (w.transport_paid_amount || 0), 0
+      )
+      
+      if (totalTransportPaid > 0) {
+        setTransportPayments([{ month, year, totalPaid: totalTransportPaid, weeksPaid: paidWeeks.length }])
+      } else {
+        setTransportPayments([])
+      }
     } catch {
       setPayments([])
       setMonthlyPayments([])
+      setTransportPayments([])
     }
     setLoading(false)
   }, [diaristaId, month, year])
@@ -214,6 +244,44 @@ export function MyPaymentsSection({ diaristaId, month, year }: MyPaymentsSection
           </div>
         </div>
       )}
+
+      {/* Transporte Pago do Mes */}
+      {transportPayments.length > 0 && transportPayments.map(tp => (
+        <div
+          key={`transport-${tp.month}-${tp.year}`}
+          className="rounded-xl border border-blue-500/30 bg-blue-500/5 p-4"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
+              <Bus className="h-6 w-6 text-blue-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold">Transporte</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[10px] bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                      <Bus className="h-3 w-3" />
+                      Transporte
+                    </span>
+                    <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                      <FileText className="h-3 w-3" />
+                      {MONTHS_FULL[tp.month - 1]}/{tp.year}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-lg font-bold shrink-0 text-blue-500">
+                  {'R$ '}{tp.totalPaid.toFixed(2)}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 mt-2 text-[10px] text-muted-foreground">
+                <CheckCircle className="h-3 w-3 text-green-500" />
+                <span>{tp.weeksPaid} semana(s) paga(s)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
 
       {/* Historico de pagamentos mensais */}
       {paidMonthlyPayments.length > 0 && (
