@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import { DollarSign, CheckCircle, Clock, AlertCircle, Upload, Receipt, Filter, ChevronRight } from 'lucide-react'
+import { DollarSign, CheckCircle, Clock, AlertCircle, Upload, Receipt, Filter, ChevronRight, Calendar, FileText, ExternalLink } from 'lucide-react'
 import type { Diarista } from '@/types/database'
 
 interface Payment {
@@ -24,6 +24,21 @@ interface Payment {
   created_at: string
 }
 
+interface MonthlyPayment {
+  id: string
+  diarista_id: string
+  month: number
+  year: number
+  monthly_value: number
+  paid_at: string | null
+  payment_date: string | null
+  receipt_url: string | null
+  notes: string | null
+  created_at: string
+}
+
+const MONTHS_FULL = ['Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+
 interface PaymentsSectionProps {
   diaristas: Diarista[]
   selectedDiaristaId: string | null
@@ -33,6 +48,7 @@ interface PaymentsSectionProps {
 
 export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: PaymentsSectionProps) {
   const [payments, setPayments] = useState<Payment[]>([])
+  const [monthlyPayments, setMonthlyPayments] = useState<MonthlyPayment[]>([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'paid'>('all')
   const [updatingId, setUpdatingId] = useState<string | null>(null)
@@ -40,13 +56,21 @@ export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: 
   const fetchPayments = useCallback(async () => {
     setLoading(true)
     try {
+      // Busca payment_history
       let query = supabase.from('payment_history').select('*').eq('month', month).eq('year', year).order('created_at', { ascending: false })
       if (selectedDiaristaId) query = query.eq('diarista_id', selectedDiaristaId)
       const { data } = await query
       setPayments((data as unknown as Payment[]) || [])
+      
+      // Busca monthly_payments (pagamentos mensais registrados)
+      let monthlyQuery = supabase.from('monthly_payments').select('*').order('year', { ascending: false }).order('month', { ascending: false })
+      if (selectedDiaristaId) monthlyQuery = monthlyQuery.eq('diarista_id', selectedDiaristaId)
+      const { data: monthlyData } = await monthlyQuery
+      setMonthlyPayments((monthlyData as unknown as MonthlyPayment[]) || [])
     } catch (err) {
-      console.log('[v0] Error fetching payments:', err)
+      console.error('[v0] Error fetching payments:', err)
       setPayments([])
+      setMonthlyPayments([])
     }
     setLoading(false)
   }, [month, year, selectedDiaristaId])
@@ -132,6 +156,91 @@ export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: 
           ))}
         </div>
       </div>
+
+      {/* Grid de Pagamentos Mensais Registrados */}
+      {monthlyPayments.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-primary" />
+              Pagamentos Mensais Registrados
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <div className="space-y-2">
+              {monthlyPayments.map(mp => {
+                const diarista = diaristas.find(d => d.id === mp.diarista_id)
+                const isPaid = !!mp.paid_at
+                return (
+                  <div
+                    key={mp.id}
+                    className={cn(
+                      'p-3 rounded-xl border transition-colors',
+                      isPaid ? 'border-green-500/30 bg-green-500/5' : 'border-yellow-500/30 bg-yellow-500/5'
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      {/* Icone de status */}
+                      <div className={cn(
+                        'w-10 h-10 rounded-xl flex items-center justify-center shrink-0',
+                        isPaid ? 'bg-green-500/10' : 'bg-yellow-500/10'
+                      )}>
+                        {isPaid ? <CheckCircle className="h-5 w-5 text-green-500" /> : <Clock className="h-5 w-5 text-yellow-500" />}
+                      </div>
+                      
+                      {/* Informacoes */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-semibold">{diarista?.name || 'Diarista'}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                                <FileText className="h-3 w-3" />
+                                {MONTHS_FULL[mp.month - 1]}/{mp.year}
+                              </span>
+                              {mp.payment_date && (
+                                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  Pago em {new Date(mp.payment_date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <p className={cn(
+                            'text-base font-bold shrink-0',
+                            isPaid ? 'text-green-500' : 'text-yellow-500'
+                          )}>
+                            R$ {Number(mp.monthly_value).toFixed(2)}
+                          </p>
+                        </div>
+                        
+                        {/* Notas e Recibo */}
+                        <div className="flex items-center justify-between mt-2">
+                          {mp.notes && (
+                            <p className="text-[10px] text-muted-foreground italic truncate max-w-[200px]">{mp.notes}</p>
+                          )}
+                          {mp.receipt_url && (
+                            <a
+                              href={mp.receipt_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-primary text-[11px] font-medium hover:underline ml-auto"
+                            >
+                              <Receipt className="h-3.5 w-3.5" />
+                              Ver Recibo
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* List */}
       {loading ? (
