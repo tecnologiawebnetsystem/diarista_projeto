@@ -65,8 +65,19 @@ const clauses: { icon: React.ElementType; title: string; items: ReactNode[] }[] 
     ],
   },
   {
+    icon: Clock,
+    title: 'Cláusula 7 - Período de Trabalho Mensal',
+    items: [
+      <>{'O período de trabalho é '}<strong>{'mensal'}</strong>{', compreendendo sempre do '}<span className="text-primary font-semibold">{'dia 1º'}</span>{' ao '}<span className="text-primary font-semibold">{'último dia do mês'}</span>{' (28, 29, 30 ou 31, conforme o mês).'}</>,
+      <>{'O pagamento corresponde '}<strong>{'exclusivamente'}</strong>{' aos dias efetivamente trabalhados dentro do período mensal.'}</>,
+      <>{'Em caso de '}<strong>{'admissão'}</strong>{' no decorrer do mês, a remuneração será '}<span className="text-primary font-semibold">{'proporcional'}</span>{' aos dias trabalhados, contados a partir da data de início até o último dia do mês.'}</>,
+      <>{'Em caso de '}<strong>{'desligamento'}</strong>{' no decorrer do mês, a remuneração será '}<span className="text-primary font-semibold">{'proporcional'}</span>{' aos dias trabalhados, contados do dia 1º até a data de término.'}</>,
+      'Não há pagamento por dias não trabalhados, exceto nos casos previstos nas cláusulas de feriados e alterações de agenda.',
+    ],
+  },
+  {
     icon: Shield,
-    title: 'Cláusula 7 - Segurança e EPIs',
+    title: 'Cláusula 8 - Segurança e EPIs',
     items: [
       'O CONTRATANTE fornece: luvas de cano longo, calçado antiderrapante, avental de PVC e máscaras.',
       'Uso obrigatório. Recusa injustificada pode ensejar rescisão imediata.',
@@ -74,7 +85,7 @@ const clauses: { icon: React.ElementType; title: string; items: ReactNode[] }[] 
   },
   {
     icon: Shield,
-    title: 'Cláusula 8 - Acesso e Privacidade',
+    title: 'Cláusula 9 - Acesso e Privacidade',
     items: [
       'Responsabilidade civil da CONTRATADA por extravios ou danos de chaves (Art. 186 CC).',
       'Vedada captação de imagens (fotos/vídeos) da residência ou moradores para redes sociais.',
@@ -83,7 +94,7 @@ const clauses: { icon: React.ElementType; title: string; items: ReactNode[] }[] 
   },
   {
     icon: Users,
-    title: 'Cláusula 9 - Conduta Profissional',
+    title: 'Cláusula 10 - Conduta Profissional',
     items: [
       'Relação pautada na dinâmica Contratante-Prestador. Assuntos familiares e pessoais devem ser evitados no expediente.',
       'Diálogos sociais devem ser breves. Assuntos longos fora dos horários de serviço.',
@@ -91,7 +102,7 @@ const clauses: { icon: React.ElementType; title: string; items: ReactNode[] }[] 
   },
   {
     icon: Shield,
-    title: 'Cláusula 10 - Dignidade e Igualdade',
+    title: 'Cláusula 11 - Dignidade e Igualdade',
     items: [
       'Ambiente livre de racismo ou preconceito.',
       'A CONTRATADA utilizará os mesmos utensílios, banheiros e realizará refeições na mesma mesa que o CONTRATANTE.',
@@ -99,7 +110,7 @@ const clauses: { icon: React.ElementType; title: string; items: ReactNode[] }[] 
   },
   {
     icon: Clock,
-    title: 'Cláusula 11 - Repouso e Alimentação',
+    title: 'Cláusula 12 - Repouso e Alimentação',
     items: [
       'Intervalo de 01 (uma) hora garantido, com total liberdade de locomoção.',
       'O CONTRATANTE não solicitará atividades durante o intervalo.',
@@ -107,7 +118,7 @@ const clauses: { icon: React.ElementType; title: string; items: ReactNode[] }[] 
   },
   {
     icon: Clock,
-    title: 'Cláusula 12 - Vigência e Reajuste',
+    title: 'Cláusula 13 - Vigência e Reajuste',
     items: [
       'Início em 09/03/2026, prazo indeterminado.',
       'Reajuste anual pelo IPCA (IBGE) para manutenção do equilíbrio econômico.',
