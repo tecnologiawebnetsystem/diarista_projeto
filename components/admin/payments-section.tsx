@@ -93,8 +93,8 @@ export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: 
       
       for (const diarista of targetDiaristas) {
         // Busca presencas do mes
-        const { data: attendances } = await supabase
-          .from('attendances')
+        const { data: attendanceData } = await supabase
+          .from('attendance')
           .select('*')
           .eq('diarista_id', diarista.id)
           .gte('date', `${year}-${String(month).padStart(2, '0')}-01`)
@@ -116,7 +116,7 @@ export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: 
         const weeksInMonth = getWeeksInMonth(month, year)
         const washingValuePerWeek = monthlyWashingValue / weeksInMonth
         
-        const attendanceTotal = (attendances || [])
+        const attendanceTotal = (attendanceData || [])
           .filter((a: { present: boolean }) => a.present)
           .reduce((sum: number, a: { day_type: string }) => {
             return sum + (a.day_type === 'heavy_cleaning' ? heavyValue : lightValue)
