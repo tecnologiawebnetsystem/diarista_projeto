@@ -808,13 +808,14 @@ export default function DiaristaPage() {
                 <div className="relative group">
                   <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl scale-110 opacity-60" />
                   {currentDiarista?.photo_url ? (
-                    <Image
-                      src={currentDiarista.photo_url}
-                      alt={currentDiarista.name}
-                      width={110}
-                      height={110}
-                      className="relative rounded-full object-cover w-[110px] h-[110px] border-[3px] border-primary/30 shadow-lg shadow-primary/10"
-                    />
+                    <div className="relative w-[110px] h-[110px] rounded-full overflow-hidden border-[3px] border-primary/30 shadow-lg shadow-primary/10">
+                      <Image
+                        src={currentDiarista.photo_url}
+                        alt={currentDiarista.name}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
                   ) : (
                     <div className="relative w-[110px] h-[110px] rounded-full gradient-primary flex items-center justify-center text-white font-bold text-4xl border-[3px] border-primary/30 shadow-lg shadow-primary/10">
                       {currentDiarista?.name?.charAt(0).toUpperCase() || 'D'}
