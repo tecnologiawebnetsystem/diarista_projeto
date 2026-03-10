@@ -1036,30 +1036,32 @@ export default function DiaristaPage() {
 
       {/* Bottom Navigation Bar */}
       <div className="fixed bottom-0 left-0 right-0 z-20 bg-card border-t border-border" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="flex items-stretch h-16 overflow-x-auto scrollbar-hide">
+        <div className="flex items-stretch h-12 justify-center gap-1 px-2">
           {([
-            { key: 'resumo',      label: 'Inicio',      Icon: LayoutDashboard },
-            { key: 'presenca',    label: 'Presenca',    Icon: CalendarCheck },
-            { key: 'lavanderia',  label: 'Lavanderia',  Icon: WashingMachine },
-            { key: 'transporte',  label: 'Transporte',  Icon: Bus },
-            { key: 'pagamentos',  label: 'Pagamentos',  Icon: DollarSign },
-            { key: 'anotacoes',   label: warnings.length > 0 ? `Notas·${warnings.length}` : 'Notas', Icon: FileText },
-            { key: 'contrato',    label: 'Contrato',    Icon: ScrollText },
-            { key: 'perfil',      label: 'Perfil',      Icon: User },
-          ] as { key: typeof activeTab; label: string; Icon: React.ElementType }[]).map(({ key, label, Icon }) => (
+            { key: 'resumo',      label: 'Inicio',      Icon: LayoutDashboard, color: 'text-orange-500', bgColor: 'bg-orange-500/10' },
+            { key: 'presenca',    label: 'Presenca',    Icon: CalendarCheck, color: 'text-green-500', bgColor: 'bg-green-500/10' },
+            { key: 'lavanderia',  label: 'Lavanderia',  Icon: WashingMachine, color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
+            { key: 'transporte',  label: 'Transporte',  Icon: Bus, color: 'text-yellow-500', bgColor: 'bg-yellow-500/10' },
+            { key: 'pagamentos',  label: 'Pagamentos',  Icon: DollarSign, color: 'text-emerald-500', bgColor: 'bg-emerald-500/10' },
+            { key: 'anotacoes',   label: warnings.length > 0 ? `Notas (${warnings.length})` : 'Notas', Icon: FileText, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
+            { key: 'contrato',    label: 'Contrato',    Icon: ScrollText, color: 'text-cyan-500', bgColor: 'bg-cyan-500/10' },
+            { key: 'perfil',      label: 'Perfil',      Icon: User, color: 'text-pink-500', bgColor: 'bg-pink-500/10' },
+          ] as { key: typeof activeTab; label: string; Icon: React.ElementType; color: string; bgColor: string }[]).map(({ key, label, Icon, color, bgColor }) => (
             <button
               key={key}
               onClick={() => handleTabChange(key)}
-              className={`flex-1 min-w-[52px] flex flex-col items-center justify-center gap-0.5 transition-colors ${
+              title={label}
+              className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-all ${
                 activeTab === key
-                  ? 'text-primary'
-                  : 'text-muted-foreground'
+                  ? `${color} ${bgColor}`
+                  : 'text-muted-foreground hover:bg-muted/50'
               }`}
             >
-              <Icon className={`h-5 w-5 ${activeTab === key ? 'text-primary' : ''}`} strokeWidth={activeTab === key ? 2.5 : 1.5} />
-              <span className="text-[10px] font-medium leading-none">{label}</span>
-              {activeTab === key && (
-                <span className="absolute bottom-0 w-8 h-0.5 bg-primary rounded-t-full" />
+              <Icon className="h-4 w-4" strokeWidth={activeTab === key ? 2.5 : 1.5} />
+              {key === 'anotacoes' && warnings.length > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+                  {warnings.length}
+                </span>
               )}
             </button>
           ))}
