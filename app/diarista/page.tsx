@@ -28,6 +28,22 @@ import { useDbNotifications } from '@/hooks/use-db-notifications'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 
+const MONTHS_FULL = ['Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+
+// Calcula o Nésimo dia útil de um mês
+function getNthBusinessDay(year: number, month: number, n: number): Date {
+  let count = 0
+  let day = 1
+  const lastDay = new Date(year, month, 0).getDate()
+  while (count < n && day <= lastDay) {
+    const date = new Date(year, month - 1, day)
+    const dayOfWeek = date.getDay()
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) count++
+    if (count < n) day++
+  }
+  return new Date(year, month - 1, day)
+}
+
 const MONTHS = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
@@ -398,32 +414,44 @@ export default function DiaristaPage() {
               </CardContent>
             </Card>
 
-            {payment && hasActivity && (
-              <Card>
-                <CardHeader className="pb-2 pt-4 px-4">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <CalendarDays className="h-4 w-4 text-primary" />
-                    Pagamento Mensal
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="px-4 pb-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-muted-foreground">{'Previsao de pagamento'}</p>
-                      <p className="text-sm font-medium">
-                        {format(new Date(payment.payment_due_date + 'T00:00:00'), "dd 'de' MMMM", { locale: ptBR })}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">Limite: {payment.hour_limit?.slice(0, 5) || '20:00'}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xl font-bold text-primary">R$ {grandTotal.toFixed(2)}</p>
-                      <Badge variant={payment.paid_at ? 'default' : 'outline'} className="text-[10px] mt-1">
-                        {payment.paid_at ? 'Pago' : 'Aguardando'}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            {hasActivity && (
+              (() => {
+                // Calcula a data de pagamento: 5º dia útil do MÊS SEGUINTE
+                const nextMonth = selectedMonth === 12 ? 1 : selectedMonth + 1
+                const nextYear = selectedMonth === 12 ? selectedYear + 1 : selectedYear
+                const paymentDate = getNthBusinessDay(nextYear, nextMonth, 5)
+                
+                return (
+                  <Card>
+                    <CardHeader className="pb-2 pt-4 px-4">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <CalendarDays className="h-4 w-4 text-primary" />
+                        Pagamento Mensal
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-muted-foreground">{'Previsao de pagamento (5º dia util)'}</p>
+                          <p className="text-sm font-medium">
+                            {format(paymentDate, "dd 'de' MMMM", { locale: ptBR })}
+                          </p>
+                          <p className="text-[10px] text-primary mt-1">
+                            Ref: {MONTHS_FULL[selectedMonth - 1]}/{selectedYear}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">Limite: 20:00</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-bold text-primary">R$ {grandTotal.toFixed(2)}</p>
+                          <Badge variant={payment?.paid_at ? 'default' : 'outline'} className="text-[10px] mt-1">
+                            {payment?.paid_at ? 'Pago' : 'Aguardando'}
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })()
             )}
 
             <div className="flex gap-2">
