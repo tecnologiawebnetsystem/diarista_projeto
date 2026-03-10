@@ -9,7 +9,7 @@ import {
   ShieldCheck, FileDown, Bus, Plus, AlertTriangle,
   CheckCircle, XCircle, Trash2, Edit2, X,
   Users, Phone, Hash, UserPlus, UserX, UserCheck, Eye, EyeOff,
-  MapPin, Building2, DollarSign, Bell, Settings
+  MapPin, Building2, DollarSign, Settings
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -30,8 +30,9 @@ import { useAwards } from '@/hooks/use-awards'
 import { useDiaristas } from '@/hooks/use-diaristas'
 import { useClients } from '@/hooks/use-clients'
 import { PaymentsSection } from '@/components/admin/payments-section'
+import { RetroactivePaymentForm } from '@/components/admin/retroactive-payment-form'
 
-import { AlertsSection } from '@/components/admin/alerts-section'
+
 import { SettingsSection } from '@/components/admin/settings-section'
 import { useDbNotifications } from '@/hooks/use-db-notifications'
 import { MonthlyPaymentSection } from '@/components/monthly-payment-section'
@@ -71,7 +72,7 @@ const CLEANING_TYPES = [
   { value: 'light_cleaning', label: 'Limpeza Leve' },
 ] as const
 
-type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'notas' | 'contrato' | 'equipe' | 'clientes' | 'pagamentos' | 'alertas' | 'config'
+type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'notas' | 'contrato' | 'equipe' | 'clientes' | 'pagamentos' | 'config'
 
 const NAV_ITEMS: { key: Tab; label: string; Icon: React.ElementType }[] = [
   { key: 'resumo',      label: 'Dashboard',    Icon: LayoutDashboard },
@@ -80,7 +81,7 @@ const NAV_ITEMS: { key: Tab; label: string; Icon: React.ElementType }[] = [
   { key: 'transporte',  label: 'Transporte',   Icon: Bus },
   { key: 'pagamentos',  label: 'Pagamentos',   Icon: DollarSign },
   { key: 'notas',       label: 'Notas',        Icon: FileText },
-  { key: 'alertas',     label: 'Alertas',      Icon: Bell },
+
   { key: 'contrato',    label: 'Contrato',     Icon: ScrollText },
   { key: 'equipe',      label: 'Equipe',       Icon: Users },
   { key: 'clientes',    label: 'Clientes',     Icon: Building2 },
@@ -112,6 +113,7 @@ export default function AdminPage() {
   const [showPin, setShowPin] = useState<string | null>(null)
   const [diaristaError, setDiaristaError] = useState('')
   const [showInactive, setShowInactive] = useState(false)
+  const [showRetroactivePayment, setShowRetroactivePayment] = useState(false)
   const currentDate = new Date()
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear())
@@ -891,22 +893,35 @@ export default function AdminPage() {
 
         {/* PAGAMENTOS */}
         {activeTab === 'pagamentos' && (
-          <PaymentsSection
-            diaristas={allDiaristas}
-            selectedDiaristaId={selectedDiaristaId}
-            month={selectedMonth}
-            year={selectedYear}
-          />
+          <div className="space-y-4">
+            {/* Botao para registrar pagamento anterior */}
+            <Button
+              variant="outline"
+              className="w-full h-11 border-dashed border-primary/50 text-primary hover:bg-primary/5"
+              onClick={() => setShowRetroactivePayment(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Registrar Pagamento Anterior
+            </Button>
+            
+            <PaymentsSection
+              diaristas={allDiaristas}
+              selectedDiaristaId={selectedDiaristaId}
+              month={selectedMonth}
+              year={selectedYear}
+            />
+          </div>
         )}
-
-        {/* ALERTAS */}
-        {activeTab === 'alertas' && (
-          <AlertsSection
+        
+        {/* Modal para pagamento retroativo */}
+        {showRetroactivePayment && (
+          <RetroactivePaymentForm
             diaristas={allDiaristas}
-            notes={notes}
-            pendingPayments={pendingPaymentsCount}
-            month={selectedMonth}
-            year={selectedYear}
+            onClose={() => setShowRetroactivePayment(false)}
+            onSuccess={() => {
+              // Recarrega a pagina para atualizar os dados
+              window.location.reload()
+            }}
           />
         )}
 

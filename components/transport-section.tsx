@@ -138,23 +138,41 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
   const totalPending = totalTransport - totalPaid
 
   // Paga um valor parcial ou total do transporte
-  const handlePayTransport = async (week: TransportWeek, amount: number) => {
+  // type: 'ida' = metade, 'volta' = outra metade, 'completo' = total
+  const handlePayTransport = async (week: TransportWeek, type: 'ida' | 'volta' | 'completo') => {
     try {
       const halfValue = transportValue / 2
+      const currentPaid = week.transport_paid_amount || 0
       let newPaidAmount = 0
       
-      // Se clicar no mesmo valor que ja esta pago, zera (toggle)
-      if (week.transport_paid_amount === amount) {
-        newPaidAmount = 0
-      } else if (amount === halfValue) {
-        // Se ja pagou metade e clica em metade novamente, paga completo
-        if (week.transport_paid_amount === halfValue) {
-          newPaidAmount = transportValue
+      if (type === 'ida') {
+        // IDA: toggle entre 0 e metade
+        if (currentPaid >= halfValue) {
+          // Se ja pagou ida (ou mais), remove a ida (volta para 0, ou se tinha completo, volta para metade)
+          newPaidAmount = currentPaid >= transportValue ? halfValue : 0
         } else {
+          // Se nao pagou ida ainda, paga a ida
           newPaidAmount = halfValue
         }
+      } else if (type === 'volta') {
+        // VOLTA: só funciona se já pagou ida
+        if (currentPaid >= transportValue) {
+          // Se ja pagou completo, remove a volta (fica so com ida)
+          newPaidAmount = halfValue
+        } else if (currentPaid >= halfValue) {
+          // Se pagou ida, adiciona volta (completa)
+          newPaidAmount = transportValue
+        } else {
+          // Se nao pagou ida ainda, nao faz nada
+          return
+        }
       } else {
-        newPaidAmount = amount
+        // COMPLETO: toggle entre 0 e total
+        if (currentPaid >= transportValue) {
+          newPaidAmount = 0
+        } else {
+          newPaidAmount = transportValue
+        }
       }
       
       const isPaid = newPaidAmount >= transportValue
@@ -412,13 +430,11 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
                     <div className="grid grid-cols-3 gap-2">
                       {/* Botao Ida */}
                       <button
-                        onClick={() => handlePayTransport(week, halfValue)}
+                        onClick={() => handlePayTransport(week, 'ida')}
                         className={`flex flex-col items-center justify-center gap-1 px-3 py-2.5 rounded-lg border-2 transition-all active:scale-[0.98] ${
-                          paidAmount >= halfValue && paidAmount < transportValue
-                            ? 'border-yellow-500 bg-yellow-500/10 text-yellow-500'
-                            : paidAmount >= transportValue
-                            ? 'border-green-500/50 bg-green-500/5 text-green-500/50'
-                            : 'border-border bg-background text-muted-foreground hover:border-yellow-500/50'
+                          paidAmount >= halfValue
+                            ? 'border-green-500 bg-green-500/10 text-green-500'
+                            : 'border-border bg-background text-muted-foreground hover:border-green-500/50'
                         }`}
                       >
                         <span className="text-[10px] font-medium uppercase">Ida</span>
@@ -427,15 +443,15 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
                       
                       {/* Botao Volta */}
                       <button
-                        onClick={() => handlePayTransport(week, halfValue)}
+                        onClick={() => handlePayTransport(week, 'volta')}
+                        disabled={paidAmount < halfValue}
                         className={`flex flex-col items-center justify-center gap-1 px-3 py-2.5 rounded-lg border-2 transition-all active:scale-[0.98] ${
                           paidAmount >= transportValue
                             ? 'border-green-500 bg-green-500/10 text-green-500'
                             : paidAmount >= halfValue
-                            ? 'border-border bg-background text-muted-foreground hover:border-yellow-500/50'
-                            : 'border-border/50 bg-muted/30 text-muted-foreground/50'
+                            ? 'border-border bg-background text-muted-foreground hover:border-green-500/50'
+                            : 'border-border/50 bg-muted/30 text-muted-foreground/50 cursor-not-allowed'
                         }`}
-                        disabled={paidAmount < halfValue && paidAmount !== transportValue}
                       >
                         <span className="text-[10px] font-medium uppercase">Volta</span>
                         <span className="text-sm font-bold">R$ {halfValue.toFixed(2)}</span>
@@ -443,7 +459,7 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
                       
                       {/* Botao Completo */}
                       <button
-                        onClick={() => handlePayTransport(week, transportValue)}
+                        onClick={() => handlePayTransport(week, 'completo')}
                         className={`flex flex-col items-center justify-center gap-1 px-3 py-2.5 rounded-lg border-2 transition-all active:scale-[0.98] ${
                           paidAmount >= transportValue
                             ? 'border-green-500 bg-green-500/10 text-green-500'
