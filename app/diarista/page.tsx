@@ -454,25 +454,6 @@ export default function DiaristaPage() {
               })()
             )}
 
-            <div className="flex gap-2">
-              <Link href="/payment-history" className="flex-1">
-                <Button className="w-full h-11" variant="outline">
-                  <Receipt className="h-4 w-4 mr-2" />
-                  Historico
-                </Button>
-              </Link>
-              <Button
-                className="flex-1 h-11"
-                variant="outline"
-                onClick={() => {
-                  const url = `/api/report?month=${selectedMonth}&year=${selectedYear}${diaristaId ? `&diarista_id=${diaristaId}` : ''}`
-                  window.open(url, '_blank')
-                }}
-              >
-                <FileDown className="h-4 w-4 mr-2" />
-                Relatorio
-              </Button>
-            </div>
           </div>
         )}
 
