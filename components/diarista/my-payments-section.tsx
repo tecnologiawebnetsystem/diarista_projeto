@@ -150,35 +150,6 @@ export function MyPaymentsSection({ diaristaId, month, year }: MyPaymentsSection
 
   return (
     <div className="space-y-4">
-      {/* Resumo visual do mes atual */}
-      <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
-        <div className="p-5 text-center">
-          <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">
-            {MONTHS_SHORT[month - 1]} {year}
-          </p>
-          <p className="text-3xl font-bold text-foreground mt-1">
-            {'R$ '}{totalAll.toFixed(2)}
-          </p>
-          <p className="text-[11px] text-muted-foreground mt-1">Total do periodo</p>
-        </div>
-        <div className="grid grid-cols-2 border-t border-border/40">
-          <div className="p-4 text-center border-r border-border/40">
-            <div className="flex items-center justify-center gap-1.5 mb-1">
-              <Clock className="h-3.5 w-3.5 text-yellow-500" />
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Pendente</span>
-            </div>
-            <p className="text-lg font-bold text-yellow-500">{'R$ '}{totalAllPending.toFixed(2)}</p>
-          </div>
-          <div className="p-4 text-center">
-            <div className="flex items-center justify-center gap-1.5 mb-1">
-              <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Recebido</span>
-            </div>
-            <p className="text-lg font-bold text-green-500">{'R$ '}{totalAllPaid.toFixed(2)}</p>
-          </div>
-        </div>
-      </div>
-
       {/* Pagamento mensal do mes atual (se existir) */}
       {currentMonthPayment && (
         <div className={cn(
