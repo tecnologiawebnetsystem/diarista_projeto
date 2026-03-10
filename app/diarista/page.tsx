@@ -116,29 +116,19 @@ export default function DiaristaPage() {
   const washingValue = monthlyWashingValue / weeksInCurrentMonth
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('[v0] handlePhotoUpload triggered')
     const file = e.target.files?.[0]
-    console.log('[v0] File selected:', file?.name, file?.type, file?.size)
-    if (!file || !diaristaId) {
-      console.log('[v0] No file or diaristaId:', { file: !!file, diaristaId })
-      return
-    }
+    if (!file || !diaristaId) return
     setUploadingPhoto(true)
     setProfileError('')
     try {
       const formData = new FormData()
       formData.append('file', file)
-      console.log('[v0] Uploading to /api/upload...')
       const res = await fetch('/api/upload', { method: 'POST', body: formData })
       const data = await res.json()
-      console.log('[v0] Upload response:', res.status, data)
       if (!res.ok) throw new Error(data.error || 'Erro no upload')
-      console.log('[v0] Updating diarista with photo_url:', data.url)
       await updateDiarista(diaristaId, { photo_url: data.url })
       refetchDiaristas()
-      console.log('[v0] Photo upload complete!')
-    } catch (err) {
-      console.error('[v0] Photo upload error:', err)
+    } catch {
       setProfileError('Erro ao enviar foto')
     } finally {
       setUploadingPhoto(false)
