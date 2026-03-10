@@ -125,11 +125,8 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
     )
   }
 
-  // Calcula semanas totais do mês para o seletor de nova semana
-  const totalWeeksInMonth = Math.ceil(
-    (new Date(year, month, 0).getDate() + new Date(year, month - 1, 1).getDay()) / 7
-  )
-  const allWeeks = Array.from({ length: totalWeeksInMonth }, (_, i) => i + 1)
+  // Usa a mesma função para calcular semanas totais do mês
+  const allWeeks = Array.from({ length: weeksInMonth }, (_, i) => i + 1)
   // Semanas sem nenhum serviço ativo (ironed ou washed) devem aparecer como "não registradas"
   const unregisteredWeeks = allWeeks.filter(w => !weeksWithServices.find(lw => lw.week_number === w))
 
@@ -186,36 +183,31 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
           </div>
         </div>
 
-        {/* Estado vazio — só mostra no modo leitura (isAdmin) ou quando não há semanas não registradas */}
-        {weeksWithServices.length === 0 && isAdmin && (
-          <p className="text-center text-muted-foreground py-4 text-sm">
-            Nenhum serviço registrado neste mês
-          </p>
-        )}
-
-        {/* Semanas com serviços */}
-        {weeksWithServices.map((week) => {
-          const weekNumber = week.week_number
-          const ironed = week.ironed
-          const washed = week.washed
+        {/* TODAS as semanas do mês */}
+        {allWeeks.map((weekNumber) => {
+          const ironed = isIroned(weekNumber)
+          const washed = isWashed(weekNumber)
           const weekTotal = getWeekTotal(weekNumber)
+          const hasAnyService = ironed || washed
 
           return (
-            <div key={weekNumber} className="rounded-xl border border-border bg-muted/30 overflow-hidden">
+            <div key={weekNumber} className={`rounded-xl border overflow-hidden ${hasAnyService ? 'border-primary/30 bg-primary/5' : 'border-border bg-muted/30'}`}>
               <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
                 <span className="text-sm font-semibold">{getWeekPeriod(weekNumber, month, year)}</span>
-                <span className="text-sm font-bold text-primary">R$ {weekTotal.toFixed(2)}</span>
+                <span className={`text-sm font-bold ${hasAnyService ? 'text-primary' : 'text-muted-foreground'}`}>
+                  R$ {weekTotal.toFixed(2)}
+                </span>
               </div>
 
               {isAdmin ? (
                 /* Modo Admin — somente leitura */
                 <div className="flex gap-2 px-4 py-3">
                   <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${ironed ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    {ironed ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
                     Passou roupa
                   </div>
                   <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${washed ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    {washed ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
                     Lavou roupa
                   </div>
                 </div>
@@ -248,31 +240,9 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
                   </button>
                 </div>
               )}
-
-
             </div>
           )
         })}
-
-        {/* Botões para adicionar semanas — modo interativo */}
-        {!isAdmin && unregisteredWeeks.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-[11px] text-muted-foreground font-medium">
-              {weeksWithServices.length === 0 ? 'Selecione a semana para registrar serviço:' : 'Adicionar semana:'}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {unregisteredWeeks.map(w => (
-                <button
-                  key={w}
-                  onClick={() => handleIronedChange(w, true)}
-                  className="px-4 py-2.5 rounded-xl border-2 border-dashed border-border text-sm text-muted-foreground active:scale-95 transition-all hover:border-primary hover:text-primary"
-                >
-                  + {getWeekPeriod(w, month, year)}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   )
