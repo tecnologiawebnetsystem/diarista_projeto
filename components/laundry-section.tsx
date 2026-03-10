@@ -30,6 +30,21 @@ function getWeeksInMonth(month: number, year: number): number {
   return weeks
 }
 
+// Retorna o periodo de cada semana do mes (ex: "01-07 Mar")
+function getWeekPeriod(weekNumber: number, month: number, year: number): string {
+  const MONTHS_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+  const lastDayOfMonth = new Date(year, month, 0).getDate()
+  
+  const startDay = (weekNumber - 1) * 7 + 1
+  let endDay = startDay + 6
+  if (endDay > lastDayOfMonth) endDay = lastDayOfMonth
+  
+  const startStr = String(startDay).padStart(2, '0')
+  const endStr = String(endDay).padStart(2, '0')
+  
+  return `${startStr}-${endStr} ${MONTHS_SHORT[month - 1]}`
+}
+
 export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDataChange, diaristaIroningValue, diaristaWashingValue, diaristaTransportValue }: LaundrySectionProps) {
   const { laundryWeeks, loading, updateLaundryService, refetch } = useLaundryWeeks(month, year, diaristaId)
 
@@ -188,7 +203,7 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
           return (
             <div key={weekNumber} className="rounded-xl border border-border bg-muted/30 overflow-hidden">
               <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
-                <span className="text-sm font-semibold">Semana {weekNumber}</span>
+                <span className="text-sm font-semibold">{getWeekPeriod(weekNumber, month, year)}</span>
                 <span className="text-sm font-bold text-primary">R$ {weekTotal.toFixed(2)}</span>
               </div>
 
@@ -252,7 +267,7 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
                   onClick={() => handleIronedChange(w, true)}
                   className="px-4 py-2.5 rounded-xl border-2 border-dashed border-border text-sm text-muted-foreground active:scale-95 transition-all hover:border-primary hover:text-primary"
                 >
-                  + Semana {w}
+                  + {getWeekPeriod(w, month, year)}
                 </button>
               ))}
             </div>
