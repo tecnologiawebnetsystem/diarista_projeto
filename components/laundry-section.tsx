@@ -125,11 +125,8 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
     )
   }
 
-  // Calcula semanas totais do mês para o seletor de nova semana
-  const totalWeeksInMonth = Math.ceil(
-    (new Date(year, month, 0).getDate() + new Date(year, month - 1, 1).getDay()) / 7
-  )
-  const allWeeks = Array.from({ length: totalWeeksInMonth }, (_, i) => i + 1)
+  // Usa a mesma função para calcular semanas totais do mês
+  const allWeeks = Array.from({ length: weeksInMonth }, (_, i) => i + 1)
   // Semanas sem nenhum serviço ativo (ironed ou washed) devem aparecer como "não registradas"
   const unregisteredWeeks = allWeeks.filter(w => !weeksWithServices.find(lw => lw.week_number === w))
 
