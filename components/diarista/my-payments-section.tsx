@@ -262,7 +262,7 @@ export function MyPaymentsSection({ diaristaId, month, year }: MyPaymentsSection
                     className="flex items-center gap-1 text-primary text-[11px] font-medium hover:underline"
                   >
                     <Receipt className="h-3.5 w-3.5" />
-                    Ver Recibo
+                    Ver Comprovante
                     <ChevronRight className="h-3 w-3" />
                   </a>
                 )}
