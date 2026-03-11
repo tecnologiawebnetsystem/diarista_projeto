@@ -262,7 +262,7 @@ export function MyPaymentsSection({ diaristaId, month, year }: MyPaymentsSection
                     className="flex items-center gap-1 text-primary text-[11px] font-medium hover:underline"
                   >
                     <Receipt className="h-3.5 w-3.5" />
-                    Ver Recibo
+                    Ver Comprovante
                     <ChevronRight className="h-3 w-3" />
                   </a>
                 )}
@@ -302,19 +302,20 @@ export function MyPaymentsSection({ diaristaId, month, year }: MyPaymentsSection
                       {'R$ '}{Number(mp.monthly_value).toFixed(2)}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    {mp.receipt_url && (
+                  {mp.receipt_url && (
+                    <div className="flex justify-end mt-1">
                       <a
                         href={mp.receipt_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-primary flex items-center gap-0.5 text-[10px] font-medium"
+                        className="flex items-center gap-1 text-primary text-[11px] font-medium hover:underline"
                       >
-                        <Receipt className="h-3 w-3" />
-                        Ver comprovante
+                        <Receipt className="h-3.5 w-3.5" />
+                        Ver Comprovante
+                        <ChevronRight className="h-3 w-3" />
                       </a>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

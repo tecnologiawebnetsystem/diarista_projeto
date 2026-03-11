@@ -407,7 +407,7 @@ export default function DiaristaPage() {
                     <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">Leve</p>
                   </div>
                   <div className="flex-1 bg-muted rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-destructive">{warnings.length}</p>
+                    <p className="text-2xl font-bold text-primary">{notes.length}</p>
                     <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{'Anotações'}</p>
                   </div>
                 </div>
@@ -530,47 +530,70 @@ export default function DiaristaPage() {
               <CardDescription className="text-xs">Serviços de lavagem e passagem</CardDescription>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              {laundryWeeks.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8 text-sm">
-                  Nenhum serviço registrado neste mês
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {laundryWeeks.map(week => {
-                    const services = (week.ironed ? ironingValue : 0) + (week.washed ? washingValue : 0)
-                    const hasServices = week.ironed || week.washed
-                    const transportPaid = hasServices && !!week.paid_at
-                    return (
-                      <div key={week.id} className="p-3 bg-muted rounded-lg">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-sm font-semibold">Semana {week.week_number}</p>
-                          <p className="text-sm font-bold text-primary">R$ {services.toFixed(2)}</p>
-                        </div>
-                        <div className="text-[11px] text-muted-foreground space-y-0.5">
-                          {week.ironed && <p>Passou roupa: R$ {ironingValue.toFixed(2)}</p>}
-                          {week.washed && <p>Lavou roupa: R$ {washingValue.toFixed(2)}</p>}
-                        </div>
-                        {hasServices && (
-                          <div className="mt-2 pt-2 border-t border-border/50 flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
-                              <Bus className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span className="text-[11px] text-muted-foreground">
-                                Transporte: R$ {(week.transport_fee || 0).toFixed(2)}
-                              </span>
-                            </div>
-                            <Badge
-                              variant={transportPaid ? 'default' : 'outline'}
-                              className={`text-[10px] ${transportPaid ? 'bg-green-600' : ''}`}
-                            >
-                              {transportPaid ? 'Pago' : 'Pendente'}
-                            </Badge>
+              {(() => {
+                // Gera todas as semanas do mes com datas
+                const lastDay = new Date(selectedYear, selectedMonth, 0).getDate()
+                const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+                const monthAbbr = monthNames[selectedMonth - 1]
+                
+                const weeksOfMonth: { weekNumber: number; startDay: number; endDay: number }[] = []
+                let currentDay = 1
+                let weekNum = 1
+                while (currentDay <= lastDay) {
+                  const startDay = currentDay
+                  const endDay = Math.min(currentDay + 6, lastDay)
+                  weeksOfMonth.push({ weekNumber: weekNum, startDay, endDay })
+                  currentDay = endDay + 1
+                  weekNum++
+                }
+
+                // Calcula valor por semana da lavagem (valor mensal / numero de semanas)
+                const monthlyWashingValue = currentDiarista?.washing_value ?? 300
+                const washingPerWeek = monthlyWashingValue / weeksOfMonth.length
+                
+                return (
+                  <div className="space-y-2">
+                    {weeksOfMonth.map(({ weekNumber, startDay, endDay }) => {
+                      const weekData = laundryWeeks.find(w => w.week_number === weekNumber)
+                      const ironed = weekData?.ironed || false
+                      const washed = weekData?.washed || false
+                      const services = (ironed ? ironingValue : 0) + (washed ? washingPerWeek : 0)
+                      const hasServices = ironed || washed
+                      const weekLabel = `${String(startDay).padStart(2, '0')}-${String(endDay).padStart(2, '0')} ${monthAbbr}`
+                      
+                      return (
+                        <div 
+                          key={weekNumber} 
+                          className={`p-3 rounded-xl border ${hasServices ? 'border-primary/30 bg-primary/5' : 'border-border bg-muted/30'}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-semibold">{weekLabel}</p>
+                            <p className={`text-sm font-bold ${hasServices ? 'text-primary' : 'text-muted-foreground'}`}>
+                              R$ {services.toFixed(2)}
+                            </p>
                           </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+                          {hasServices && (
+                            <div className="mt-2 flex gap-2">
+                              {ironed && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-medium">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  Passou
+                                </span>
+                              )}
+                              {washed && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-medium">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  Lavou
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })()}
             </CardContent>
           </Card>
         )}

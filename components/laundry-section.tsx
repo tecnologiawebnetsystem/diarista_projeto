@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { Shirt, CheckCircle2, Circle, Info, Calculator, Calendar } from 'lucide-react'
 
 const MONTHS_FULL = ['Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+const MONTHS_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
 interface LaundrySectionProps {
   month: number
@@ -18,38 +19,40 @@ interface LaundrySectionProps {
   diaristaTransportValue?: number
 }
 
-// Calcula quantas semanas tem no mes
-function getWeeksInMonth(month: number, year: number): number {
+// Retorna as semanas do mes com suas datas de inicio e fim (igual ao transporte)
+function getWeeksOfMonth(month: number, year: number): { weekNumber: number; startDay: number; endDay: number }[] {
   const lastDay = new Date(year, month, 0).getDate()
-  let weeks = 0
+  const weeks: { weekNumber: number; startDay: number; endDay: number }[] = []
+  
   let currentDay = 1
+  let weekNumber = 1
+  
   while (currentDay <= lastDay) {
-    weeks++
-    currentDay += 7
+    const startDay = currentDay
+    const endDay = Math.min(currentDay + 6, lastDay)
+    
+    weeks.push({ weekNumber, startDay, endDay })
+    
+    currentDay = endDay + 1
+    weekNumber++
   }
+  
   return weeks
 }
 
-// Retorna o periodo de cada semana do mes (ex: "01-07 Mar")
-function getWeekPeriod(weekNumber: number, month: number, year: number): string {
-  const MONTHS_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-  const lastDayOfMonth = new Date(year, month, 0).getDate()
-  
-  const startDay = (weekNumber - 1) * 7 + 1
-  let endDay = startDay + 6
-  if (endDay > lastDayOfMonth) endDay = lastDayOfMonth
-  
+// Formata o periodo da semana (ex: "01-07 Mar")
+function formatWeekPeriod(startDay: number, endDay: number, month: number): string {
   const startStr = String(startDay).padStart(2, '0')
   const endStr = String(endDay).padStart(2, '0')
-  
   return `${startStr}-${endStr} ${MONTHS_SHORT[month - 1]}`
 }
 
 export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDataChange, diaristaIroningValue, diaristaWashingValue, diaristaTransportValue }: LaundrySectionProps) {
   const { laundryWeeks, loading, updateLaundryService, refetch } = useLaundryWeeks(month, year, diaristaId)
 
-  // Calcula o numero de semanas do mes
-  const weeksInMonth = getWeeksInMonth(month, year)
+  // Pega todas as semanas do mês com suas datas (igual ao transporte)
+  const weeksOfMonth = getWeeksOfMonth(month, year)
+  const weeksInMonth = weeksOfMonth.length
   
   // Valor mensal de lavagem (washing_value agora é mensal)
   const monthlyWashingValue = diaristaWashingValue ?? 300
@@ -59,9 +62,6 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
   
   const ironingValue = diaristaIroningValue ?? 50
   const transportValue = diaristaTransportValue ?? 30
-
-  // Só mostra semanas que têm serviços cadastrados (igual ao AttendanceSection)
-  const weeksWithServices = laundryWeeks.filter(w => w.ironed || w.washed)
 
   const handleIronedChange = async (weekNumber: number, checked: boolean) => {
     const week = laundryWeeks.find(w => w.week_number === weekNumber)
@@ -125,10 +125,7 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
     )
   }
 
-  // Usa a mesma função para calcular semanas totais do mês
-  const allWeeks = Array.from({ length: weeksInMonth }, (_, i) => i + 1)
-  // Semanas sem nenhum serviço ativo (ironed ou washed) devem aparecer como "não registradas"
-  const unregisteredWeeks = allWeeks.filter(w => !weeksWithServices.find(lw => lw.week_number === w))
+
 
   return (
     <Card>
@@ -183,17 +180,18 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
           </div>
         </div>
 
-        {/* TODAS as semanas do mês */}
-        {allWeeks.map((weekNumber) => {
+        {/* TODAS as semanas do mês com datas */}
+        {weeksOfMonth.map(({ weekNumber, startDay, endDay }) => {
           const ironed = isIroned(weekNumber)
           const washed = isWashed(weekNumber)
           const weekTotal = getWeekTotal(weekNumber)
           const hasAnyService = ironed || washed
+          const weekLabel = formatWeekPeriod(startDay, endDay, month)
 
           return (
             <div key={weekNumber} className={`rounded-xl border overflow-hidden ${hasAnyService ? 'border-primary/30 bg-primary/5' : 'border-border bg-muted/30'}`}>
               <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
-                <span className="text-sm font-semibold">{getWeekPeriod(weekNumber, month, year)}</span>
+                <span className="text-sm font-semibold">{weekLabel}</span>
                 <span className={`text-sm font-bold ${hasAnyService ? 'text-primary' : 'text-muted-foreground'}`}>
                   R$ {weekTotal.toFixed(2)}
                 </span>
