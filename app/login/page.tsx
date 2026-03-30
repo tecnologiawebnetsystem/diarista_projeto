@@ -118,69 +118,110 @@ export default function LoginPage() {
   const numKeys = ['1','2','3','4','5','6','7','8','9','','0','del']
 
   /* ── PIN Screen (reusavel) ── */
-  function PinScreen({ title, subtitle, pinLength, onKey, onBack, icon }: {
+  function PinScreen({ title, subtitle, pinLength, onKey, onBack, isAdmin }: {
     title: string
     subtitle: string
     pinLength: number
     onKey: (key: string) => void
     onBack: () => void
-    icon?: React.ReactNode
+    isAdmin?: boolean
   }) {
     return (
-      <div className="min-h-dvh bg-background flex flex-col select-none">
+      <div className="min-h-dvh bg-background flex flex-col select-none relative overflow-hidden">
+        {/* Background decorativo */}
+        <div className="absolute inset-0 pointer-events-none">
+          {/* Gradiente de topo */}
+          <div className="absolute top-0 left-0 right-0 h-[40%] bg-gradient-to-b from-primary/5 to-transparent" />
+          {/* Círculos decorativos */}
+          <div className="absolute top-[-80px] right-[-80px] w-[250px] h-[250px] rounded-full bg-primary/5 blur-3xl" />
+          <div className="absolute bottom-[20%] left-[-60px] w-[180px] h-[180px] rounded-full bg-primary/3 blur-2xl" />
+          {/* Padrão de grid sutil */}
+          <div className="absolute inset-0 opacity-[0.02]" style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)`,
+            backgroundSize: '24px 24px'
+          }} />
+        </div>
+
         {/* Back */}
-        <div className="flex items-center px-4 pt-4 safe-area-inset-top">
+        <div className="relative flex items-center px-4 pt-4 safe-area-inset-top z-10">
           <button
             onClick={onBack}
-            className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center active:scale-90 transition-transform"
+            className="w-10 h-10 rounded-full bg-card/80 backdrop-blur-sm border border-border flex items-center justify-center active:scale-90 transition-transform"
           >
             <ArrowLeft className="h-5 w-5 text-foreground" />
           </button>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center gap-5 px-6">
-          {/* Icon */}
-          {icon ? (
-            icon
-          ) : (
-            <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center shadow-lg shadow-primary/30">
-              <Lock className="h-7 w-7 text-primary-foreground" />
-            </div>
-          )}
-
-          <div className="flex flex-col items-center gap-1 text-center">
-            <h1 className="text-xl font-bold text-foreground text-balance">{title}</h1>
-            <p className="text-sm text-muted-foreground">{subtitle}</p>
-          </div>
-
-          {/* PIN dots */}
-          <div className={`flex gap-4 py-2 ${shake ? 'animate-shake' : ''}`}>
-            {Array.from({ length: pinLength }).map((_, i) => (
-              <div
-                key={i}
-                className={`w-4 h-4 rounded-full transition-all duration-200 ${
-                  i < pin.length
-                    ? error ? 'bg-destructive scale-110' : 'bg-primary scale-110'
-                    : 'bg-muted border border-border'
-                }`}
+        <div className="relative flex-1 flex flex-col items-center justify-center gap-6 px-6 z-10">
+          {/* Header visual aprimorado */}
+          <div className="flex flex-col items-center gap-4">
+            {/* Logo com efeito glow */}
+            <div className="relative">
+              <div className="absolute inset-0 rounded-[22px] bg-primary/25 blur-xl scale-150" />
+              <Image
+                src="/logo.jpg"
+                alt="LIMPP DAY"
+                width={72}
+                height={72}
+                priority
+                className="relative rounded-[22px] shadow-2xl shadow-black/50 border border-primary/20"
               />
-            ))}
+              {/* Badge de admin */}
+              {isAdmin && (
+                <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-lg bg-primary flex items-center justify-center shadow-lg">
+                  <ShieldCheck className="h-4 w-4 text-primary-foreground" />
+                </div>
+              )}
+            </div>
+
+            {/* Titulo e subtitulo */}
+            <div className="flex flex-col items-center gap-1.5 text-center">
+              <h1 className="text-xl font-bold text-foreground text-balance">{title}</h1>
+              <p className="text-sm text-muted-foreground">{subtitle}</p>
+            </div>
           </div>
 
-          {/* Status */}
-          <div className="h-5 flex items-center">
-            {error && <p className="text-destructive text-sm font-medium">PIN incorreto. Tente novamente.</p>}
-            {loading && (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                <p className="text-muted-foreground text-sm">Verificando...</p>
+          {/* Card do PIN */}
+          <div className="w-full max-w-[300px]">
+            <div className="rounded-2xl bg-card/60 backdrop-blur-sm border border-border p-5">
+              {/* PIN dots */}
+              <div className={`flex justify-center gap-4 ${shake ? 'animate-shake' : ''}`}>
+                {Array.from({ length: pinLength }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`w-4 h-4 rounded-full transition-all duration-200 ${
+                      i < pin.length
+                        ? error 
+                          ? 'bg-destructive scale-110 shadow-lg shadow-destructive/30' 
+                          : 'bg-primary scale-110 shadow-lg shadow-primary/30'
+                        : 'bg-muted border border-border'
+                    }`}
+                  />
+                ))}
               </div>
-            )}
+
+              {/* Status */}
+              <div className="h-6 flex items-center justify-center mt-3">
+                {error && <p className="text-destructive text-sm font-medium">PIN incorreto. Tente novamente.</p>}
+                {loading && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                    <p className="text-muted-foreground text-sm">Verificando...</p>
+                  </div>
+                )}
+                {!error && !loading && (
+                  <div className="flex items-center gap-1.5">
+                    <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
+                    <p className="text-muted-foreground/50 text-xs">Acesso protegido</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Keypad */}
-        <div className="px-8 pb-10 pt-2">
+        {/* Keypad aprimorado */}
+        <div className="relative px-8 pb-10 pt-4 z-10">
           <div className="grid grid-cols-3 gap-3 max-w-[280px] mx-auto">
             {numKeys.map((key, i) => {
               if (key === '') return <div key={i} />
@@ -190,7 +231,7 @@ export default function LoginPage() {
                     key={i}
                     onClick={() => onKey('del')}
                     disabled={loading || pin.length === 0}
-                    className="h-[60px] rounded-2xl bg-card border border-border flex items-center justify-center active:scale-90 transition-all disabled:opacity-20"
+                    className="h-[60px] rounded-2xl bg-card/70 backdrop-blur-sm border border-border flex items-center justify-center active:scale-90 transition-all disabled:opacity-20 hover:bg-card"
                   >
                     <Delete className="h-5 w-5 text-foreground" />
                   </button>
@@ -201,13 +242,18 @@ export default function LoginPage() {
                   key={i}
                   onClick={() => onKey(key)}
                   disabled={loading}
-                  className="h-[60px] rounded-2xl bg-card border border-border flex items-center justify-center active:scale-90 active:bg-primary/10 active:border-primary/40 transition-all"
+                  className="h-[60px] rounded-2xl bg-card/70 backdrop-blur-sm border border-border flex items-center justify-center active:scale-90 active:bg-primary/20 active:border-primary/50 transition-all hover:bg-card"
                 >
                   <span className="text-xl font-semibold text-foreground">{key}</span>
                 </button>
               )
             })}
           </div>
+          
+          {/* Dica visual */}
+          <p className="text-center text-[10px] text-muted-foreground/40 mt-6 font-medium tracking-wider uppercase">
+            LIMPP DAY Admin
+          </p>
         </div>
       </div>
     )
@@ -222,11 +268,7 @@ export default function LoginPage() {
         pinLength={ADMIN_PIN_LENGTH}
         onKey={handleAdminKey}
         onBack={() => { setScreen('home'); setPin(''); setError(false) }}
-        icon={
-          <div className="w-16 h-16 rounded-2xl bg-muted border border-border flex items-center justify-center">
-            <ShieldCheck className="h-7 w-7 text-muted-foreground" />
-          </div>
-        }
+        isAdmin={true}
       />
     )
   }
