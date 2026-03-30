@@ -98,7 +98,8 @@ export function SettingsSection() {
     setSavingPin(false)
   }
 
-  const valueConfigs = configs.filter(c => c.key !== 'admin_pin')
+  // Filtra admin_pin e monthly_salary (salário mensal não se aplica para diaristas)
+  const valueConfigs = configs.filter(c => c.key !== 'admin_pin' && c.key !== 'monthly_salary')
 
   const configGroups = [
     { title: 'Valores de Limpeza', keys: ['default_heavy_cleaning_value', 'default_light_cleaning_value'], icon: DollarSign },
