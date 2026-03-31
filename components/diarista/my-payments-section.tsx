@@ -204,10 +204,10 @@ export function MyPaymentsSection({ diaristaId, month, year }: MyPaymentsSection
                     href={currentMonthPayment.receipt_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary flex items-center gap-0.5 text-[10px] font-medium ml-auto"
+                    className="text-primary flex items-center gap-1 text-[11px] font-medium ml-auto hover:underline"
                   >
-                    <Receipt className="h-3 w-3" />
-                    Comprovante
+                    <Receipt className="h-3.5 w-3.5" />
+                    Ver Comprovante
                     <ChevronRight className="h-3 w-3" />
                   </a>
                 )}
@@ -357,10 +357,11 @@ export function MyPaymentsSection({ diaristaId, month, year }: MyPaymentsSection
                       href={p.receipt_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-primary flex items-center gap-0.5 text-[9px] font-medium mt-1"
+                      className="text-primary flex items-center gap-1 text-[10px] font-medium mt-1 hover:underline"
                     >
-                      <Receipt className="h-2.5 w-2.5" />
-                      Comprovante
+                      <Receipt className="h-3 w-3" />
+                      Ver Comprovante
+                      <ChevronRight className="h-3 w-3" />
                     </a>
                   )}
                 </div>

@@ -283,8 +283,16 @@ export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: 
         </CardHeader>
         <CardContent className="px-4 pb-4">
           <div className="space-y-2">
-            {/* Mes Atual - Valor Calculado Dinamicamente */}
-            {currentMonthTotals.map(total => (
+            {/* Mes Atual - Valor Calculado Dinamicamente (apenas se nao foi pago ainda) */}
+            {currentMonthTotals
+              .filter(total => {
+                // Verifica se ja existe pagamento pago para este diarista neste mes/ano
+                const alreadyPaid = monthlyPayments.some(
+                  mp => mp.diarista_id === total.diaristaId && mp.month === month && mp.year === year
+                )
+                return !alreadyPaid
+              })
+              .map(total => (
               <div
                 key={`current-${total.diaristaId}`}
                 className="p-3 rounded-xl border border-yellow-500/30 bg-yellow-500/5"
