@@ -274,6 +274,26 @@ CREATE TABLE IF NOT EXISTS notifications (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
+-- TABELA: work_days (Dias de Trabalho)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS work_days (
+    id CHAR(36) NOT NULL DEFAULT (UUID()) PRIMARY KEY,
+    day_of_week ENUM('sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday') NOT NULL,
+    is_work_day BOOLEAN DEFAULT FALSE,
+    day_type ENUM('heavy_cleaning', 'light_cleaning') DEFAULT 'heavy_cleaning',
+    diarista_id CHAR(36),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    INDEX idx_work_days_diarista (diarista_id),
+    INDEX idx_work_days_day (day_of_week),
+    UNIQUE KEY uk_work_days_diarista_day (diarista_id, day_of_week),
+    
+    CONSTRAINT fk_work_days_diarista 
+        FOREIGN KEY (diarista_id) REFERENCES diaristas(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
 -- TRIGGERS PARA ATUALIZAÇÃO AUTOMÁTICA DE updated_at
 -- (MySQL já faz isso com ON UPDATE CURRENT_TIMESTAMP, mas
 -- criamos triggers para compatibilidade se necessário)
