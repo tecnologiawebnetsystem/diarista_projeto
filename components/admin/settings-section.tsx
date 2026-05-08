@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,19 +35,18 @@ export function SettingsSection() {
   const fetchConfigs = useCallback(async () => {
     setLoading(true)
     try {
-      const { data } = await supabase.from('config').select('*').order('key')
-      const rows = (data as unknown as ConfigRow[]) || []
+      const res = await fetch('/api/db/config')
+      const rows: ConfigRow[] = res.ok ? await res.json() : []
       setConfigs(rows)
       const vals: Record<string, string> = {}
       for (const r of rows) vals[r.key] = String(r.value)
 
-      // Find admin pin config
       const pinConfig = rows.find(r => r.key === 'admin_pin')
       if (pinConfig) setAdminPin(String(pinConfig.value))
 
       setEditValues(vals)
     } catch (err) {
-      console.log('[v0] Error fetching configs:', err)
+      console.error('Error fetching configs:', err)
     }
     setLoading(false)
   }, [])
@@ -63,7 +61,11 @@ export function SettingsSection() {
         if (cfg.key === 'admin_pin') continue
         const newVal = parseFloat(editValues[cfg.key] || '0')
         if (newVal !== cfg.value) {
-          await supabase.from('config').update({ value: newVal }).eq('id', cfg.id)
+          await fetch('/api/db/config', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: cfg.key, value: newVal }),
+          })
         }
       }
       await fetchConfigs()
@@ -83,12 +85,11 @@ export function SettingsSection() {
     setSavingPin(true)
     setError('')
     try {
-      const pinConfig = configs.find(r => r.key === 'admin_pin')
-      if (pinConfig) {
-        await supabase.from('config').update({ value: parseInt(adminPin) }).eq('id', pinConfig.id)
-      } else {
-        await supabase.from('config').insert({ key: 'admin_pin', value: parseInt(adminPin), label: 'PIN Administrador', description: 'PIN de acesso ao painel admin' })
-      }
+      await fetch('/api/db/config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'admin_pin', value: parseInt(adminPin) }),
+      })
       setPinSaved(true)
       setTimeout(() => setPinSaved(false), 2000)
       await fetchConfigs()
