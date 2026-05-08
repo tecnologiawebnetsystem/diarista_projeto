@@ -1,26 +1,24 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { queryOne } from '@/lib/mysql'
 
 export async function POST(request: Request) {
   try {
     const { pin } = await request.json()
 
     if (!pin) {
-      return NextResponse.json({ error: 'PIN não fornecido' }, { status: 400 })
+      return NextResponse.json({ error: 'PIN nao fornecido' }, { status: 400 })
     }
 
-    // Get admin PIN from config
-    const { data, error } = await supabase
-      .from('config')
-      .select('value')
-      .eq('key', 'admin_pin')
-      .single<{ value: number }>()
+    const row = await queryOne<{ value: number }>(
+      'SELECT value FROM config WHERE `key` = ?',
+      ['admin_pin']
+    )
 
-    if (error || !data) {
+    if (!row) {
       return NextResponse.json({ error: 'Erro ao verificar PIN' }, { status: 500 })
     }
 
-    const correctPin = data.value?.toString() || '123456'
+    const correctPin = String(row.value) || '123456'
     const providedPin = pin.toString()
 
     if (providedPin === correctPin) {

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
 import type { Diarista } from '@/types/database'
 
 export function useDiaristas() {
@@ -10,13 +9,10 @@ export function useDiaristas() {
 
   const fetchDiaristas = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('diaristas')
-        .select('*')
-        .order('name')
-
-      if (error) throw error
-      setDiaristas((data as unknown as Diarista[]) || [])
+      const res = await fetch('/api/db/diaristas')
+      if (!res.ok) throw new Error('Erro ao buscar diaristas')
+      const data: Diarista[] = await res.json()
+      setDiaristas(data)
     } catch (error) {
       console.error('Error fetching diaristas:', error)
     } finally {
@@ -30,21 +26,13 @@ export function useDiaristas() {
 
   async function addDiarista(name: string, pin: string, phone?: string, extras?: Record<string, unknown>) {
     try {
-      const insertData = {
-        name,
-        pin,
-        phone: phone || null,
-        active: true,
-        ...extras,
-      }
-      const { data, error } = await supabase
-        .from('diaristas')
-        .insert([insertData])
-        .select()
-        .single()
-
-      if (error) throw error
-      const newDiarista = data as unknown as Diarista
+      const res = await fetch('/api/db/diaristas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, pin, phone: phone || null, active: true, ...extras }),
+      })
+      if (!res.ok) throw new Error('Erro ao criar diarista')
+      const newDiarista: Diarista = await res.json()
       setDiaristas(prev => [...prev, newDiarista])
       return newDiarista
     } catch (error) {
@@ -55,15 +43,13 @@ export function useDiaristas() {
 
   async function updateDiarista(id: string, updates: Record<string, unknown>) {
     try {
-      const { data, error } = await supabase
-        .from('diaristas')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) throw error
-      const updated = data as unknown as Diarista
+      const res = await fetch(`/api/db/diaristas/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      })
+      if (!res.ok) throw new Error('Erro ao atualizar diarista')
+      const updated: Diarista = await res.json()
       setDiaristas(prev => prev.map(d => d.id === id ? updated : d))
       return updated
     } catch (error) {
@@ -74,12 +60,8 @@ export function useDiaristas() {
 
   async function deleteDiarista(id: string) {
     try {
-      const { error } = await supabase
-        .from('diaristas')
-        .update({ active: false })
-        .eq('id', id)
-
-      if (error) throw error
+      const res = await fetch(`/api/db/diaristas/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Erro ao desativar diarista')
       setDiaristas(prev => prev.map(d => d.id === id ? { ...d, active: false } : d))
     } catch (error) {
       console.error('Error deleting diarista:', error)

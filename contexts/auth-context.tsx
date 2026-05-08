@@ -1,7 +1,6 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { supabase } from '@/lib/supabase'
 import type { Diarista } from '@/types/database'
 
 type UserRole = 'diarista' | 'admin' | null
@@ -15,7 +14,6 @@ interface AuthContextType {
   loginAsDiarista: (d: Diarista) => void
   loginAsAdmin: (pin: string) => Promise<boolean>
   logout: () => void
-  /** Admin: selecionar diarista para visualizar */
   selectedDiaristaId: string | null
   setSelectedDiaristaId: (id: string | null) => void
 }
@@ -55,16 +53,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginAsAdmin = async (pin: string): Promise<boolean> => {
     try {
-      const { data, error } = await supabase
-        .from('config')
-        .select('value')
-        .eq('key', 'admin_pin')
-        .single()
-
-      if (error || !data) return false
-
-      const correctPin = String(data.value) || '123456'
-      if (pin === correctPin) {
+      const res = await fetch('/api/auth/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin }),
+      })
+      if (!res.ok) return false
+      const data = await res.json()
+      if (data.success) {
         setRole('admin')
         setIsAuthenticated(true)
         sessionStorage.setItem('limpp_day_role', 'admin')
