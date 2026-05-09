@@ -66,4 +66,4 @@ export function generateUUID(): string {
   })
 }
 
-// Exportacoes nomeadas apenas — sem default anonimo para evitar aviso ESLint
+// Apenas exportacoes nomeadas — nao ha default export
