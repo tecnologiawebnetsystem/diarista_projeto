@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query, queryOne, execute, generateUUID } from '@/lib/mysql'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const rows = await query('SELECT * FROM diaristas ORDER BY name')
+    const { searchParams } = new URL(request.url)
+    const activeOnly = searchParams.get('active')
+
+    let sql = 'SELECT * FROM diaristas'
+    const params: unknown[] = []
+
+    if (activeOnly === '1' || activeOnly === 'true') {
+      sql += ' WHERE active = 1'
+    }
+
+    sql += ' ORDER BY name'
+    const rows = await query(sql, params)
     return NextResponse.json(rows)
   } catch (error) {
     console.error('GET diaristas error:', error)
