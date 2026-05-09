@@ -76,12 +76,12 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
 
       const res = await fetch(`/api/db/laundry-weeks?month=${month}&year=${year}&diarista_id=${diaristaId}`)
       if (!res.ok) throw new Error('Falha ao buscar semanas de transporte')
-      const existingWeeks = await res.json()
+      const existingWeeks: TransportWeek[] = await res.json()
 
       // Monta a lista de semanas, criando placeholders para as que nao existem
       const weeks: TransportWeek[] = []
       for (let i = 1; i <= weeksCount; i++) {
-        const existing = existingWeeks?.find(w => w.week_number === i)
+        const existing = existingWeeks?.find((w: TransportWeek) => w.week_number === i)
         if (existing) {
           weeks.push({
             id: existing.id,

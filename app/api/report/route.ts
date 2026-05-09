@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
     const attParams: unknown[] = [startDate, endDate]
     if (diaristaId) { attSql += ' AND diarista_id = ?'; attParams.push(diaristaId) }
     attSql += ' ORDER BY date'
-    const attendanceData = await query<{ date: string; day_type: string; present: boolean | number }>(attSql, attParams)
+    const attendanceData = await query<{ date: string; day_type: string; present: boolean }>(attSql, attParams)
 
     // Lavanderia
     let laundrySql = 'SELECT * FROM laundry_weeks WHERE month = ? AND year = ?'
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     if (diaristaId) { laundrySql += ' AND diarista_id = ?'; laundryParams.push(diaristaId) }
     laundrySql += ' ORDER BY week_number'
     const laundryData = await query<{
-      week_number: number; washed: boolean | number; ironed: boolean | number; transport_fee: number; paid_at: string | null
+      week_number: number; washed: boolean; ironed: boolean; transport_fee: number; paid_at: string | null
     }>(laundrySql, laundryParams)
 
     // Notas
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
     const notesParams: unknown[] = [startDate, endDate]
     if (diaristaId) { notesSql += ' AND diarista_id = ?'; notesParams.push(diaristaId) }
     notesSql += ' ORDER BY date'
-    const notesData = await query<{ date: string; is_warning: boolean | number; note_type: string; content: string }>(notesSql, notesParams)
+    const notesData = await query<{ date: string; is_warning: boolean; note_type: string; content: string }>(notesSql, notesParams)
 
     // Calculos - prioriza valores da diarista, fallback para config global
     const ironingValue = diaristaValues.ironing ?? cfg.ironing ?? 50
@@ -550,7 +550,7 @@ export async function GET(request: NextRequest) {
           </tr>
         </thead>
         <tbody>
-          ${attendanceData.map((a: { date: string; day_type: string; present: boolean }) => {
+          ${attendanceData.map((a) => {
             const d = new Date(a.date + 'T00:00:00')
             const dayName = d.toLocaleDateString('pt-BR', { weekday: 'short' })
             const isHeavy = a.day_type === 'heavy_cleaning'
@@ -592,7 +592,7 @@ export async function GET(request: NextRequest) {
           </tr>
         </thead>
         <tbody>
-          ${laundryData.map((w: { week_number: number; washed: boolean; ironed: boolean; transport_fee: number; paid_at: string | null }) => {
+          ${laundryData.map((w) => {
             const services = (w.ironed ? ironingValue : 0) + (w.washed ? washingValuePerWeek : 0)
             const hasServices = w.ironed || w.washed
             const tPaid = hasServices && !!w.paid_at
@@ -618,7 +618,7 @@ export async function GET(request: NextRequest) {
         <h3>Anotacoes</h3>
         <span class="count">${notesData.length} registro${notesData.length > 1 ? 's' : ''}${warnings > 0 ? ` | ${warnings} advertencia${warnings > 1 ? 's' : ''}` : ''}</span>
       </div>
-      ${notesData.map((n: { date: string; is_warning: boolean; note_type: string; content: string }) => `
+      ${notesData.map((n) => `
         <div class="note-card ${n.is_warning ? 'warning' : ''}">
           <div class="note-meta">
             <span class="badge ${n.is_warning ? 'badge-warning' : n.note_type === 'extra_work' ? 'badge-paid' : n.note_type === 'missed_task' ? 'badge-warning' : 'badge-info'}">
