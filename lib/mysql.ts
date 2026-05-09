@@ -1,9 +1,9 @@
-import mysql, { type Connection } from 'mysql2/promise'
+import mysql, { type Connection, type FieldPacket, type QueryResult } from 'mysql2/promise'
 
 // HostGator plano compartilhado tem limite restrito de conexoes simultaneas.
 // Usamos uma unica conexao reutilizavel com reconexao automatica.
 
-const DB_CONFIG = {
+const DB_CONFIG: mysql.ConnectionOptions = {
   host: process.env.MYSQL_HOST || 'sh00022.hostgator.com.br',
   port: Number(process.env.MYSQL_PORT) || 3306,
   database: process.env.MYSQL_DATABASE || 'klebe475_limpp_day',
@@ -11,7 +11,7 @@ const DB_CONFIG = {
   password: process.env.MYSQL_PASSWORD || 'D05m09@123',
   timezone: '+00:00',
   connectTimeout: 15000,
-  typeCast(field: { type: string; length: number; string: () => string | null }, next: () => unknown) {
+  typeCast(field, next) {
     if (field.type === 'TINY' && field.length === 1) {
       return field.string() === '1'
     }
@@ -29,11 +29,9 @@ let connection: Connection | null = null
 async function getConnection(): Promise<Connection> {
   if (connection) {
     try {
-      // Ping para verificar se a conexao ainda esta ativa
       await connection.ping()
       return connection
     } catch {
-      // Conexao morreu — recria
       connection = null
     }
   }
@@ -41,9 +39,13 @@ async function getConnection(): Promise<Connection> {
   return connection
 }
 
+// mysql2 usa um tipo interno para os valores de parametros.
+// Usamos um cast via 'as Parameters' para manter compatibilidade de tipos.
+type ExecParams = Parameters<Connection['execute']>[1]
+
 export async function query<T = unknown>(sql: string, params?: unknown[]): Promise<T[]> {
   const conn = await getConnection()
-  const [rows] = await conn.execute(sql, params ?? [])
+  const [rows] = await conn.execute(sql, (params ?? []) as ExecParams) as [QueryResult, FieldPacket[]]
   return rows as T[]
 }
 
@@ -54,8 +56,8 @@ export async function queryOne<T = unknown>(sql: string, params?: unknown[]): Pr
 
 export async function execute(sql: string, params?: unknown[]): Promise<{ insertId: number; affectedRows: number }> {
   const conn = await getConnection()
-  const [result] = await conn.execute(sql, params ?? [])
-  return result as { insertId: number; affectedRows: number }
+  const [result] = await conn.execute(sql, (params ?? []) as ExecParams) as [{ insertId: number; affectedRows: number }, FieldPacket[]]
+  return result
 }
 
 export function generateUUID(): string {
@@ -65,5 +67,3 @@ export function generateUUID(): string {
     return v.toString(16)
   })
 }
-
-// Exportacoes nomeadas apenas — sem default anonimo para evitar aviso ESLint

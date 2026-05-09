@@ -14,9 +14,9 @@ function parseDiarista(row: Record<string, unknown>) {
   }
 }
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params
+    const { id } = await context.params
     const row = await queryOne<Record<string, unknown>>('SELECT * FROM diaristas WHERE id = ?', [id])
     if (!row) return NextResponse.json({ error: 'Nao encontrado' }, { status: 404 })
     return NextResponse.json(parseDiarista(row))
@@ -26,9 +26,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params
+    const { id } = await context.params
     const body = await request.json()
 
     const allowedFields = ['name', 'pin', 'phone', 'active', 'photo_url', 'heavy_cleaning_value',
@@ -64,9 +64,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params
+    const { id } = await context.params
     await execute('UPDATE diaristas SET active = 0, updated_at = NOW() WHERE id = ?', [id])
     return NextResponse.json({ success: true })
   } catch (error) {

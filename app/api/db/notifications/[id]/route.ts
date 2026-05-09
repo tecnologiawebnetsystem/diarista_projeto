@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { execute } from '@/lib/mysql'
 
-export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params
+    const { id } = await context.params
     const body = await request.json()
 
     if (body.read !== undefined) {
