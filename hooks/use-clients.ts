@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
 import type { Client } from '@/types/database'
 
 export function useClients() {
@@ -10,13 +9,10 @@ export function useClients() {
 
   const fetchClients = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .order('name')
-
-      if (error) throw error
-      setClients((data as unknown as Client[]) || [])
+      const res = await fetch('/api/db/clients')
+      if (!res.ok) throw new Error('Erro ao buscar clientes')
+      const data: Client[] = await res.json()
+      setClients(data)
     } catch (error) {
       console.error('Error fetching clients:', error)
     } finally {
@@ -36,14 +32,13 @@ export function useClients() {
     notes?: string
   }) {
     try {
-      const { data, error } = await supabase
-        .from('clients')
-        .insert([{ ...clientData, active: true }])
-        .select()
-        .single()
-
-      if (error) throw error
-      const newClient = data as unknown as Client
+      const res = await fetch('/api/db/clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...clientData, active: true }),
+      })
+      if (!res.ok) throw new Error('Erro ao criar cliente')
+      const newClient: Client = await res.json()
       setClients(prev => [...prev, newClient].sort((a, b) => a.name.localeCompare(b.name)))
       return newClient
     } catch (error) {
@@ -54,15 +49,13 @@ export function useClients() {
 
   async function updateClient(id: string, updates: Partial<Client>) {
     try {
-      const { data, error } = await supabase
-        .from('clients')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) throw error
-      const updated = data as unknown as Client
+      const res = await fetch(`/api/db/clients/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      })
+      if (!res.ok) throw new Error('Erro ao atualizar cliente')
+      const updated: Client = await res.json()
       setClients(prev => prev.map(c => c.id === id ? updated : c))
       return updated
     } catch (error) {
@@ -73,12 +66,8 @@ export function useClients() {
 
   async function deleteClient(id: string) {
     try {
-      const { error } = await supabase
-        .from('clients')
-        .update({ active: false })
-        .eq('id', id)
-
-      if (error) throw error
+      const res = await fetch(`/api/db/clients/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Erro ao desativar cliente')
       setClients(prev => prev.map(c => c.id === id ? { ...c, active: false } : c))
     } catch (error) {
       console.error('Error deleting client:', error)

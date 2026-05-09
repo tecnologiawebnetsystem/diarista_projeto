@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
 import type { Note } from '@/types/database'
 
 export function useNotes(month: number, year: number, diaristaId?: string | null) {
@@ -15,23 +14,13 @@ export function useNotes(month: number, year: number, diaristaId?: string | null
     }
     try {
       setLoading(true)
-      const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0]
-      const endDate = new Date(year, month, 0).toISOString().split('T')[0]
+      const params = new URLSearchParams({ month: String(month), year: String(year) })
+      if (diaristaId) params.set('diarista_id', diaristaId)
 
-      let query = supabase
-        .from('notes')
-        .select('*')
-        .gte('date', startDate)
-        .lte('date', endDate)
-        .order('date', { ascending: false })
-
-      if (diaristaId) {
-        query = query.eq('diarista_id', diaristaId)
-      }
-
-      const { data, error } = await query
-      if (error) throw error
-      setNotes(data || [])
+      const res = await fetch(`/api/db/notes?${params}`)
+      if (!res.ok) throw new Error('Erro ao buscar anotacoes')
+      const data: Note[] = await res.json()
+      setNotes(data)
     } catch (error) {
       console.error('Error fetching notes:', error)
       setNotes([])
@@ -46,21 +35,15 @@ export function useNotes(month: number, year: number, diaristaId?: string | null
 
   async function addNote(date: string, note_type: string, content: string, is_warning: boolean = false) {
     try {
-      const insertData: Record<string, unknown> = { date, note_type, content, is_warning }
-      if (diaristaId) insertData.diarista_id = diaristaId
-
-      const { data, error } = await supabase
-        .from('notes')
-        .insert([insertData])
-        .select()
-        .single()
-
-      if (error) throw error
-      if (data) {
-        setNotes(prev => [data, ...prev])
-        return data
-      }
-      return null
+      const res = await fetch('/api/db/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date, note_type, content, is_warning, diarista_id: diaristaId }),
+      })
+      if (!res.ok) throw new Error('Erro ao criar anotacao')
+      const created: Note = await res.json()
+      setNotes(prev => [created, ...prev])
+      return created
     } catch (error) {
       console.error('Error adding note:', error)
       throw error
@@ -72,19 +55,15 @@ export function useNotes(month: number, year: number, diaristaId?: string | null
       const updates: Record<string, unknown> = { content }
       if (is_warning !== undefined) updates.is_warning = is_warning
 
-      const { data, error } = await supabase
-        .from('notes')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) throw error
-      if (data) {
-        setNotes(prev => prev.map(n => n.id === id ? data : n))
-        return data
-      }
-      return null
+      const res = await fetch(`/api/db/notes/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      })
+      if (!res.ok) throw new Error('Erro ao atualizar anotacao')
+      const updated: Note = await res.json()
+      setNotes(prev => prev.map(n => n.id === id ? updated : n))
+      return updated
     } catch (error) {
       console.error('Error updating note:', error)
       throw error
@@ -93,12 +72,8 @@ export function useNotes(month: number, year: number, diaristaId?: string | null
 
   async function deleteNote(id: string) {
     try {
-      const { error } = await supabase
-        .from('notes')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
+      const res = await fetch(`/api/db/notes/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Erro ao deletar anotacao')
       setNotes(prev => prev.filter(n => n.id !== id))
     } catch (error) {
       console.error('Error deleting note:', error)

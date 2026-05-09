@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import { query, queryOne } from '@/lib/mysql'
 
 const MONTHS = [
   '', 'Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho',
@@ -27,15 +22,18 @@ export async function GET(request: NextRequest) {
     const endDate = new Date(year, month, 0).toISOString().split('T')[0]
 
     // Config (fallback)
-    const { data: configData } = await supabase.from('config').select('key, value')
+    const configRows = await query<{ key: string; value: number }>('SELECT `key`, value FROM config')
     const cfg: Record<string, number> = {}
-    configData?.forEach(item => { cfg[item.key] = item.value })
+    configRows.forEach(item => { cfg[item.key] = item.value })
 
     // Diarista info + valores individuais
     let diaristaName = 'Diarista'
     let diaristaValues: Record<string, number> = {}
     if (diaristaId) {
-      const { data: d } = await supabase.from('diaristas').select('*').eq('id', diaristaId).single()
+      const d = await queryOne<{
+        name: string; heavy_cleaning_value: number; light_cleaning_value: number;
+        washing_value: number; ironing_value: number; transport_value: number
+      }>('SELECT * FROM diaristas WHERE id = ?', [diaristaId])
       if (d) {
         diaristaName = d.name
         diaristaValues = {
@@ -49,24 +47,34 @@ export async function GET(request: NextRequest) {
     }
 
     // Pagamento mensal
-    let paymentQuery = supabase.from('monthly_payments').select('*').eq('month', month).eq('year', year)
-    if (diaristaId) paymentQuery = paymentQuery.eq('diarista_id', diaristaId)
-    const { data: paymentData } = await paymentQuery.maybeSingle()
+    let paymentSql = 'SELECT * FROM monthly_payments WHERE month = ? AND year = ?'
+    const paymentParams: unknown[] = [month, year]
+    if (diaristaId) { paymentSql += ' AND diarista_id = ?'; paymentParams.push(diaristaId) }
+    paymentSql += ' LIMIT 1'
+    const paymentData = await queryOne<{ paid_at: string | null; receipt_url: string | null }>(paymentSql, paymentParams)
 
     // Presenca
-    let attendanceQuery = supabase.from('attendance').select('*').gte('date', startDate).lte('date', endDate).order('date')
-    if (diaristaId) attendanceQuery = attendanceQuery.eq('diarista_id', diaristaId)
-    const { data: attendanceData } = await attendanceQuery
+    let attSql = 'SELECT * FROM attendance WHERE date >= ? AND date <= ?'
+    const attParams: unknown[] = [startDate, endDate]
+    if (diaristaId) { attSql += ' AND diarista_id = ?'; attParams.push(diaristaId) }
+    attSql += ' ORDER BY date'
+    const attendanceData = await query<{ date: string; day_type: string; present: number }>(attSql, attParams)
 
     // Lavanderia
-    let laundryQuery = supabase.from('laundry_weeks').select('*').eq('month', month).eq('year', year).order('week_number')
-    if (diaristaId) laundryQuery = laundryQuery.eq('diarista_id', diaristaId)
-    const { data: laundryData } = await laundryQuery
+    let laundrySql = 'SELECT * FROM laundry_weeks WHERE month = ? AND year = ?'
+    const laundryParams: unknown[] = [month, year]
+    if (diaristaId) { laundrySql += ' AND diarista_id = ?'; laundryParams.push(diaristaId) }
+    laundrySql += ' ORDER BY week_number'
+    const laundryData = await query<{
+      week_number: number; washed: number; ironed: number; transport_fee: number; paid_at: string | null
+    }>(laundrySql, laundryParams)
 
     // Notas
-    let notesQuery = supabase.from('notes').select('*').gte('date', startDate).lte('date', endDate).order('date')
-    if (diaristaId) notesQuery = notesQuery.eq('diarista_id', diaristaId)
-    const { data: notesData } = await notesQuery
+    let notesSql = 'SELECT * FROM notes WHERE date >= ? AND date <= ?'
+    const notesParams: unknown[] = [startDate, endDate]
+    if (diaristaId) { notesSql += ' AND diarista_id = ?'; notesParams.push(diaristaId) }
+    notesSql += ' ORDER BY date'
+    const notesData = await query<{ date: string; is_warning: number; note_type: string; content: string }>(notesSql, notesParams)
 
     // Calculos - prioriza valores da diarista, fallback para config global
     const ironingValue = diaristaValues.ironing ?? cfg.ironing ?? 50
@@ -81,8 +89,8 @@ export async function GET(request: NextRequest) {
     const heavyCleaningValue = diaristaValues.heavy_cleaning ?? cfg.heavy_cleaning ?? 250
     const lightCleaningValue = diaristaValues.light_cleaning ?? cfg.light_cleaning ?? 150
 
-    const heavyDays = (attendanceData || []).filter((a: { day_type: string; present: boolean }) => a.day_type === 'heavy_cleaning' && a.present).length
-    const lightDays = (attendanceData || []).filter((a: { day_type: string; present: boolean }) => a.day_type === 'light_cleaning' && a.present).length
+    const heavyDays = (attendanceData || []).filter((a) => a.day_type === 'heavy_cleaning' && a.present).length
+    const lightDays = (attendanceData || []).filter((a) => a.day_type === 'light_cleaning' && a.present).length
     const totalDays = heavyDays + lightDays
     const attendanceTotal = (heavyDays * heavyCleaningValue) + (lightDays * lightCleaningValue)
 
@@ -94,7 +102,7 @@ export async function GET(request: NextRequest) {
     const transportTotal = (laundryData || []).reduce((sum, w) => {
       return sum + (w.transport_fee || 0)
     }, 0)
-    const transportPaidTotal = (laundryData || []).filter((w: { paid_at: string | null }) => w.paid_at).reduce((sum, w) => sum + (w.transport_fee || 0), 0)
+    const transportPaidTotal = (laundryData || []).filter((w) => w.paid_at).reduce((sum, w) => sum + (w.transport_fee || 0), 0)
 
     const warnings = (notesData || []).filter((n: { is_warning: boolean }) => n.is_warning).length
     const grandTotal = attendanceTotal + laundryTotal
@@ -571,7 +579,7 @@ export async function GET(request: NextRequest) {
       <div class="section-header">
         <div class="section-icon" style="background:#EFF6FF;">&#x1F455;</div>
         <h3>Lavanderia</h3>
-        <span class="count">${(laundryData || []).filter((w: { ironed: boolean; washed: boolean }) => w.ironed || w.washed).length} semana${(laundryData || []).filter((w: { ironed: boolean; washed: boolean }) => w.ironed || w.washed).length > 1 ? 's' : ''} ativa${(laundryData || []).filter((w: { ironed: boolean; washed: boolean }) => w.ironed || w.washed).length > 1 ? 's' : ''}</span>
+        <span class="count">${(laundryData || []).filter((w) => w.ironed || w.washed).length} semana${(laundryData || []).filter((w) => w.ironed || w.washed).length > 1 ? 's' : ''} ativa${(laundryData || []).filter((w) => w.ironed || w.washed).length > 1 ? 's' : ''}</span>
       </div>
       <table>
         <thead>

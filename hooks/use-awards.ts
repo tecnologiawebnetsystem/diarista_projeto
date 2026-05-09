@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
 import type { Award } from '@/types/database'
 
 export function useAwards(diaristaId?: string | null) {
@@ -11,21 +10,16 @@ export function useAwards(diaristaId?: string | null) {
 
   const fetchAwards = useCallback(async () => {
     try {
-      let query = supabase
-        .from('awards')
-        .select('*')
-        .order('period_start', { ascending: false })
+      const params = new URLSearchParams()
+      if (diaristaId) params.set('diarista_id', diaristaId)
 
-      if (diaristaId) {
-        query = query.eq('diarista_id', diaristaId)
-      }
-
-      const { data, error } = await query
-      if (error) throw error
-      setAwards(data || [])
+      const res = await fetch(`/api/db/awards?${params}`)
+      if (!res.ok) throw new Error('Erro ao buscar premiacoes')
+      const data: Award[] = await res.json()
+      setAwards(data)
 
       const today = new Date().toISOString().split('T')[0]
-      const current = data?.find(a => a.period_start <= today && a.period_end >= today)
+      const current = data.find(a => a.period_start <= today && a.period_end >= today)
       setCurrentPeriod(current || null)
     } catch (error) {
       console.error('Error fetching awards:', error)
@@ -42,29 +36,21 @@ export function useAwards(diaristaId?: string | null) {
 
   async function createAwardPeriod(startDate: string, endDate: string) {
     try {
-      const insertData: Record<string, unknown> = {
-        period_start: startDate,
-        period_end: endDate,
-        value: 300,
-        status: 'pending',
-        warnings_count: 0,
-        attendance_score: 0,
-        performance_score: 0,
-        conduct_score: 0,
-      }
-      if (diaristaId) insertData.diarista_id = diaristaId
-
-      const { data, error } = await supabase
-        .from('awards')
-        .insert([insertData])
-        .select()
-        .single()
-
-      if (error) throw error
-      if (data) {
-        setAwards(prev => [data, ...prev])
-        return data
-      }
+      const res = await fetch('/api/db/awards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          period_start: startDate,
+          period_end: endDate,
+          value: 300,
+          status: 'pending',
+          diarista_id: diaristaId,
+        }),
+      })
+      if (!res.ok) throw new Error('Erro ao criar periodo de premiacao')
+      const created: Award = await res.json()
+      setAwards(prev => [created, ...prev])
+      return created
     } catch (error) {
       console.error('Error creating award period:', error)
       throw error
@@ -73,19 +59,16 @@ export function useAwards(diaristaId?: string | null) {
 
   async function updateAward(id: string, updates: Partial<Award>) {
     try {
-      const { data, error } = await supabase
-        .from('awards')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) throw error
-      if (data) {
-        setAwards(prev => prev.map(a => a.id === id ? data : a))
-        if (currentPeriod?.id === id) setCurrentPeriod(data)
-        return data
-      }
+      const res = await fetch(`/api/db/awards/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      })
+      if (!res.ok) throw new Error('Erro ao atualizar premiacao')
+      const updated: Award = await res.json()
+      setAwards(prev => prev.map(a => a.id === id ? updated : a))
+      if (currentPeriod?.id === id) setCurrentPeriod(updated)
+      return updated
     } catch (error) {
       console.error('Error updating award:', error)
       throw error

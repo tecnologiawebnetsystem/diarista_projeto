@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -83,25 +82,34 @@ export function RetroactivePaymentForm({ diaristas, onClose, onSuccess }: Retroa
         if (businessDays < 5) dueDate.setDate(dueDate.getDate() + 1)
       }
 
-      // Cria o registro de pagamento mensal
-      const { error } = await supabase
-        .from('monthly_payments')
-        .upsert({
-          diarista_id: form.diarista_id,
-          month,
-          year,
-          monthly_value: amount,
-          payment_due_date: dueDate.toISOString().split('T')[0],
-          payment_date: form.payment_date,
-          paid_at: new Date(form.payment_date + 'T12:00:00').toISOString(),
-          receipt_url: receiptUrl,
-          hour_limit: '20:00:00',
-          notes: form.description || `Pagamento retroativo - ${MONTHS.find(m => m.value === month)?.label}/${year}`
-        }, {
-          onConflict: 'month,year,diarista_id'
-        })
+      const payload = {
+        diarista_id: form.diarista_id,
+        month,
+        year,
+        monthly_value: amount,
+        payment_due_date: dueDate.toISOString().split('T')[0],
+        payment_date: form.payment_date,
+        paid_at: new Date(form.payment_date + 'T12:00:00').toISOString(),
+        receipt_url: receiptUrl,
+        hour_limit: '20:00:00',
+        notes: form.description || `Pagamento retroativo - ${MONTHS.find(m => m.value === month)?.label}/${year}`,
+      }
 
-      if (error) throw error
+      // Tenta criar; se conflito (mes/ano/diarista ja existe), atualiza via PATCH
+      const checkRes = await fetch(`/api/db/monthly-payments?month=${month}&year=${year}&diarista_id=${form.diarista_id}`)
+      const existing = checkRes.ok ? await checkRes.json() : null
+
+      if (existing?.id) {
+        const res = await fetch(`/api/db/monthly-payments/${existing.id}`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+        })
+        if (!res.ok) throw new Error('Falha ao atualizar pagamento')
+      } else {
+        const res = await fetch('/api/db/monthly-payments', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+        })
+        if (!res.ok) throw new Error('Falha ao criar pagamento')
+      }
 
       onSuccess()
       onClose()

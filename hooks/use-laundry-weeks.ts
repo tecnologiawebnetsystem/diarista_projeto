@@ -1,16 +1,15 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
 import type { LaundryWeek } from '@/types/database'
 
-async function getConfigValues() {
-  const { data } = await supabase.from('config').select('key, value')
-  const config: Record<string, number> = {}
-  data?.forEach(item => {
-    config[item.key] = item.value
-  })
-  return config
+async function getConfigValues(): Promise<Record<string, number>> {
+  const res = await fetch('/api/db/config')
+  if (!res.ok) return {}
+  const data: Array<{ key: string; value: number }> = await res.json()
+  const cfg: Record<string, number> = {}
+  data.forEach(item => { cfg[item.key] = item.value })
+  return cfg
 }
 
 export function useLaundryWeeks(month: number, year: number, diaristaId?: string | null) {
@@ -24,20 +23,13 @@ export function useLaundryWeeks(month: number, year: number, diaristaId?: string
     }
     try {
       setLoading(true)
-      let query = supabase
-        .from('laundry_weeks')
-        .select('*')
-        .eq('month', month)
-        .eq('year', year)
-        .order('week_number', { ascending: true })
+      const params = new URLSearchParams({ month: String(month), year: String(year) })
+      if (diaristaId) params.set('diarista_id', diaristaId)
 
-      if (diaristaId) {
-        query = query.eq('diarista_id', diaristaId)
-      }
-
-      const { data, error } = await query
-      if (error) throw error
-      setLaundryWeeks(data || [])
+      const res = await fetch(`/api/db/laundry-weeks?${params}`)
+      if (!res.ok) throw new Error('Erro ao buscar semanas')
+      const data: LaundryWeek[] = await res.json()
+      setLaundryWeeks(data)
     } catch (error) {
       console.error('Error fetching laundry weeks:', error)
       setLaundryWeeks([])
@@ -54,23 +46,18 @@ export function useLaundryWeeks(month: number, year: number, diaristaId?: string
     try {
       const existing = laundryWeeks.find(w => w.week_number === weekNumber)
       if (existing) {
-        const { error } = await supabase
-          .from('laundry_weeks')
-          .delete()
-          .eq('id', existing.id)
-        if (error) throw error
+        const res = await fetch(`/api/db/laundry-weeks/${existing.id}`, { method: 'DELETE' })
+        if (!res.ok) throw new Error('Erro ao remover semana')
         setLaundryWeeks(prev => prev.filter(w => w.id !== existing.id))
       } else {
-        const insertData: Record<string, unknown> = { week_number: weekNumber, month, year, value: 0, ironed: false, washed: false }
-        if (diaristaId) insertData.diarista_id = diaristaId
-
-        const { data, error } = await supabase
-          .from('laundry_weeks')
-          .insert([insertData])
-          .select()
-          .single()
-        if (error) throw error
-        if (data) setLaundryWeeks(prev => [...prev, data])
+        const res = await fetch('/api/db/laundry-weeks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ week_number: weekNumber, month, year, value: 0, ironed: false, washed: false, diarista_id: diaristaId }),
+        })
+        if (!res.ok) throw new Error('Erro ao criar semana')
+        const created: LaundryWeek = await res.json()
+        setLaundryWeeks(prev => [...prev, created])
       }
     } catch (error) {
       console.error('Error toggling laundry week:', error)
@@ -85,17 +72,14 @@ export function useLaundryWeeks(month: number, year: number, diaristaId?: string
       const washingValue = config.washing || 75
       const value = (ironed ? ironingValue : 0) + (washed ? washingValue : 0)
 
-      const { data, error } = await supabase
-        .from('laundry_weeks')
-        .update({ ironed, washed, value })
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) throw error
-      if (data) {
-        setLaundryWeeks(prev => prev.map(w => w.id === id ? data : w))
-      }
+      const res = await fetch(`/api/db/laundry-weeks/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ironed, washed, value }),
+      })
+      if (!res.ok) throw new Error('Erro ao atualizar servico')
+      const updated: LaundryWeek = await res.json()
+      setLaundryWeeks(prev => prev.map(w => w.id === id ? updated : w))
     } catch (error) {
       console.error('Error updating laundry service:', error)
       throw error
@@ -104,16 +88,14 @@ export function useLaundryWeeks(month: number, year: number, diaristaId?: string
 
   async function markTransportPaid(id: string, paid: boolean) {
     try {
-      const { data, error } = await supabase
-        .from('laundry_weeks')
-        .update({ paid_at: paid ? new Date().toISOString() : null })
-        .eq('id', id)
-        .select()
-        .single()
-      if (error) throw error
-      if (data) {
-        setLaundryWeeks(prev => prev.map(w => w.id === id ? data : w))
-      }
+      const res = await fetch(`/api/db/laundry-weeks/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paid_at: paid ? new Date().toISOString() : null }),
+      })
+      if (!res.ok) throw new Error('Erro ao marcar transporte')
+      const updated: LaundryWeek = await res.json()
+      setLaundryWeeks(prev => prev.map(w => w.id === id ? updated : w))
     } catch (error) {
       console.error('Error marking transport paid:', error)
       throw error
@@ -122,16 +104,14 @@ export function useLaundryWeeks(month: number, year: number, diaristaId?: string
 
   async function updateTransportReceipt(id: string, receiptUrl: string | null) {
     try {
-      const { data, error } = await supabase
-        .from('laundry_weeks')
-        .update({ receipt_url: receiptUrl })
-        .eq('id', id)
-        .select()
-        .single()
-      if (error) throw error
-      if (data) {
-        setLaundryWeeks(prev => prev.map(w => w.id === id ? data : w))
-      }
+      const res = await fetch(`/api/db/laundry-weeks/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ receipt_url: receiptUrl }),
+      })
+      if (!res.ok) throw new Error('Erro ao atualizar comprovante')
+      const updated: LaundryWeek = await res.json()
+      setLaundryWeeks(prev => prev.map(w => w.id === id ? updated : w))
     } catch (error) {
       console.error('Error updating transport receipt:', error)
       throw error

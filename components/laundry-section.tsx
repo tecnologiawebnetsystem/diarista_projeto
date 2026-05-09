@@ -2,7 +2,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLaundryWeeks } from '@/hooks/use-laundry-weeks'
-import { supabase } from '@/lib/supabase'
 import { Shirt, CheckCircle2, Circle, Info, Calculator, Calendar } from 'lucide-react'
 
 const MONTHS_FULL = ['Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
@@ -68,12 +67,16 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
     if (week) {
       await updateLaundryService(week.id, checked, week.washed)
     } else if (checked) {
-      const insertData: Record<string, unknown> = {
+      const body: Record<string, unknown> = {
         week_number: weekNumber, month, year, value: ironingValue,
         ironed: true, washed: false, transport_fee: transportValue
       }
-      if (diaristaId) insertData.diarista_id = diaristaId
-      await supabase.from('laundry_weeks').insert([insertData]).select().single()
+      if (diaristaId) body.diarista_id = diaristaId
+      await fetch('/api/db/laundry-weeks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
       await refetch()
     }
     onDataChange?.()
@@ -84,12 +87,16 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
     if (week) {
       await updateLaundryService(week.id, week.ironed, checked)
     } else if (checked) {
-      const insertData: Record<string, unknown> = {
+      const body: Record<string, unknown> = {
         week_number: weekNumber, month, year, value: washingValuePerWeek,
         ironed: false, washed: true, transport_fee: transportValue
       }
-      if (diaristaId) insertData.diarista_id = diaristaId
-      await supabase.from('laundry_weeks').insert([insertData]).select().single()
+      if (diaristaId) body.diarista_id = diaristaId
+      await fetch('/api/db/laundry-weeks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
       await refetch()
     }
     onDataChange?.()

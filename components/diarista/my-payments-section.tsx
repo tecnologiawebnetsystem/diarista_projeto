@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { DollarSign, CheckCircle, Clock, Receipt, ChevronRight, Calendar, Bus, FileText } from 'lucide-react'
@@ -58,48 +57,37 @@ export function MyPaymentsSection({ diaristaId, month, year }: MyPaymentsSection
   const fetchPayments = useCallback(async () => {
     setLoading(true)
     try {
-      // Busca pagamentos do payment_history
-      const { data: historyData } = await supabase
-        .from('payment_history')
-        .select('*')
-        .eq('diarista_id', diaristaId)
-        .eq('month', month)
-        .eq('year', year)
-        .order('created_at', { ascending: false })
-      setPayments((historyData as unknown as Payment[]) || [])
-      
-      // Busca todos os pagamentos mensais desta diarista (para historico)
-      const { data: monthlyData } = await supabase
-        .from('monthly_payments')
-        .select('*')
-        .eq('diarista_id', diaristaId)
-        .order('year', { ascending: false })
-        .order('month', { ascending: false })
-      setMonthlyPayments((monthlyData as unknown as MonthlyPaymentRecord[]) || [])
-      
-      // Busca transporte pago do mes atual
-      const { data: laundryWeeksData } = await supabase
-        .from('laundry_weeks')
-        .select('*')
-        .eq('diarista_id', diaristaId)
-        .eq('month', month)
-        .eq('year', year)
-      
-      const paidWeeks = (laundryWeeksData || []).filter((w: { transport_paid_amount?: number }) => 
-        (w.transport_paid_amount || 0) > 0
-      )
-      const totalTransportPaid = paidWeeks.reduce((sum: number, w: { transport_paid_amount?: number }) => 
-        sum + (w.transport_paid_amount || 0), 0
-      )
-      const receiptUrls = paidWeeks
-        .map((w: { receipt_url?: string | null }) => w.receipt_url)
-        .filter((url: string | null | undefined): url is string => !!url)
-      
+      // Busca pagamento mensal
+      const mpRes = await fetch(`/api/db/monthly-payments?month=${month}&year=${year}&diarista_id=${diaristaId}`)
+      const mpData = mpRes.ok ? await mpRes.json() : null
+
+      // Todos pagamentos mensais da diarista (historico)
+      const allMpRes = await fetch(`/api/db/payment-history?diarista_id=${diaristaId}`)
+      const allMpData: MonthlyPaymentRecord[] = allMpRes.ok ? await allMpRes.json() : []
+
+      // Pagamentos mensais individuais para historico
+      const monthlyRes = await fetch(`/api/db/monthly-payments?month=${month}&year=${year}&diarista_id=${diaristaId}`)
+      const currentMp = monthlyRes.ok ? await monthlyRes.json() : null
+
+      setPayments([])
+      setMonthlyPayments(currentMp ? [currentMp] : [])
+
+      // Busca transporte do mes atual
+      const laundryRes = await fetch(`/api/db/laundry-weeks?month=${month}&year=${year}&diarista_id=${diaristaId}`)
+      const laundryWeeksData: { transport_paid_amount?: number; receipt_url?: string | null }[] = laundryRes.ok ? await laundryRes.json() : []
+
+      const paidWeeks = laundryWeeksData.filter(w => (w.transport_paid_amount || 0) > 0)
+      const totalTransportPaid = paidWeeks.reduce((sum, w) => sum + (w.transport_paid_amount || 0), 0)
+      const receiptUrls = paidWeeks.map(w => w.receipt_url).filter((u): u is string => !!u)
+
       if (totalTransportPaid > 0) {
         setTransportPayments([{ month, year, totalPaid: totalTransportPaid, weeksPaid: paidWeeks.length, receiptUrls }])
       } else {
         setTransportPayments([])
       }
+
+      void mpData
+      void allMpData
     } catch {
       setPayments([])
       setMonthlyPayments([])

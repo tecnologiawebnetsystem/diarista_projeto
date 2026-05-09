@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { User, ShieldCheck, ChevronRight, Lock, Delete, ArrowLeft, Users } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
-import { supabase } from '@/lib/supabase'
 import type { Diarista } from '@/types/database'
 
 const ADMIN_PIN_LENGTH = 6
@@ -28,13 +27,10 @@ export default function LoginPage() {
   async function loadDiaristas() {
     setLoadingDiaristas(true)
     try {
-      const { data, error } = await supabase
-        .from('diaristas')
-        .select('*')
-        .eq('active', true)
-        .order('name')
-      if (!error && data) {
-        setDiaristas(data as unknown as Diarista[])
+      const res = await fetch('/api/db/diaristas?active=1')
+      if (res.ok) {
+        const data = await res.json()
+        setDiaristas(data as Diarista[])
       }
     } catch (e) {
       console.error('Error loading diaristas:', e)
@@ -51,20 +47,17 @@ export default function LoginPage() {
     if (diaristas.length === 0) {
       setLoadingDiaristas(true)
       try {
-        const { data } = await supabase
-          .from('diaristas')
-          .select('*')
-          .eq('active', true)
-          .order('name')
-        if (data && data.length > 0) {
-          const loaded = data as unknown as Diarista[]
-          setDiaristas(loaded)
-          if (loaded.length === 1) {
-            // Apenas 1 diarista - entra direto
-            loginAsDiarista(loaded[0])
-            router.push('/diarista')
-          } else {
-            setScreen('diarista-select')
+        const res = await fetch('/api/db/diaristas?active=1')
+        if (res.ok) {
+          const data = await res.json() as Diarista[]
+          if (data.length > 0) {
+            setDiaristas(data)
+            if (data.length === 1) {
+              loginAsDiarista(data[0])
+              router.push('/diarista')
+            } else {
+              setScreen('diarista-select')
+            }
           }
         }
       } catch {

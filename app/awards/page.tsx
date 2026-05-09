@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useAwards } from '@/hooks/use-awards'
-import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -24,15 +23,15 @@ export default function AwardsPage() {
         return
       }
       try {
-        const { count, error } = await supabase
-          .from('notes')
-          .select('*', { count: 'exact', head: true })
-          .eq('is_warning', true)
-          .gte('date', currentPeriod.period_start)
-          .lte('date', currentPeriod.period_end)
-
-        if (error) throw error
-        setWarningsInPeriod(count || 0)
+        const params = new URLSearchParams({
+          is_warning: '1',
+          date_from: currentPeriod.period_start,
+          date_to: currentPeriod.period_end,
+          count_only: '1',
+        })
+        const res = await fetch(`/api/db/notes?${params}`)
+        const data = res.ok ? await res.json() : { count: 0 }
+        setWarningsInPeriod(data.count || 0)
       } catch (error) {
         console.error('Error fetching warnings:', error)
         setWarningsInPeriod(0)

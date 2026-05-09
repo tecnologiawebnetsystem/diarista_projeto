@@ -1,26 +1,18 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
 import type { Config } from '@/types/database'
 
 export function useConfig() {
   const [config, setConfig] = useState<Config[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchConfig()
-  }, [])
-
   async function fetchConfig() {
     try {
-      const { data, error } = await supabase
-        .from('config')
-        .select('*')
-        .order('key')
-
-      if (error) throw error
-      setConfig(data || [])
+      const res = await fetch('/api/db/config')
+      if (!res.ok) throw new Error('Erro ao buscar configuracoes')
+      const data: Config[] = await res.json()
+      setConfig(data)
     } catch (error) {
       console.error('Error fetching config:', error)
     } finally {
@@ -28,20 +20,21 @@ export function useConfig() {
     }
   }
 
+  useEffect(() => {
+    fetchConfig()
+  }, [])
+
   async function updateConfig(key: string, value: number) {
     try {
-      const { data, error } = await supabase
-        .from('config')
-        .update({ value })
-        .eq('key', key)
-        .select()
-        .single()
-
-      if (error) throw error
-      if (data) {
-        setConfig(config.map(c => c.key === key ? data : c))
-      }
-      return data
+      const res = await fetch('/api/db/config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, value }),
+      })
+      if (!res.ok) throw new Error('Erro ao atualizar configuracao')
+      const updated: Config[] = await res.json()
+      setConfig(updated)
+      return updated.find(c => c.key === key) ?? null
     } catch (error) {
       console.error('Error updating config:', error)
       throw error
