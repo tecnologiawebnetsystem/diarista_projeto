@@ -33,13 +33,13 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { week_number, month, year, value = 0, ironed = false, washed = false,
-      transport_fee = 0, transport_paid_amount = 0, diarista_id } = body
+      transport_fee = 0, transport_paid_amount = 0, diarista_id, paid_at = null, receipt_url = null } = body
     const id = generateUUID()
 
     await execute(
-      `INSERT INTO laundry_weeks (id, week_number, month, year, value, ironed, washed, transport_fee, transport_paid_amount, diarista_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, week_number, month, year, value, ironed ? 1 : 0, washed ? 1 : 0, transport_fee, transport_paid_amount, diarista_id || null]
+      `INSERT INTO laundry_weeks (id, week_number, month, year, value, ironed, washed, transport_fee, transport_paid_amount, diarista_id, paid_at, receipt_url)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, week_number, month, year, value, ironed ? 1 : 0, washed ? 1 : 0, transport_fee, transport_paid_amount, diarista_id || null, paid_at, receipt_url]
     )
     const created = await queryOne('SELECT * FROM laundry_weeks WHERE id = ?', [id])
     return NextResponse.json(created, { status: 201 })

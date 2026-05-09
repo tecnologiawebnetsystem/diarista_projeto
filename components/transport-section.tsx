@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ReceiptUpload } from '@/components/receipt-upload'
 import { Bus, CheckCircle2, Circle, ChevronDown, ChevronUp } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+
 
 interface TransportWeek {
   id: string
@@ -74,16 +74,9 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
     try {
       setLoading(true)
 
-      // Busca registros existentes na laundry_weeks
-      const { data: existingWeeks, error } = await supabase
-        .from('laundry_weeks')
-        .select('*')
-        .eq('month', month)
-        .eq('year', year)
-        .eq('diarista_id', diaristaId)
-        .order('week_number', { ascending: true })
-
-      if (error) throw error
+      const res = await fetch(`/api/db/laundry-weeks?month=${month}&year=${year}&diarista_id=${diaristaId}`)
+      if (!res.ok) throw new Error('Falha ao buscar semanas de transporte')
+      const existingWeeks = await res.json()
 
       // Monta a lista de semanas, criando placeholders para as que nao existem
       const weeks: TransportWeek[] = []
@@ -178,58 +171,41 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
       const isPaid = newPaidAmount >= transportValue
 
       if (week.id.startsWith('new-')) {
-        // Cria novo registro no banco
-        const { data, error } = await supabase
-          .from('laundry_weeks')
-          .insert([{
-            week_number: week.week_number,
-            month,
-            year,
-            diarista_id: diaristaId,
-            value: 0,
-            ironed: false,
-            washed: false,
+        const res = await fetch('/api/db/laundry-weeks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            week_number: week.week_number, month, year,
+            diarista_id: diaristaId, value: 0,
+            ironed: false, washed: false,
             transport_fee: transportValue,
             transport_paid_amount: newPaidAmount,
-            paid_at: isPaid ? new Date().toISOString() : null
-          }])
-          .select()
-          .single()
-
-        if (error) throw error
-        if (data) {
-          setTransportWeeks(prev => prev.map(w => 
-            w.week_number === week.week_number ? {
-              ...w,
-              id: data.id,
-              paid_at: data.paid_at,
-              transport_fee: data.transport_fee,
-              transport_paid_amount: data.transport_paid_amount || newPaidAmount
-            } : w
-          ))
-        }
+            paid_at: isPaid ? new Date().toISOString() : null,
+          }),
+        })
+        if (!res.ok) throw new Error('Falha ao criar semana')
+        const data = await res.json()
+        setTransportWeeks(prev => prev.map(w =>
+          w.week_number === week.week_number
+            ? { ...w, id: data.id, paid_at: data.paid_at, transport_fee: data.transport_fee, transport_paid_amount: data.transport_paid_amount || newPaidAmount }
+            : w
+        ))
       } else {
-        // Atualiza registro existente
-        const { data, error } = await supabase
-          .from('laundry_weeks')
-          .update({ 
+        const res = await fetch(`/api/db/laundry-weeks/${week.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             transport_paid_amount: newPaidAmount,
-            paid_at: isPaid ? new Date().toISOString() : null 
-          })
-          .eq('id', week.id)
-          .select()
-          .single()
-
-        if (error) throw error
-        if (data) {
-          setTransportWeeks(prev => prev.map(w => 
-            w.id === week.id ? { 
-              ...w, 
-              paid_at: data.paid_at,
-              transport_paid_amount: data.transport_paid_amount || newPaidAmount
-            } : w
-          ))
-        }
+            paid_at: isPaid ? new Date().toISOString() : null,
+          }),
+        })
+        if (!res.ok) throw new Error('Falha ao atualizar semana')
+        const data = await res.json()
+        setTransportWeeks(prev => prev.map(w =>
+          w.id === week.id
+            ? { ...w, paid_at: data.paid_at, transport_paid_amount: data.transport_paid_amount || newPaidAmount }
+            : w
+        ))
       }
 
       onDataChange?.()
@@ -241,51 +217,35 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
   const handleUploadReceipt = async (week: TransportWeek, url: string) => {
     try {
       if (week.id.startsWith('new-')) {
-        // Cria novo registro no banco com o comprovante
-        const { data, error } = await supabase
-          .from('laundry_weeks')
-          .insert([{
-            week_number: week.week_number,
-            month,
-            year,
-            diarista_id: diaristaId,
-            value: 0,
-            ironed: false,
-            washed: false,
-            transport_fee: transportValue,
-            receipt_url: url
-          }])
-          .select()
-          .single()
-
-        if (error) throw error
-        if (data) {
-          setTransportWeeks(prev => prev.map(w => 
-            w.week_number === week.week_number ? {
-              ...w,
-              id: data.id,
-              receipt_url: data.receipt_url,
-              transport_fee: data.transport_fee
-            } : w
-          ))
-        }
+        const res = await fetch('/api/db/laundry-weeks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            week_number: week.week_number, month, year,
+            diarista_id: diaristaId, value: 0,
+            ironed: false, washed: false,
+            transport_fee: transportValue, receipt_url: url,
+          }),
+        })
+        if (!res.ok) throw new Error('Falha ao criar semana')
+        const data = await res.json()
+        setTransportWeeks(prev => prev.map(w =>
+          w.week_number === week.week_number
+            ? { ...w, id: data.id, receipt_url: data.receipt_url, transport_fee: data.transport_fee }
+            : w
+        ))
       } else {
-        // Atualiza registro existente
-        const { data, error } = await supabase
-          .from('laundry_weeks')
-          .update({ receipt_url: url })
-          .eq('id', week.id)
-          .select()
-          .single()
-
-        if (error) throw error
-        if (data) {
-          setTransportWeeks(prev => prev.map(w => 
-            w.id === week.id ? { ...w, receipt_url: data.receipt_url } : w
-          ))
-        }
+        const res = await fetch(`/api/db/laundry-weeks/${week.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ receipt_url: url }),
+        })
+        if (!res.ok) throw new Error('Falha ao atualizar semana')
+        const data = await res.json()
+        setTransportWeeks(prev => prev.map(w =>
+          w.id === week.id ? { ...w, receipt_url: data.receipt_url } : w
+        ))
       }
-
       onDataChange?.()
     } catch (error) {
       console.error('Error uploading transport receipt:', error)
@@ -295,21 +255,15 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
   const handleRemoveReceipt = async (week: TransportWeek) => {
     try {
       if (week.id.startsWith('new-')) return
-
-      const { data, error } = await supabase
-        .from('laundry_weeks')
-        .update({ receipt_url: null })
-        .eq('id', week.id)
-        .select()
-        .single()
-
-      if (error) throw error
-      if (data) {
-        setTransportWeeks(prev => prev.map(w => 
-          w.id === week.id ? { ...w, receipt_url: null } : w
-        ))
-      }
-
+      const res = await fetch(`/api/db/laundry-weeks/${week.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ receipt_url: null }),
+      })
+      if (!res.ok) throw new Error('Falha ao remover comprovante')
+      setTransportWeeks(prev => prev.map(w =>
+        w.id === week.id ? { ...w, receipt_url: null } : w
+      ))
       onDataChange?.()
     } catch (error) {
       console.error('Error removing transport receipt:', error)

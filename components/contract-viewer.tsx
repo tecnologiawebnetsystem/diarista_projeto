@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { ScrollText, X, Shield, Clock, DollarSign, AlertTriangle, Smartphone, Shirt, ChevronRight, Users, CheckCircle2, Lock } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 
 const clauses: { icon: React.ElementType; title: string; items: ReactNode[] }[] = [
@@ -147,24 +146,16 @@ export function ContractViewer({ isAdmin = false, diaristaId, diaristaName }: Co
       setAgreedAt(null)
       setLoading(true)
 
-      let query = supabase
-        .from('contract_agreements')
-        .select('agreed_at')
-        .order('agreed_at', { ascending: false })
-        .limit(1)
-
-      if (diaristaId) {
-        query = query.eq('diarista_id', diaristaId)
-      }
-
-      const result = await query.maybeSingle()
-      const row = (result as unknown as { data: { agreed_at: string } | null }).data
-      if (row) {
+      const params = new URLSearchParams()
+      if (diaristaId) params.set('diarista_id', diaristaId)
+      const res = await fetch(`/api/db/contract-agreements?${params}`)
+      const rows: { agreed_at: string }[] = res.ok ? await res.json() : []
+      if (rows.length > 0) {
         setAgreed(true)
-        setAgreedAt(row.agreed_at)
+        setAgreedAt(rows[0].agreed_at)
       }
     } catch (e) {
-      console.error('Erro ao verificar concordância:', e)
+      console.error('Erro ao verificar concordancia:', e)
     } finally {
       setLoading(false)
     }
@@ -177,21 +168,21 @@ export function ContractViewer({ isAdmin = false, diaristaId, diaristaName }: Co
   async function handleAgree() {
     try {
       setConfirming(true)
-      const insertData: Record<string, unknown> = { agreed_at: new Date().toISOString() }
-      if (diaristaId) insertData.diarista_id = diaristaId
+      const body: Record<string, unknown> = { agreed_at: new Date().toISOString() }
+      if (diaristaId) body.diarista_id = diaristaId
 
-      const client = supabase as unknown as { from: (t: string) => { insert: (d: Record<string, unknown>[]) => Promise<{ error: unknown | null }> } }
-      const insertResult = await client
-        .from('contract_agreements')
-        .insert([insertData])
-
-      if (insertResult.error) throw insertResult.error
+      const res = await fetch('/api/db/contract-agreements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) throw new Error('Falha ao registrar concordancia')
 
       setAgreed(true)
       setAgreedAt(new Date().toISOString())
       setOpen(false)
     } catch (e) {
-      console.error('Erro ao registrar concordância:', e)
+      console.error('Erro ao registrar concordancia:', e)
     } finally {
       setConfirming(false)
     }

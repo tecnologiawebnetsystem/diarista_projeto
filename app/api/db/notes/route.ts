@@ -7,6 +7,26 @@ export async function GET(request: NextRequest) {
     const month = searchParams.get('month')
     const year = searchParams.get('year')
     const diaristaId = searchParams.get('diarista_id')
+    const dateFrom = searchParams.get('date_from')
+    const dateTo = searchParams.get('date_to')
+    const isWarning = searchParams.get('is_warning')
+    const countOnly = searchParams.get('count_only') === '1'
+
+    // Modo por intervalo direto (para awards)
+    if (dateFrom && dateTo) {
+      let sql = 'SELECT * FROM notes WHERE date >= ? AND date <= ?'
+      const params: unknown[] = [dateFrom, dateTo]
+      if (diaristaId) { sql += ' AND diarista_id = ?'; params.push(diaristaId) }
+      if (isWarning) { sql += ' AND is_warning = ?'; params.push(isWarning === '1' ? 1 : 0) }
+      if (countOnly) {
+        const countSql = sql.replace('SELECT *', 'SELECT COUNT(*) as cnt')
+        const rows = await query<{ cnt: number }>(countSql, params)
+        return NextResponse.json({ count: rows[0]?.cnt || 0 })
+      }
+      sql += ' ORDER BY date DESC'
+      const rows = await query(sql, params)
+      return NextResponse.json(rows)
+    }
 
     if (!month || !year) {
       return NextResponse.json({ error: 'month e year sao obrigatorios' }, { status: 400 })

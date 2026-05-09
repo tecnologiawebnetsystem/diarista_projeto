@@ -138,9 +138,10 @@ export default function AdminPage() {
   // Fetch pending payments count
   useEffect(() => {
     async function fetchPending() {
-      const { supabase: sb } = await import('@/lib/supabase')
-      const { count } = await sb.from('payment_history').select('*', { count: 'exact', head: true }).eq('month', selectedMonth).eq('year', selectedYear).eq('status', 'pending')
-      setPendingPaymentsCount(count || 0)
+      const params = new URLSearchParams({ month: String(selectedMonth), year: String(selectedYear), status: 'pending', count_only: '1' })
+      const res = await fetch(`/api/db/payment-history?${params}`)
+      const data = res.ok ? await res.json() : { count: 0 }
+      setPendingPaymentsCount(data.count || 0)
     }
     fetchPending()
   }, [selectedMonth, selectedYear])

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -84,105 +83,69 @@ export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: 
   const fetchPayments = useCallback(async () => {
     setLoading(true)
     try {
-      // Busca payment_history
-      let query = supabase.from('payment_history').select('*').eq('month', month).eq('year', year).order('created_at', { ascending: false })
-      if (selectedDiaristaId) query = query.eq('diarista_id', selectedDiaristaId)
-      const { data } = await query
-      setPayments((data as unknown as Payment[]) || [])
-      
-      // Busca monthly_payments (pagamentos mensais registrados) - apenas pagos
-      let monthlyQuery = supabase.from('monthly_payments').select('*').not('paid_at', 'is', null).order('year', { ascending: false }).order('month', { ascending: false })
-      if (selectedDiaristaId) monthlyQuery = monthlyQuery.eq('diarista_id', selectedDiaristaId)
-      const { data: monthlyData } = await monthlyQuery
-      setMonthlyPayments((monthlyData as unknown as MonthlyPayment[]) || [])
-      
-      // Calcula totais do mes atual para cada diarista
+      // payment_history
+      const phParams = new URLSearchParams({ month: String(month), year: String(year) })
+      if (selectedDiaristaId) phParams.set('diarista_id', selectedDiaristaId)
+      const phRes = await fetch(`/api/db/payment-history?${phParams}`)
+      setPayments(phRes.ok ? await phRes.json() : [])
+
+      // monthly_payments pagos
+      const mpParams = new URLSearchParams({ paid_only: '1' })
+      if (selectedDiaristaId) mpParams.set('diarista_id', selectedDiaristaId)
+      const mpRes = await fetch(`/api/db/monthly-payments?${mpParams}`)
+      setMonthlyPayments(mpRes.ok ? await mpRes.json() : [])
+
+      // totais do mes atual por diarista
       const totals: CurrentMonthTotal[] = []
-      const targetDiaristas = selectedDiaristaId 
+      const targetDiaristas = selectedDiaristaId
         ? diaristas.filter(d => d.id === selectedDiaristaId)
         : diaristas.filter(d => d.active)
-      
+
       for (const diarista of targetDiaristas) {
-        // Busca presencas do mes
-        const { data: attendanceData } = await supabase
-          .from('attendance')
-          .select('*')
-          .eq('diarista_id', diarista.id)
-          .gte('date', `${year}-${String(month).padStart(2, '0')}-01`)
-          .lte('date', `${year}-${String(month).padStart(2, '0')}-31`)
-        
-        // Busca lavanderia do mes
-        const { data: laundry } = await supabase
-          .from('laundry_weeks')
-          .select('*')
-          .eq('diarista_id', diarista.id)
-          .eq('month', month)
-          .eq('year', year)
-        
-        // Calcula valores
+        const attRes = await fetch(
+          `/api/db/attendance?month=${month}&year=${year}&diarista_id=${diarista.id}`
+        )
+        const attendanceData: { present: boolean | number; day_type: string }[] = attRes.ok ? await attRes.json() : []
+
+        const lwRes = await fetch(
+          `/api/db/laundry-weeks?month=${month}&year=${year}&diarista_id=${diarista.id}`
+        )
+        const laundryData: { ironed: boolean | number; washed: boolean | number }[] = lwRes.ok ? await lwRes.json() : []
+
         const heavyValue = diarista.heavy_cleaning_value ?? 250
         const lightValue = diarista.light_cleaning_value ?? 150
         const ironingValue = diarista.ironing_value ?? 50
         const monthlyWashingValue = diarista.washing_value ?? 300
         const weeksInMonth = getWeeksInMonth(month, year)
         const washingValuePerWeek = monthlyWashingValue / weeksInMonth
-        
-        const attendanceTotal = (attendanceData || [])
-          .filter((a: { present: boolean }) => a.present)
-          .reduce((sum: number, a: { day_type: string }) => {
-            return sum + (a.day_type === 'heavy_cleaning' ? heavyValue : lightValue)
-          }, 0)
-        
-        const laundryTotal = (laundry || []).reduce((sum: number, w: { ironed: boolean; washed: boolean }) => {
-          return sum + (w.ironed ? ironingValue : 0) + (w.washed ? washingValuePerWeek : 0)
-        }, 0)
-        
-        totals.push({
-          diaristaId: diarista.id,
-          diaristaName: diarista.name,
-          attendanceTotal,
-          laundryTotal,
-          grandTotal: attendanceTotal + laundryTotal
-        })
+
+        const attendanceTotal = attendanceData
+          .filter(a => a.present)
+          .reduce((sum, a) => sum + (a.day_type === 'heavy_cleaning' ? heavyValue : lightValue), 0)
+
+        const laundryTotal = laundryData.reduce(
+          (sum, w) => sum + (w.ironed ? ironingValue : 0) + (w.washed ? washingValuePerWeek : 0), 0
+        )
+
+        totals.push({ diaristaId: diarista.id, diaristaName: diarista.name, attendanceTotal, laundryTotal, grandTotal: attendanceTotal + laundryTotal })
       }
-      
       setCurrentMonthTotals(totals)
-      
-      // Busca transporte pago para cada diarista
+
+      // transporte pago por diarista
       const transportPaid: TransportPayment[] = []
       for (const diarista of targetDiaristas) {
-        const { data: laundryWeeksData } = await supabase
-          .from('laundry_weeks')
-          .select('*')
-          .eq('diarista_id', diarista.id)
-          .eq('month', month)
-          .eq('year', year)
-        
-        const paidWeeks = (laundryWeeksData || []).filter((w: { transport_paid_amount?: number }) => 
-          (w.transport_paid_amount || 0) > 0
-        )
-        const totalPaid = paidWeeks.reduce((sum: number, w: { transport_paid_amount?: number }) => 
-          sum + (w.transport_paid_amount || 0), 0
-        )
-        const receiptUrls = paidWeeks
-          .map((w: { receipt_url?: string | null }) => w.receipt_url)
-          .filter((url: string | null | undefined): url is string => !!url)
-        
+        const lwRes = await fetch(`/api/db/laundry-weeks?month=${month}&year=${year}&diarista_id=${diarista.id}`)
+        const laundryWeeksData: { transport_paid_amount?: number; receipt_url?: string | null }[] = lwRes.ok ? await lwRes.json() : []
+        const paidWeeks = laundryWeeksData.filter(w => (w.transport_paid_amount || 0) > 0)
+        const totalPaid = paidWeeks.reduce((sum, w) => sum + (w.transport_paid_amount || 0), 0)
+        const receiptUrls = paidWeeks.map(w => w.receipt_url).filter((u): u is string => !!u)
         if (totalPaid > 0) {
-          transportPaid.push({
-            diaristaId: diarista.id,
-            diaristaName: diarista.name,
-            month,
-            year,
-            totalPaid,
-            weeksPaid: paidWeeks.length,
-            receiptUrls
-          })
+          transportPaid.push({ diaristaId: diarista.id, diaristaName: diarista.name, month, year, totalPaid, weeksPaid: paidWeeks.length, receiptUrls })
         }
       }
       setTransportPayments(transportPaid)
     } catch (err) {
-      console.error('[v0] Error fetching payments:', err)
+      console.error('Error fetching payments:', err)
       setPayments([])
       setMonthlyPayments([])
       setCurrentMonthTotals([])
@@ -195,14 +158,22 @@ export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: 
 
   const markAsPaid = async (paymentId: string) => {
     setUpdatingId(paymentId)
-    await supabase.from('payment_history').update({ status: 'paid', paid_at: new Date().toISOString() }).eq('id', paymentId)
+    await fetch(`/api/db/payment-history/${paymentId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'paid', paid_at: new Date().toISOString() }),
+    })
     await fetchPayments()
     setUpdatingId(null)
   }
 
   const markAsPending = async (paymentId: string) => {
     setUpdatingId(paymentId)
-    await supabase.from('payment_history').update({ status: 'pending', paid_at: null }).eq('id', paymentId)
+    await fetch(`/api/db/payment-history/${paymentId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'pending', paid_at: null }),
+    })
     await fetchPayments()
     setUpdatingId(null)
   }
@@ -215,7 +186,11 @@ export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: 
       const res = await fetch('/api/upload', { method: 'POST', body: formData })
       const data = await res.json()
       if (res.ok) {
-        await supabase.from('payment_history').update({ receipt_url: data.url }).eq('id', paymentId)
+        await fetch(`/api/db/payment-history/${paymentId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ receipt_url: data.url }),
+        })
         await fetchPayments()
       }
     } catch { /* ignore */ }

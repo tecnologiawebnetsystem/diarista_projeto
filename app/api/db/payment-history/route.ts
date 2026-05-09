@@ -6,6 +6,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const diaristaId = searchParams.get('diarista_id')
     const filterYear = searchParams.get('year')
+    const filterMonth = searchParams.get('month')
+    const filterStatus = searchParams.get('status')
+    const countOnly = searchParams.get('count_only') === '1'
 
     // Buscar config
     const cfgRows = await query<{ key: string; value: number }>('SELECT `key`, value FROM config')
@@ -18,12 +21,30 @@ export async function GET(request: NextRequest) {
     const washingValue = cfg.washing || 75
 
     // Buscar presenca
+    // count_only mode: conta registros virtuais de payment_history baseados em attendance
+    if (countOnly) {
+      let cntSql = 'SELECT COUNT(*) as cnt FROM attendance WHERE present = 1'
+      const cntParams: unknown[] = []
+      if (diaristaId) { cntSql += ' AND diarista_id = ?'; cntParams.push(diaristaId) }
+      if (filterYear) { cntSql += ' AND YEAR(date) = ?'; cntParams.push(filterYear) }
+      if (filterMonth) { cntSql += ' AND MONTH(date) = ?'; cntParams.push(filterMonth) }
+      const cntRows = await query<{ cnt: number }>(cntSql, cntParams)
+      return NextResponse.json({ count: cntRows[0]?.cnt || 0 })
+    }
+
     let attSql = 'SELECT * FROM attendance WHERE present = 1'
     const attParams: unknown[] = []
     if (diaristaId) { attSql += ' AND diarista_id = ?'; attParams.push(diaristaId) }
     if (filterYear) {
       attSql += ' AND date >= ? AND date <= ?'
       attParams.push(`${filterYear}-01-01`, `${filterYear}-12-31`)
+    }
+    if (filterMonth && filterYear) {
+      // already filtered by year above, add month filter
+      attSql = 'SELECT * FROM attendance WHERE present = 1 AND MONTH(date) = ? AND YEAR(date) = ?'
+      attParams.length = 0
+      attParams.push(filterMonth, filterYear)
+      if (diaristaId) { attSql += ' AND diarista_id = ?'; attParams.push(diaristaId) }
     }
     attSql += ' ORDER BY date DESC'
     const attendanceData = await query<{ date: string; day_type: string; present: number }>(attSql, attParams)
@@ -123,7 +144,8 @@ export async function GET(request: NextRequest) {
       return a.type.localeCompare(b.type)
     })
 
-    return NextResponse.json(allRecords)
+    const filtered = filterStatus ? allRecords.filter(r => r.status === filterStatus) : allRecords
+    return NextResponse.json(filtered)
   } catch (error) {
     console.error('GET payment-history error:', error)
     return NextResponse.json({ error: 'Erro ao buscar historico' }, { status: 500 })
