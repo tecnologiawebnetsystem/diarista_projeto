@@ -6,7 +6,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     const { id } = await context.params
     const body = await request.json()
 
-    const allowed = ['date', 'day_type', 'present', 'start_time', 'end_time', 'notes']
+    const allowed = ['date', 'day_type', 'present', 'start_time', 'end_time', 'notes', 'checked_in_by_diarista']
     const fields: string[] = []
     const values: unknown[] = []
 

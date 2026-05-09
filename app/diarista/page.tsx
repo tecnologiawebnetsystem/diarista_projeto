@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { LayoutDashboard, CalendarCheck, WashingMachine, FileText, ScrollText, Trophy, AlertTriangle, LogOut, CheckCircle2, XCircle, Briefcase, TrendingUp, CalendarDays, Receipt, FileDown, Bus, Bell, X, User, Camera, Phone, Save, Check, MapPin, Building2, DollarSign } from 'lucide-react'
+import { LayoutDashboard, CalendarCheck, WashingMachine, FileText, ScrollText, Trophy, AlertTriangle, LogOut, CheckCircle2, XCircle, Briefcase, TrendingUp, CalendarDays, Receipt, FileDown, Bus, Bell, X, User, Camera, Phone, Save, Check, MapPin, Building2, DollarSign, HandCoins } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,6 +22,8 @@ import { useDiaristas } from '@/hooks/use-diaristas'
 import { useClients } from '@/hooks/use-clients'
 import { ContractViewer } from '@/components/contract-viewer'
 import { MyPaymentsSection } from '@/components/diarista/my-payments-section'
+import { MyLoansSection } from '@/components/diarista/my-loans-section'
+import { CheckInSection } from '@/components/diarista/check-in-section'
 
 import { NotificationBanner } from '@/components/notification-banner'
 import { useDbNotifications } from '@/hooks/use-db-notifications'
@@ -55,7 +57,7 @@ export default function DiaristaPage() {
   const currentDate = new Date()
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear())
-  const [activeTab, setActiveTab] = useState<'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'anotacoes' | 'contrato' | 'perfil' | 'pagamentos'>('resumo')
+  const [activeTab, setActiveTab] = useState<'resumo' | 'presenca' | 'checkin' | 'lavanderia' | 'transporte' | 'anotacoes' | 'contrato' | 'perfil' | 'pagamentos' | 'emprestimos'>('resumo')
 
   const { diaristaId } = useAuth()
   const { diaristas: allDiaristas, updateDiarista, refetch: refetchDiaristas } = useDiaristas()
@@ -816,6 +818,22 @@ export default function DiaristaPage() {
           <MyPaymentsSection diaristaId={diaristaId} month={selectedMonth} year={selectedYear} />
         )}
 
+        {/* EMPRESTIMOS */}
+        {activeTab === 'emprestimos' && diaristaId && (
+          <MyLoansSection diaristaId={diaristaId} />
+        )}
+
+        {/* CHECK-IN */}
+        {activeTab === 'checkin' && diaristaId && (
+          <CheckInSection
+            month={selectedMonth}
+            year={selectedYear}
+            diaristaId={diaristaId}
+            workSchedule={currentDiarista?.work_schedule}
+            clients={activeClients}
+          />
+        )}
+
         {/* PERFIL */}
         {activeTab === 'perfil' && (
           <div className="space-y-5">
@@ -1044,10 +1062,12 @@ export default function DiaristaPage() {
         <div className="flex items-stretch h-12 justify-center gap-1 px-2">
           {([
             { key: 'resumo',      label: 'Inicio',      Icon: LayoutDashboard, color: 'text-orange-500', bgColor: 'bg-orange-500/10' },
-            { key: 'presenca',    label: 'Presenca',    Icon: CalendarCheck, color: 'text-green-500', bgColor: 'bg-green-500/10' },
+            { key: 'checkin',     label: 'Check-in',    Icon: CalendarCheck, color: 'text-green-500', bgColor: 'bg-green-500/10' },
+            { key: 'presenca',    label: 'Presenca',    Icon: CalendarDays, color: 'text-teal-500', bgColor: 'bg-teal-500/10' },
             { key: 'lavanderia',  label: 'Lavanderia',  Icon: WashingMachine, color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
             { key: 'transporte',  label: 'Transporte',  Icon: Bus, color: 'text-yellow-500', bgColor: 'bg-yellow-500/10' },
             { key: 'pagamentos',  label: 'Pagamentos',  Icon: DollarSign, color: 'text-emerald-500', bgColor: 'bg-emerald-500/10' },
+            { key: 'emprestimos', label: 'Emprestimos', Icon: HandCoins, color: 'text-orange-400', bgColor: 'bg-orange-400/10' },
             { key: 'anotacoes',   label: warnings.length > 0 ? `Notas (${warnings.length})` : 'Notas', Icon: FileText, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
             { key: 'contrato',    label: 'Contrato',    Icon: ScrollText, color: 'text-cyan-500', bgColor: 'bg-cyan-500/10' },
             { key: 'perfil',      label: 'Perfil',      Icon: User, color: 'text-pink-500', bgColor: 'bg-pink-500/10' },

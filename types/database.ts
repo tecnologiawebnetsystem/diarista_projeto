@@ -159,6 +159,31 @@ export interface PaymentHistory {
   updated_at: string
 }
 
+export interface Loan {
+  id: string
+  diarista_id: string
+  description: string
+  amount: number
+  installments: number
+  installments_paid: number
+  installment_value: number
+  status: 'active' | 'paid' | 'cancelled'
+  date: string
+  notes?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface LoanPayment {
+  id: string
+  loan_id: string
+  diarista_id: string
+  amount: number
+  payment_date: string
+  notes?: string | null
+  created_at: string
+}
+
 export interface Database {
   public: {
     Tables: {
