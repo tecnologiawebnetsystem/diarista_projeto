@@ -6,11 +6,11 @@ import { execute } from '@/lib/mysql'
 // Este endpoint apenas atualiza monthly_payments baseado no id virtual.
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json()
-    const { id } = params
+    const { id } = await params
 
     // id format: "attendance-YEAR-MONTH" | "laundry-YEAR-MONTH" | "transport-YEAR-MONTH"
     const [type, yearStr, monthStr] = id.split('-')
