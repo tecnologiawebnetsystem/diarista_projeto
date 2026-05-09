@@ -9,7 +9,7 @@ import {
   ShieldCheck, FileDown, Bus, Plus, AlertTriangle,
   CheckCircle, XCircle, Trash2, Edit2, X,
   Users, Phone, Hash, UserPlus, UserX, UserCheck, Eye, EyeOff,
-  MapPin, Building2, DollarSign, Settings
+  MapPin, Building2, DollarSign, Settings, HandCoins
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -34,6 +34,7 @@ import { RetroactivePaymentForm } from '@/components/admin/retroactive-payment-f
 
 
 import { SettingsSection } from '@/components/admin/settings-section'
+import { LoansSection } from '@/components/admin/loans-section'
 import { useDbNotifications } from '@/hooks/use-db-notifications'
 import { MonthlyPaymentSection } from '@/components/monthly-payment-section'
 import { AttendanceSection } from '@/components/attendance-section'
@@ -72,20 +73,20 @@ const CLEANING_TYPES = [
   { value: 'light_cleaning', label: 'Limpeza Leve' },
 ] as const
 
-type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'notas' | 'contrato' | 'equipe' | 'clientes' | 'pagamentos' | 'config'
+type Tab = 'resumo' | 'presenca' | 'lavanderia' | 'transporte' | 'notas' | 'contrato' | 'equipe' | 'clientes' | 'pagamentos' | 'emprestimos' | 'config'
 
 const NAV_ITEMS: { key: Tab; label: string; Icon: React.ElementType }[] = [
-  { key: 'resumo',      label: 'Dashboard',    Icon: LayoutDashboard },
-  { key: 'presenca',    label: 'Presenca',     Icon: CalendarCheck },
-  { key: 'lavanderia',  label: 'Lavanderia',   Icon: WashingMachine },
-  { key: 'transporte',  label: 'Transporte',   Icon: Bus },
-  { key: 'pagamentos',  label: 'Pagamentos',   Icon: DollarSign },
-  { key: 'notas',       label: 'Notas',        Icon: FileText },
-
-  { key: 'contrato',    label: 'Contrato',     Icon: ScrollText },
-  { key: 'equipe',      label: 'Equipe',       Icon: Users },
-  { key: 'clientes',    label: 'Clientes',     Icon: Building2 },
-  { key: 'config',      label: 'Config',       Icon: Settings },
+  { key: 'resumo',       label: 'Dashboard',    Icon: LayoutDashboard },
+  { key: 'presenca',     label: 'Presenca',     Icon: CalendarCheck },
+  { key: 'lavanderia',   label: 'Lavanderia',   Icon: WashingMachine },
+  { key: 'transporte',   label: 'Transporte',   Icon: Bus },
+  { key: 'pagamentos',   label: 'Pagamentos',   Icon: DollarSign },
+  { key: 'emprestimos',  label: 'Emprestimos',  Icon: HandCoins },
+  { key: 'notas',        label: 'Notas',        Icon: FileText },
+  { key: 'contrato',     label: 'Contrato',     Icon: ScrollText },
+  { key: 'equipe',       label: 'Equipe',       Icon: Users },
+  { key: 'clientes',     label: 'Clientes',     Icon: Building2 },
+  { key: 'config',       label: 'Config',       Icon: Settings },
 ]
 
 export default function AdminPage() {
@@ -923,6 +924,14 @@ export default function AdminPage() {
               // Recarrega a pagina para atualizar os dados
               window.location.reload()
             }}
+          />
+        )}
+
+        {/* EMPRESTIMOS */}
+        {activeTab === 'emprestimos' && (
+          <LoansSection
+            diaristas={allDiaristas}
+            selectedDiaristaId={selectedDiaristaId}
           />
         )}
 

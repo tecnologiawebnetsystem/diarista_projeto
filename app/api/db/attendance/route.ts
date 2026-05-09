@@ -35,12 +35,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { date, day_type, present = true, start_time, end_time, notes, diarista_id } = body
+    const { date, day_type, present = true, start_time, end_time, notes, diarista_id, checked_in_by_diarista = false } = body
     const id = generateUUID()
 
     await execute(
-      'INSERT INTO attendance (id, date, day_type, present, start_time, end_time, notes, diarista_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [id, date, day_type, present ? 1 : 0, start_time || null, end_time || null, notes || null, diarista_id || null]
+      'INSERT INTO attendance (id, date, day_type, present, start_time, end_time, notes, diarista_id, checked_in_by_diarista) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, date, day_type, present ? 1 : 0, start_time || null, end_time || null, notes || null, diarista_id || null, checked_in_by_diarista ? 1 : 0]
     )
     const created = await queryOne('SELECT * FROM attendance WHERE id = ?', [id])
     return NextResponse.json(created, { status: 201 })
