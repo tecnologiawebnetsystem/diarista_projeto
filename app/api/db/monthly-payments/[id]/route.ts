@@ -7,7 +7,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     const body = await request.json()
 
     const allowed = ['month', 'year', 'payment_date', 'payment_due_date', 'monthly_value',
-      'receipt_url', 'paid_at', 'hour_limit', 'notes']
+      'loan_deduction', 'receipt_url', 'paid_at', 'hour_limit', 'notes']
     const fields: string[] = []
     const values: unknown[] = []
 

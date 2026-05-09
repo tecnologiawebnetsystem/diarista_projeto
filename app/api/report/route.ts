@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     const paymentParams: unknown[] = [month, year]
     if (diaristaId) { paymentSql += ' AND diarista_id = ?'; paymentParams.push(diaristaId) }
     paymentSql += ' LIMIT 1'
-    const paymentData = await queryOne<{ paid_at: string | null; receipt_url: string | null }>(paymentSql, paymentParams)
+    const paymentData = await queryOne<{ paid_at: string | null; receipt_url: string | null; monthly_value: number | null; loan_deduction: number | null }>(paymentSql, paymentParams)
 
     // Presenca
     let attSql = 'SELECT * FROM attendance WHERE date >= ? AND date <= ?'
@@ -107,9 +107,22 @@ export async function GET(request: NextRequest) {
     const warnings = (notesData || []).filter((n) => n.is_warning).length
     const grandTotal = attendanceTotal + laundryTotal
 
+    // Emprestimos ativos para desconto no relatorio
+    let activeLoans: { description: string; installment_value: number; installments: number; installments_paid: number }[] = []
+    if (diaristaId) {
+      activeLoans = await query<{ description: string; installment_value: number; installments: number; installments_paid: number }>(
+        'SELECT description, installment_value, installments, installments_paid FROM loans WHERE diarista_id = ? AND status = ?',
+        [diaristaId, 'active']
+      )
+    }
+    const loanDeduction = activeLoans.reduce((s, l) => s + Number(l.installment_value), 0)
+    const netTotal = grandTotal - loanDeduction
+
     // Dados do pagamento mensal
     const isPaid = !!paymentData?.paid_at
     const paidDate = paymentData?.paid_at ? new Date(paymentData.paid_at).toLocaleDateString('pt-BR') : null
+    // Se ja foi pago, pegar o loan_deduction registrado no pagamento
+    const paidLoanDeduction = Number(paymentData?.loan_deduction) || loanDeduction
 
     // Calcular transporte pendente
     const transportPendingTotal = transportTotal - transportPaidTotal
@@ -484,16 +497,30 @@ export async function GET(request: NextRequest) {
     </div>
   </div>
 
-  <div class="content">
+    <div class="content">
     <!-- Totals -->
     <div class="totals-row">
       <div class="total-main">
         <div class="label">Total do Mes</div>
-        <div class="amount">R$ ${grandTotal.toFixed(2)}</div>
-        <div style="display:flex;gap:16px;margin-top:12px;">
+        ${(isPaid ? paidLoanDeduction : loanDeduction) > 0 ? `<div style="font-size:13px;color:#A8A29E;text-decoration:line-through;margin-bottom:2px;">R$ ${grandTotal.toFixed(2)}</div>` : ''}
+        <div class="amount">R$ ${isPaid ? (Number(paymentData?.monthly_value) || netTotal).toFixed(2) : netTotal.toFixed(2)}</div>
+        <div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;">
           <span style="font-size:12px;color:#A8A29E;">Limpeza <strong style="color:#F5F5F4;">R$ ${attendanceTotal.toFixed(2)}</strong></span>
           <span style="font-size:12px;color:#A8A29E;">Lavanderia <strong style="color:#F5F5F4;">R$ ${laundryTotal.toFixed(2)}</strong></span>
         </div>
+        ${(isPaid ? paidLoanDeduction : loanDeduction) > 0 ? `
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.08);">
+          ${activeLoans.map(l => `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+              <span style="font-size:11px;color:#FB923C;">&#8722; ${l.description}${l.installments > 1 ? ` (parc. ${l.installments_paid + 1}/${l.installments})` : ''}</span>
+              <span style="font-size:11px;font-weight:600;color:#FB923C;">- R$ ${Number(l.installment_value).toFixed(2)}</span>
+            </div>
+          `).join('')}
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding-top:6px;border-top:1px solid rgba(251,146,60,0.2);">
+            <span style="font-size:12px;color:#D6D3D1;font-weight:500;">Valor liquido</span>
+            <span style="font-size:13px;font-weight:700;color:#4ADE80;">R$ ${netTotal.toFixed(2)}</span>
+          </div>
+        </div>` : ''}
       </div>
       <div class="total-side">
         <div class="total-card-sm card-transport">
