@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
     const attParams: unknown[] = [startDate, endDate]
     if (diaristaId) { attSql += ' AND diarista_id = ?'; attParams.push(diaristaId) }
     attSql += ' ORDER BY date'
-    const attendanceData = await query<{ date: string; day_type: string; present: number }>(attSql, attParams)
+    const attendanceData = await query<{ date: string; day_type: string; present: boolean | number }>(attSql, attParams)
 
     // Lavanderia
     let laundrySql = 'SELECT * FROM laundry_weeks WHERE month = ? AND year = ?'
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     if (diaristaId) { laundrySql += ' AND diarista_id = ?'; laundryParams.push(diaristaId) }
     laundrySql += ' ORDER BY week_number'
     const laundryData = await query<{
-      week_number: number; washed: number; ironed: number; transport_fee: number; paid_at: string | null
+      week_number: number; washed: boolean | number; ironed: boolean | number; transport_fee: number; paid_at: string | null
     }>(laundrySql, laundryParams)
 
     // Notas
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
     const notesParams: unknown[] = [startDate, endDate]
     if (diaristaId) { notesSql += ' AND diarista_id = ?'; notesParams.push(diaristaId) }
     notesSql += ' ORDER BY date'
-    const notesData = await query<{ date: string; is_warning: number; note_type: string; content: string }>(notesSql, notesParams)
+    const notesData = await query<{ date: string; is_warning: boolean | number; note_type: string; content: string }>(notesSql, notesParams)
 
     // Calculos - prioriza valores da diarista, fallback para config global
     const ironingValue = diaristaValues.ironing ?? cfg.ironing ?? 50
@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
     }, 0)
     const transportPaidTotal = (laundryData || []).filter((w) => w.paid_at).reduce((sum, w) => sum + (w.transport_fee || 0), 0)
 
-    const warnings = (notesData || []).filter((n: { is_warning: boolean }) => n.is_warning).length
+    const warnings = (notesData || []).filter((n) => n.is_warning).length
     const grandTotal = attendanceTotal + laundryTotal
 
     // Dados do pagamento mensal
