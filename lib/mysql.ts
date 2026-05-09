@@ -66,4 +66,4 @@ export function generateUUID(): string {
   })
 }
 
-export default { query, queryOne, execute }
+// Exportacoes nomeadas apenas — sem default anonimo para evitar aviso ESLint
