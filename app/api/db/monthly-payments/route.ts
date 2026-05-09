@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { month, year, diarista_id, monthly_value, payment_date, paid_at, receipt_url, notes: paymentNotes, hour_limit } = body
+    const { month, year, diarista_id, monthly_value, payment_date, paid_at, receipt_url, notes: paymentNotes, hour_limit, loan_deduction } = body
 
     // Buscar valor mensal da config se nao fornecido
     let resolvedValue = monthly_value
@@ -65,12 +65,14 @@ export async function POST(request: NextRequest) {
 
     const dueDate = calculate5thBusinessDay(Number(month), Number(year))
     const id = generateUUID()
+    // monthly_value salvo ja e o valor liquido (bruto - desconto)
+    const deduction = Number(loan_deduction) || 0
 
     await execute(
-      `INSERT INTO monthly_payments (id, month, year, payment_due_date, monthly_value, hour_limit, diarista_id, payment_date, paid_at, receipt_url, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO monthly_payments (id, month, year, payment_due_date, monthly_value, loan_deduction, hour_limit, diarista_id, payment_date, paid_at, receipt_url, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE id = id`,
-      [id, month, year, dueDate, resolvedValue, hour_limit || '20:00:00', diarista_id || null, payment_date || null, paid_at || null, receipt_url || null, paymentNotes || null]
+      [id, month, year, dueDate, resolvedValue, deduction, hour_limit || '20:00:00', diarista_id || null, payment_date || null, paid_at || null, receipt_url || null, paymentNotes || null]
     )
 
     let sql = 'SELECT * FROM monthly_payments WHERE month = ? AND year = ?'

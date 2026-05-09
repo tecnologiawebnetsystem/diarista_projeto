@@ -6,8 +6,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { X, Upload, CheckCircle2, Calendar, DollarSign, FileText } from 'lucide-react'
-import type { Diarista } from '@/types/database'
+import { X, Upload, CheckCircle2, Calendar, DollarSign, FileText, HandCoins, Minus } from 'lucide-react'
+import type { Diarista, Loan } from '@/types/database'
 
 interface RetroactivePaymentFormProps {
   diaristas: Diarista[]
@@ -36,6 +36,19 @@ export function RetroactivePaymentForm({ diaristas, onClose, onSuccess }: Retroa
   const [uploadingReceipt, setUploadingReceipt] = useState(false)
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null)
   const [receiptName, setReceiptName] = useState<string | null>(null)
+  const [activeLoans, setActiveLoans] = useState<Loan[]>([])
+
+  const loanDeduction = activeLoans.reduce((s, l) => s + Number(l.installment_value), 0)
+
+  async function loadActiveLoans(diaristaId: string) {
+    if (!diaristaId) { setActiveLoans([]); return }
+    try {
+      const res = await fetch(`/api/db/loans?diarista_id=${diaristaId}&status=active`)
+      setActiveLoans(res.ok ? await res.json() : [])
+    } catch {
+      setActiveLoans([])
+    }
+  }
   
   const [form, setForm] = useState({
     diarista_id: '',
@@ -86,7 +99,9 @@ export function RetroactivePaymentForm({ diaristas, onClose, onSuccess }: Retroa
         diarista_id: form.diarista_id,
         month,
         year,
+        // monthly_value ja e o valor liquido (bruto - desconto de emprestimo)
         monthly_value: amount,
+        loan_deduction: loanDeduction,
         payment_due_date: dueDate.toISOString().split('T')[0],
         payment_date: form.payment_date,
         paid_at: new Date(form.payment_date + 'T12:00:00').toISOString(),
@@ -144,7 +159,7 @@ export function RetroactivePaymentForm({ diaristas, onClose, onSuccess }: Retroa
             {/* Diarista */}
             <div className="space-y-1.5">
               <Label className="text-xs">Diarista</Label>
-              <Select value={form.diarista_id} onValueChange={(v) => setForm(f => ({ ...f, diarista_id: v }))}>
+              <Select value={form.diarista_id} onValueChange={(v) => { setForm(f => ({ ...f, diarista_id: v })); loadActiveLoans(v) }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione a diarista" />
                 </SelectTrigger>
@@ -202,6 +217,35 @@ export function RetroactivePaymentForm({ diaristas, onClose, onSuccess }: Retroa
                 />
               </div>
             </div>
+
+            {/* Desconto de emprestimos ativos */}
+            {loanDeduction > 0 && (
+              <div className="rounded-lg border border-orange-400/30 bg-orange-400/5 p-3 space-y-2">
+                <p className="text-xs font-semibold text-orange-400 flex items-center gap-1.5">
+                  <HandCoins className="h-3.5 w-3.5" />
+                  Desconto de emprestimos ativos
+                </p>
+                {activeLoans.map(loan => (
+                  <div key={loan.id} className="flex items-center justify-between text-[11px]">
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <Minus className="h-3 w-3" />
+                      {loan.description}
+                      {loan.installments > 1 && ` (parcela ${loan.installments_paid + 1}/${loan.installments})`}
+                    </span>
+                    <span className="font-semibold text-orange-400">- R$ {Number(loan.installment_value).toFixed(2)}</span>
+                  </div>
+                ))}
+                <div className="pt-1.5 border-t border-orange-400/20 flex items-center justify-between text-xs font-semibold">
+                  <span className="text-foreground">Valor liquido a pagar</span>
+                  <span className="text-green-500">
+                    R$ {(parseFloat(form.amount || '0') - loanDeduction).toFixed(2)}
+                  </span>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  O desconto sera registrado automaticamente no pagamento.
+                </p>
+              </div>
+            )}
 
             {/* Data do pagamento */}
             <div className="space-y-1.5">

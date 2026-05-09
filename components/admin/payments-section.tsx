@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import { DollarSign, CheckCircle, Clock, AlertCircle, Upload, Receipt, Filter, ChevronRight, Calendar, FileText, ExternalLink, Bus } from 'lucide-react'
-import type { Diarista } from '@/types/database'
+import { DollarSign, CheckCircle, Clock, AlertCircle, Upload, Receipt, Filter, ChevronRight, Calendar, FileText, ExternalLink, Bus, HandCoins, Minus } from 'lucide-react'
+import type { Diarista, Loan } from '@/types/database'
 
 interface Payment {
   id: string
@@ -29,6 +29,7 @@ interface MonthlyPayment {
   month: number
   year: number
   monthly_value: number
+  loan_deduction: number
   paid_at: string | null
   payment_date: string | null
   receipt_url: string | null
@@ -71,6 +72,8 @@ export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: 
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'paid'>('all')
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  // loans ativos por diarista_id
+  const [activeLoansMap, setActiveLoansMap] = useState<Record<string, Loan[]>>({})
 
   // Calcula semanas do mes para o valor de lavagem
   const getWeeksInMonth = (m: number, y: number) => {
@@ -144,12 +147,21 @@ export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: 
         }
       }
       setTransportPayments(transportPaid)
+
+      // Busca loans ativos por diarista para mostrar desconto no pagamento mensal
+      const loansMap: Record<string, Loan[]> = {}
+      for (const diarista of targetDiaristas) {
+        const loanRes = await fetch(`/api/db/loans?diarista_id=${diarista.id}&status=active`)
+        loansMap[diarista.id] = loanRes.ok ? await loanRes.json() : []
+      }
+      setActiveLoansMap(loansMap)
     } catch (err) {
       console.error('Error fetching payments:', err)
       setPayments([])
       setMonthlyPayments([])
       setCurrentMonthTotals([])
       setTransportPayments([])
+      setActiveLoansMap({})
     }
     setLoading(false)
   }, [month, year, selectedDiaristaId, diaristas])
@@ -285,19 +297,51 @@ export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: 
                             <FileText className="h-3 w-3" />
                             {MONTHS_FULL[month - 1]}/{year}
                           </span>
-                          <span className="text-[10px] text-muted-foreground">
-                            Em andamento
-                          </span>
+                          <span className="text-[10px] text-muted-foreground">Em andamento</span>
                         </div>
                       </div>
-                      <p className="text-base font-bold shrink-0 text-yellow-500">
-                        R$ {total.grandTotal.toFixed(2)}
-                      </p>
+                      <div className="text-right shrink-0">
+                        {(() => {
+                          const loans = activeLoansMap[total.diaristaId] || []
+                          const loanDeduction = loans.reduce((s, l) => s + Number(l.installment_value), 0)
+                          const netTotal = total.grandTotal - loanDeduction
+                          return loanDeduction > 0 ? (
+                            <div>
+                              <p className="text-[10px] text-muted-foreground line-through">R$ {total.grandTotal.toFixed(2)}</p>
+                              <p className="text-base font-bold text-yellow-500">R$ {netTotal.toFixed(2)}</p>
+                            </div>
+                          ) : (
+                            <p className="text-base font-bold text-yellow-500">R$ {total.grandTotal.toFixed(2)}</p>
+                          )
+                        })()}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-3 mt-2 text-[10px] text-muted-foreground">
                       <span>Presencas: R$ {total.attendanceTotal.toFixed(2)}</span>
                       <span>Lavanderia: R$ {total.laundryTotal.toFixed(2)}</span>
                     </div>
+                    {/* Desconto de emprestimos */}
+                    {(activeLoansMap[total.diaristaId] || []).length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-yellow-500/20 space-y-1">
+                        {(activeLoansMap[total.diaristaId] || []).map(loan => (
+                          <div key={loan.id} className="flex items-center justify-between text-[10px]">
+                            <span className="flex items-center gap-1 text-orange-400">
+                              <HandCoins className="h-3 w-3" />
+                              <Minus className="h-2.5 w-2.5" />
+                              {loan.description}
+                              {loan.installments > 1 && ` (parcela ${loan.installments_paid + 1}/${loan.installments})`}
+                            </span>
+                            <span className="font-semibold text-orange-400">- R$ {Number(loan.installment_value).toFixed(2)}</span>
+                          </div>
+                        ))}
+                        <div className="flex items-center justify-between text-[11px] font-semibold pt-1 border-t border-yellow-500/20">
+                          <span className="text-foreground">Valor liquido a receber</span>
+                          <span className="text-green-500">
+                            R$ {(total.grandTotal - (activeLoansMap[total.diaristaId] || []).reduce((s, l) => s + Number(l.installment_value), 0)).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -332,10 +376,30 @@ export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: 
                             )}
                           </div>
                         </div>
-                        <p className="text-base font-bold shrink-0 text-green-500">
-                          R$ {Number(mp.monthly_value).toFixed(2)}
-                        </p>
+                        <div className="text-right shrink-0">
+                          {Number(mp.loan_deduction) > 0 && (
+                            <p className="text-[10px] text-muted-foreground line-through">
+                              R$ {(Number(mp.monthly_value) + Number(mp.loan_deduction)).toFixed(2)}
+                            </p>
+                          )}
+                          <p className="text-base font-bold text-green-500">
+                            R$ {Number(mp.monthly_value).toFixed(2)}
+                          </p>
+                        </div>
                       </div>
+                      {/* Desconto de emprestimo registrado */}
+                      {Number(mp.loan_deduction) > 0 && (
+                        <div className="mt-2 pt-2 border-t border-green-500/20">
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className="flex items-center gap-1 text-orange-400">
+                              <HandCoins className="h-3 w-3" />
+                              <Minus className="h-2.5 w-2.5" />
+                              Desconto emprestimo
+                            </span>
+                            <span className="font-semibold text-orange-400">- R$ {Number(mp.loan_deduction).toFixed(2)}</span>
+                          </div>
+                        </div>
+                      )}
                       <div className="flex items-center justify-between mt-2">
                         {mp.notes && (
                           <p className="text-[10px] text-muted-foreground italic truncate max-w-[200px]">{mp.notes}</p>
