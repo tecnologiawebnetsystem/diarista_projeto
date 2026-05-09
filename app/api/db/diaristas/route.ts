@@ -14,8 +14,21 @@ export async function GET(request: NextRequest) {
     }
 
     sql += ' ORDER BY name'
-    const rows = await query(sql, params)
-    return NextResponse.json(rows)
+    const rows = await query<Record<string, unknown>>(sql, params)
+
+    // MySQL retorna colunas JSON como string — fazer parse antes de retornar
+    const parsed = rows.map(row => ({
+      ...row,
+      active: Boolean(row.active),
+      work_schedule: typeof row.work_schedule === 'string'
+        ? (() => { try { return JSON.parse(row.work_schedule as string) } catch { return [] } })()
+        : (row.work_schedule ?? []),
+      laundry_assignments: typeof row.laundry_assignments === 'string'
+        ? (() => { try { return JSON.parse(row.laundry_assignments as string) } catch { return [] } })()
+        : (row.laundry_assignments ?? []),
+    }))
+
+    return NextResponse.json(parsed)
   } catch (error) {
     console.error('GET diaristas error:', error)
     return NextResponse.json({ error: 'Erro ao buscar diaristas' }, { status: 500 })

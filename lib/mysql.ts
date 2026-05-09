@@ -10,6 +10,18 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
   timezone: '+00:00',
+  // Converte TINYINT(1) automaticamente para boolean e JSON para objeto
+  typeCast(field, next) {
+    if (field.type === 'TINY' && field.length === 1) {
+      return field.string() === '1'
+    }
+    if (field.type === 'JSON') {
+      const val = field.string()
+      if (!val) return null
+      try { return JSON.parse(val) } catch { return val }
+    }
+    return next()
+  },
 })
 
 export default pool

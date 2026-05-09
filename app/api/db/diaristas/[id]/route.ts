@@ -1,12 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { queryOne, execute } from '@/lib/mysql'
 
+function parseDiarista(row: Record<string, unknown>) {
+  return {
+    ...row,
+    active: Boolean(row.active),
+    work_schedule: typeof row.work_schedule === 'string'
+      ? (() => { try { return JSON.parse(row.work_schedule as string) } catch { return [] } })()
+      : (row.work_schedule ?? []),
+    laundry_assignments: typeof row.laundry_assignments === 'string'
+      ? (() => { try { return JSON.parse(row.laundry_assignments as string) } catch { return [] } })()
+      : (row.laundry_assignments ?? []),
+  }
+}
+
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const row = await queryOne('SELECT * FROM diaristas WHERE id = ?', [id])
+    const row = await queryOne<Record<string, unknown>>('SELECT * FROM diaristas WHERE id = ?', [id])
     if (!row) return NextResponse.json({ error: 'Nao encontrado' }, { status: 404 })
-    return NextResponse.json(row)
+    return NextResponse.json(parseDiarista(row))
   } catch (error) {
     console.error('GET diarista error:', error)
     return NextResponse.json({ error: 'Erro ao buscar diarista' }, { status: 500 })
@@ -43,8 +56,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     values.push(id)
 
     await execute(`UPDATE diaristas SET ${fields.join(', ')} WHERE id = ?`, values)
-    const updated = await queryOne('SELECT * FROM diaristas WHERE id = ?', [id])
-    return NextResponse.json(updated)
+    const updated = await queryOne<Record<string, unknown>>('SELECT * FROM diaristas WHERE id = ?', [id])
+    return NextResponse.json(updated ? parseDiarista(updated) : null)
   } catch (error) {
     console.error('PATCH diarista error:', error)
     return NextResponse.json({ error: 'Erro ao atualizar diarista' }, { status: 500 })
