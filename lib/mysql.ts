@@ -28,31 +28,35 @@ const DB_CONFIG: mysql.ConnectionOptions = {
 let connection: Connection | null = null
 let connectionPromise: Promise<Connection> | null = null
 
+async function createConnection(): Promise<Connection> {
+  const conn = await mysql.createConnection(DB_CONFIG)
+  connection = conn
+  connectionPromise = null
+  return conn
+}
+
 async function getConnection(): Promise<Connection> {
+  // Se já há uma conexão sendo criada, aguardar ela
+  if (connectionPromise) {
+    return connectionPromise
+  }
+
   // Se já temos conexão válida, testar e retornar
   if (connection) {
     try {
       await connection.ping()
       return connection
     } catch {
-      // Conexão morreu, resetar
+      // Conexão morreu, limpar
       connection = null
-      connectionPromise = null
     }
   }
 
-  // Se já há uma conexão sendo criada, aguardar
-  if (connectionPromise) {
-    return connectionPromise
-  }
-
-  // Criar nova conexão com mutex via Promise
-  connectionPromise = mysql.createConnection(DB_CONFIG).then(conn => {
-    connection = conn
+  // Criar nova conexão - guarda a Promise ANTES de await
+  // para que outras chamadas concorrentes aguardem esta mesma Promise
+  connectionPromise = createConnection().catch(err => {
     connectionPromise = null
-    return conn
-  }).catch(err => {
-    connectionPromise = null
+    connection = null
     throw err
   })
 
