@@ -301,7 +301,7 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
           </CardTitle>
           {totalTransport > 0 && (
             <div className="text-right">
-              <span className="text-sm font-bold text-primary">R$ {totalPaid.toFixed(2)}</span>
+              <span className="text-sm font-bold text-primary">R$ {(Number(totalPaid) || 0).toFixed(2)}</span>
               <span className="text-[10px] text-muted-foreground ml-1">pago</span>
             </div>
           )}
@@ -315,11 +315,11 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
         {/* Resumo */}
         <div className="flex gap-2">
           <div className="flex-1 bg-green-500/10 rounded-lg p-2.5 text-center">
-            <p className="text-lg font-bold text-green-500">R$ {totalPaid.toFixed(2)}</p>
+            <p className="text-lg font-bold text-green-500">R$ {(Number(totalPaid) || 0).toFixed(2)}</p>
             <p className="text-[10px] text-muted-foreground">Pago</p>
           </div>
           <div className="flex-1 bg-destructive/10 rounded-lg p-2.5 text-center">
-            <p className="text-lg font-bold text-destructive">R$ {totalPending.toFixed(2)}</p>
+            <p className="text-lg font-bold text-destructive">R$ {(Number(totalPending) || 0).toFixed(2)}</p>
             <p className="text-[10px] text-muted-foreground">Pendente</p>
           </div>
         </div>
@@ -368,7 +368,7 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`text-sm font-bold ${isPaidFull ? 'text-green-500' : isPaidHalf ? 'text-yellow-500' : 'text-primary'}`}>
-                    R$ {paidAmount.toFixed(2)} / {transportValue.toFixed(2)}
+                    R$ {(Number(paidAmount) || 0).toFixed(2)} / {(Number(transportValue) || 0).toFixed(2)}
                   </span>
                   {isExpanded ? (
                     <ChevronUp className="h-4 w-4 text-muted-foreground" />
@@ -403,7 +403,7 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
                         }`}
                       >
                         <span className="text-[10px] font-medium uppercase">Ida</span>
-                        <span className="text-sm font-bold">R$ {halfValue.toFixed(2)}</span>
+                        <span className="text-sm font-bold">R$ {(Number(halfValue) || 0).toFixed(2)}</span>
                       </button>
                       
                       {/* Botao Volta */}
@@ -419,7 +419,7 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
                         }`}
                       >
                         <span className="text-[10px] font-medium uppercase">Volta</span>
-                        <span className="text-sm font-bold">R$ {halfValue.toFixed(2)}</span>
+                        <span className="text-sm font-bold">R$ {(Number(halfValue) || 0).toFixed(2)}</span>
                       </button>
                       
                       {/* Botao Completo */}
@@ -432,7 +432,7 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
                         }`}
                       >
                         <span className="text-[10px] font-medium uppercase">Completo</span>
-                        <span className="text-sm font-bold">R$ {transportValue.toFixed(2)}</span>
+                        <span className="text-sm font-bold">R$ {(Number(transportValue) || 0).toFixed(2)}</span>
                       </button>
                     </div>
                     
@@ -441,7 +441,7 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
                       <div className="flex items-center justify-between text-xs pt-1">
                         <span className="text-muted-foreground">Pago:</span>
                         <span className={`font-bold ${isPaidFull ? 'text-green-500' : 'text-yellow-500'}`}>
-                          R$ {paidAmount.toFixed(2)}
+                          R$ {(Number(paidAmount) || 0).toFixed(2)}
                         </span>
                       </div>
                     )}

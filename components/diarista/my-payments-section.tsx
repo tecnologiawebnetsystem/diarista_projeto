@@ -244,7 +244,7 @@ export function MyPaymentsSection({ diaristaId, month, year }: MyPaymentsSection
                   </div>
                 </div>
                 <p className="text-lg font-bold shrink-0 text-blue-500">
-                  {'R$ '}{tp.totalPaid.toFixed(2)}
+                  {'R$ '}{(Number(tp.totalPaid) || 0).toFixed(2)}
                 </p>
               </div>
               <div className="flex items-center justify-between mt-2">

@@ -502,11 +502,11 @@ export async function GET(request: NextRequest) {
     <div class="totals-row">
       <div class="total-main">
         <div class="label">Total do Mes</div>
-        ${(isPaid ? paidLoanDeduction : loanDeduction) > 0 ? `<div style="font-size:13px;color:#A8A29E;text-decoration:line-through;margin-bottom:2px;">R$ ${grandTotal.toFixed(2)}</div>` : ''}
-        <div class="amount">R$ ${isPaid ? (Number(paymentData?.monthly_value) || netTotal).toFixed(2) : netTotal.toFixed(2)}</div>
+        ${(isPaid ? paidLoanDeduction : loanDeduction) > 0 ? `<div style="font-size:13px;color:#A8A29E;text-decoration:line-through;margin-bottom:2px;">R$ ${(Number(grandTotal) || 0).toFixed(2)}</div>` : ''}
+        <div class="amount">R$ ${isPaid ? (Number(paymentData?.monthly_value) || netTotal).toFixed(2) : (Number(netTotal) || 0).toFixed(2)}</div>
         <div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;">
-          <span style="font-size:12px;color:#A8A29E;">Limpeza <strong style="color:#F5F5F4;">R$ ${attendanceTotal.toFixed(2)}</strong></span>
-          <span style="font-size:12px;color:#A8A29E;">Lavanderia <strong style="color:#F5F5F4;">R$ ${laundryTotal.toFixed(2)}</strong></span>
+          <span style="font-size:12px;color:#A8A29E;">Limpeza <strong style="color:#F5F5F4;">R$ ${(Number(attendanceTotal) || 0).toFixed(2)}</strong></span>
+          <span style="font-size:12px;color:#A8A29E;">Lavanderia <strong style="color:#F5F5F4;">R$ ${(Number(laundryTotal) || 0).toFixed(2)}</strong></span>
         </div>
         ${(isPaid ? paidLoanDeduction : loanDeduction) > 0 ? `
         <div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.08);">
@@ -518,17 +518,17 @@ export async function GET(request: NextRequest) {
           `).join('')}
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding-top:6px;border-top:1px solid rgba(251,146,60,0.2);">
             <span style="font-size:12px;color:#D6D3D1;font-weight:500;">Valor liquido</span>
-            <span style="font-size:13px;font-weight:700;color:#4ADE80;">R$ ${netTotal.toFixed(2)}</span>
+            <span style="font-size:13px;font-weight:700;color:#4ADE80;">R$ ${(Number(netTotal) || 0).toFixed(2)}</span>
           </div>
         </div>` : ''}
       </div>
       <div class="total-side">
         <div class="total-card-sm card-transport">
-          <div class="amount">R$ ${transportPaidTotal.toFixed(2)}</div>
+          <div class="amount">R$ ${(Number(transportPaidTotal) || 0).toFixed(2)}</div>
           <div class="label">Transporte pago</div>
         </div>
         <div class="total-card-sm card-laundry">
-          <div class="amount">R$ ${transportPendingTotal.toFixed(2)}</div>
+          <div class="amount">R$ ${(Number(transportPendingTotal) || 0).toFixed(2)}</div>
           <div class="label">Transp. pendente</div>
         </div>
       </div>
@@ -587,15 +587,15 @@ export async function GET(request: NextRequest) {
               <td>${d.toLocaleDateString('pt-BR')}</td>
               <td style="text-transform:capitalize;">${dayName}</td>
               <td><span class="badge ${isHeavy ? 'badge-heavy' : 'badge-light'}">${isHeavy ? 'Pesada' : 'Leve'}</span></td>
-              <td class="font-bold">R$ ${val.toFixed(2)}</td>
+              <td class="font-bold">R$ ${(Number(val) || 0).toFixed(2)}</td>
               <td class="text-center"><span class="badge ${a.present ? 'badge-present' : 'badge-absent'}">${a.present ? 'Presente' : 'Ausente'}</span></td>
             </tr>`
           }).join('')}
         </tbody>
       </table>
       <div class="breakdown">
-        <div class="breakdown-item">&#x1F9F9; Pesada: <strong>${heavyDays}x R$ ${heavyCleaningValue.toFixed(2)} = R$ ${(heavyDays * heavyCleaningValue).toFixed(2)}</strong></div>
-        <div class="breakdown-item">&#x2728; Leve: <strong>${lightDays}x R$ ${lightCleaningValue.toFixed(2)} = R$ ${(lightDays * lightCleaningValue).toFixed(2)}</strong></div>
+        <div class="breakdown-item">&#x1F9F9; Pesada: <strong>${heavyDays}x R$ ${(Number(heavyCleaningValue) || 0).toFixed(2)} = R$ ${(heavyDays * (Number(heavyCleaningValue) || 0)).toFixed(2)}</strong></div>
+        <div class="breakdown-item">&#x2728; Leve: <strong>${lightDays}x R$ ${(Number(lightCleaningValue) || 0).toFixed(2)} = R$ ${(lightDays * (Number(lightCleaningValue) || 0)).toFixed(2)}</strong></div>
       </div>
     </div>
     ` : ''}
@@ -626,10 +626,10 @@ export async function GET(request: NextRequest) {
             return `
             <tr>
               <td class="font-bold">Semana ${w.week_number}</td>
-              <td>${w.washed ? `<span class="badge badge-info">R$ ${washingValuePerWeek.toFixed(2)}</span>` : '<span style="color:#D6D3D1">-</span>'}</td>
-              <td>${w.ironed ? `<span class="badge badge-info">R$ ${ironingValue.toFixed(2)}</span>` : '<span style="color:#D6D3D1">-</span>'}</td>
-              <td>${hasServices ? `R$ ${(w.transport_fee || 0).toFixed(2)} <span class="badge ${tPaid ? 'badge-paid' : 'badge-pending'}">${tPaid ? 'Pago' : 'Pendente'}</span>` : '<span style="color:#D6D3D1">-</span>'}</td>
-              <td class="text-right font-bold">R$ ${services.toFixed(2)}</td>
+              <td>${w.washed ? `<span class="badge badge-info">R$ ${(Number(washingValuePerWeek) || 0).toFixed(2)}</span>` : '<span style="color:#D6D3D1">-</span>'}</td>
+              <td>${w.ironed ? `<span class="badge badge-info">R$ ${(Number(ironingValue) || 0).toFixed(2)}</span>` : '<span style="color:#D6D3D1">-</span>'}</td>
+              <td>${hasServices ? `R$ ${(Number(w.transport_fee) || 0).toFixed(2)} <span class="badge ${tPaid ? 'badge-paid' : 'badge-pending'}">${tPaid ? 'Pago' : 'Pendente'}</span>` : '<span style="color:#D6D3D1">-</span>'}</td>
+              <td class="text-right font-bold">R$ ${(Number(services) || 0).toFixed(2)}</td>
             </tr>`
           }).join('')}
         </tbody>

@@ -240,13 +240,13 @@ export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: 
         </Card>
         <Card className="border-yellow-500/20">
           <CardContent className="p-3 text-center">
-            <p className="text-lg font-bold text-yellow-500">R$ {totalPending.toFixed(0)}</p>
+            <p className="text-lg font-bold text-yellow-500">R$ {(Number(totalPending) || 0).toFixed(0)}</p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Pendente</p>
           </CardContent>
         </Card>
         <Card className="border-green-500/20">
           <CardContent className="p-3 text-center">
-            <p className="text-lg font-bold text-green-500">R$ {totalPaid.toFixed(0)}</p>
+            <p className="text-lg font-bold text-green-500">R$ {(Number(totalPaid) || 0).toFixed(0)}</p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Pago</p>
           </CardContent>
         </Card>
@@ -318,18 +318,18 @@ export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: 
                           const netTotal = total.grandTotal - loanDeduction
                           return loanDeduction > 0 ? (
                             <div>
-                              <p className="text-[10px] text-muted-foreground line-through">R$ {total.grandTotal.toFixed(2)}</p>
-                              <p className="text-base font-bold text-yellow-500">R$ {netTotal.toFixed(2)}</p>
+                              <p className="text-[10px] text-muted-foreground line-through">R$ {(Number(total.grandTotal) || 0).toFixed(2)}</p>
+                              <p className="text-base font-bold text-yellow-500">R$ {(Number(netTotal) || 0).toFixed(2)}</p>
                             </div>
                           ) : (
-                            <p className="text-base font-bold text-yellow-500">R$ {total.grandTotal.toFixed(2)}</p>
+                            <p className="text-base font-bold text-yellow-500">R$ {(Number(total.grandTotal) || 0).toFixed(2)}</p>
                           )
                         })()}
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-3 mt-2 text-[10px] text-muted-foreground">
-                      <span>Presencas: R$ {total.attendanceTotal.toFixed(2)}</span>
-                      <span>Lavanderia: R$ {total.laundryTotal.toFixed(2)}</span>
+                      <span>Presencas: R$ {(Number(total.attendanceTotal) || 0).toFixed(2)}</span>
+                      <span>Lavanderia: R$ {(Number(total.laundryTotal) || 0).toFixed(2)}</span>
                     </div>
                     {/* Desconto de emprestimos */}
                     {(activeLoansMap[total.diaristaId] || []).length > 0 && (
@@ -460,7 +460,7 @@ export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: 
                         </div>
                       </div>
                       <p className="text-base font-bold shrink-0 text-blue-500">
-                        R$ {tp.totalPaid.toFixed(2)}
+                        R$ {(Number(tp.totalPaid) || 0).toFixed(2)}
                       </p>
                     </div>
                     <div className="flex items-center justify-between mt-2">
