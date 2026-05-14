@@ -550,8 +550,8 @@ export default function DiaristaPage() {
                 }
 
                 // Calcula valor por semana da lavagem (valor mensal / numero de semanas)
-                const monthlyWashingValue = currentDiarista?.washing_value ?? 300
-                const washingPerWeek = monthlyWashingValue / weeksOfMonth.length
+                const monthlyWashingValue = Number(currentDiarista?.washing_value ?? 300) || 0
+                const washingPerWeek = weeksOfMonth.length > 0 ? monthlyWashingValue / weeksOfMonth.length : 0
                 
                 return (
                   <div className="space-y-2">
@@ -613,7 +613,7 @@ export default function DiaristaPage() {
             <CardContent className="px-4 pb-4">
               {(() => {
                 // Calcula as semanas do mes com datas
-                const transportValue = currentDiarista?.transport_value ?? 30
+                const transportValue = Number(currentDiarista?.transport_value ?? 30) || 0
                 const lastDay = new Date(selectedYear, selectedMonth, 0).getDate()
                 const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
                 const monthAbbr = monthNames[selectedMonth - 1]

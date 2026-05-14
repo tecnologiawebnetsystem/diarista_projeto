@@ -6,10 +6,26 @@ import type { LaundryWeek } from '@/types/database'
 async function getConfigValues(): Promise<Record<string, number>> {
   const res = await fetch('/api/db/config')
   if (!res.ok) return {}
-  const data: Array<{ key: string; value: number }> = await res.json()
+  const data: Array<{ key: string; value: string | number }> = await res.json()
   const cfg: Record<string, number> = {}
-  data.forEach(item => { cfg[item.key] = item.value })
+  // Garante conversão numérica — MySQL retorna strings em campos DECIMAL
+  data.forEach(item => { cfg[item.key] = Number(item.value) || 0 })
   return cfg
+}
+
+// Normaliza campos numéricos e booleanos vindos do MySQL como strings
+function normalizeWeek(w: LaundryWeek): LaundryWeek {
+  return {
+    ...w,
+    ironed: Boolean(w.ironed),
+    washed: Boolean(w.washed),
+    transport_fee: Number(w.transport_fee) || 0,
+    transport_paid_amount: Number(w.transport_paid_amount) || 0,
+    value: Number(w.value) || 0,
+    week_number: Number(w.week_number),
+    month: Number(w.month),
+    year: Number(w.year),
+  }
 }
 
 export function useLaundryWeeks(month: number, year: number, diaristaId?: string | null) {
@@ -29,7 +45,7 @@ export function useLaundryWeeks(month: number, year: number, diaristaId?: string
       const res = await fetch(`/api/db/laundry-weeks?${params}`)
       if (!res.ok) throw new Error('Erro ao buscar semanas')
       const data: LaundryWeek[] = await res.json()
-      setLaundryWeeks(data)
+      setLaundryWeeks(data.map(normalizeWeek))
     } catch (error) {
       console.error('Error fetching laundry weeks:', error)
       setLaundryWeeks([])
@@ -57,7 +73,7 @@ export function useLaundryWeeks(month: number, year: number, diaristaId?: string
         })
         if (!res.ok) throw new Error('Erro ao criar semana')
         const created: LaundryWeek = await res.json()
-        setLaundryWeeks(prev => [...prev, created])
+        setLaundryWeeks(prev => [...prev, normalizeWeek(created)])
       }
     } catch (error) {
       console.error('Error toggling laundry week:', error)
@@ -68,8 +84,8 @@ export function useLaundryWeeks(month: number, year: number, diaristaId?: string
   async function updateLaundryService(id: string, ironed: boolean, washed: boolean) {
     try {
       const config = await getConfigValues()
-      const ironingValue = config.ironing || 50
-      const washingValue = config.washing || 75
+      const ironingValue = config.ironing_value || config.ironing || 50
+      const washingValue = config.washing_value || config.washing || 75
       const value = (ironed ? ironingValue : 0) + (washed ? washingValue : 0)
 
       const res = await fetch(`/api/db/laundry-weeks/${id}`, {
@@ -79,7 +95,7 @@ export function useLaundryWeeks(month: number, year: number, diaristaId?: string
       })
       if (!res.ok) throw new Error('Erro ao atualizar servico')
       const updated: LaundryWeek = await res.json()
-      setLaundryWeeks(prev => prev.map(w => w.id === id ? updated : w))
+      setLaundryWeeks(prev => prev.map(w => w.id === id ? normalizeWeek(updated) : w))
     } catch (error) {
       console.error('Error updating laundry service:', error)
       throw error
@@ -95,7 +111,7 @@ export function useLaundryWeeks(month: number, year: number, diaristaId?: string
       })
       if (!res.ok) throw new Error('Erro ao marcar transporte')
       const updated: LaundryWeek = await res.json()
-      setLaundryWeeks(prev => prev.map(w => w.id === id ? updated : w))
+      setLaundryWeeks(prev => prev.map(w => w.id === id ? normalizeWeek(updated) : w))
     } catch (error) {
       console.error('Error marking transport paid:', error)
       throw error
@@ -111,7 +127,7 @@ export function useLaundryWeeks(month: number, year: number, diaristaId?: string
       })
       if (!res.ok) throw new Error('Erro ao atualizar comprovante')
       const updated: LaundryWeek = await res.json()
-      setLaundryWeeks(prev => prev.map(w => w.id === id ? updated : w))
+      setLaundryWeeks(prev => prev.map(w => w.id === id ? normalizeWeek(updated) : w))
     } catch (error) {
       console.error('Error updating transport receipt:', error)
       throw error

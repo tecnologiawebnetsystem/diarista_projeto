@@ -9,7 +9,7 @@ import {
   ShieldCheck, FileDown, Bus, Plus, AlertTriangle,
   CheckCircle, XCircle, Trash2, Edit2, X,
   Users, Phone, Hash, UserPlus, UserX, UserCheck, Eye, EyeOff,
-  MapPin, Building2, DollarSign, Settings, HandCoins
+  MapPin, Building2, DollarSign, Settings, HandCoins, RotateCcw
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -513,20 +513,42 @@ export default function AdminPage() {
         {/* RESUMO */}
         {activeTab === 'resumo' && (
           <>
-            <Button
-              variant="outline"
-              className="w-full h-11"
-              onClick={() => {
-                const url = `/api/report?month=${selectedMonth}&year=${selectedYear}${selectedDiaristaId ? `&diarista_id=${selectedDiaristaId}` : ''}`
-                window.open(url, '_blank')
-              }}
-            >
-              <FileDown className="h-4 w-4 mr-2" />
-              Gerar Relatorio Mensal
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1 h-11"
+                onClick={() => {
+                  const url = `/api/report?month=${selectedMonth}&year=${selectedYear}${selectedDiaristaId ? `&diarista_id=${selectedDiaristaId}` : ''}`
+                  window.open(url, '_blank')
+                }}
+              >
+                <FileDown className="h-4 w-4 mr-2" />
+                Gerar Relatorio
+              </Button>
+              <Button
+                variant="outline"
+                className="h-11 px-3 border-destructive/40 text-destructive hover:bg-destructive/10"
+                onClick={async () => {
+                  const monthName = new Date(selectedYear, selectedMonth - 1).toLocaleString('pt-BR', { month: 'long' })
+                  const confirmMsg = `Zerar TODOS os dados de ${monthName}/${selectedYear}${selectedDiaristaId ? ` da diarista selecionada` : ''}?\n\nEsta acao nao pode ser desfeita.`
+                  if (!confirm(confirmMsg)) return
+                  const params = new URLSearchParams({ month: String(selectedMonth), year: String(selectedYear) })
+                  if (selectedDiaristaId) params.set('diarista_id', selectedDiaristaId)
+                  const res = await fetch(`/api/db/clear-month?${params}`, { method: 'DELETE' })
+                  if (res.ok) {
+                    alert(`Dados de ${monthName}/${selectedYear} removidos com sucesso!`)
+                    window.location.reload()
+                  } else {
+                    alert('Erro ao limpar dados. Tente novamente.')
+                  }
+                }}
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+            </div>
             <MonthlyPaymentSection month={selectedMonth} year={selectedYear} isAdmin={true} hasActivity={hasActivity} diaristaId={selectedDiaristaId} diaristaName={selectedDiarista?.name} />
             <AttendanceSection month={selectedMonth} year={selectedYear} readOnly diaristaId={selectedDiaristaId} workSchedule={selectedDiarista?.work_schedule} clients={activeClients} />
-            <LaundrySection month={selectedMonth} year={selectedYear} isAdmin diaristaId={selectedDiaristaId} diaristaIroningValue={selectedDiarista?.ironing_value} diaristaWashingValue={selectedDiarista?.washing_value} diaristaTransportValue={selectedDiarista?.transport_value} />
+            <LaundrySection month={selectedMonth} year={selectedYear} isAdmin diaristaId={selectedDiaristaId} diaristaIroningValue={Number(selectedDiarista?.ironing_value) || 0} diaristaWashingValue={Number(selectedDiarista?.washing_value) || 0} diaristaTransportValue={Number(selectedDiarista?.transport_value) || 0} />
           </>
         )}
 
@@ -537,12 +559,12 @@ export default function AdminPage() {
 
         {/* LAVANDERIA */}
         {activeTab === 'lavanderia' && (
-          <LaundrySection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} onDataChange={refetchLaundry} diaristaIroningValue={selectedDiarista?.ironing_value} diaristaWashingValue={selectedDiarista?.washing_value} diaristaTransportValue={selectedDiarista?.transport_value} />
+          <LaundrySection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} onDataChange={refetchLaundry} diaristaIroningValue={Number(selectedDiarista?.ironing_value) || 0} diaristaWashingValue={Number(selectedDiarista?.washing_value) || 0} diaristaTransportValue={Number(selectedDiarista?.transport_value) || 0} />
         )}
 
         {/* TRANSPORTE */}
         {activeTab === 'transporte' && (
-          <TransportSection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} onDataChange={refetchLaundry} diaristaTransportValue={selectedDiarista?.transport_value} />
+          <TransportSection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} onDataChange={refetchLaundry} diaristaTransportValue={Number(selectedDiarista?.transport_value) || 0} />
         )}
 
         {/* NOTAS */}
