@@ -1,5 +1,8 @@
 import mysql, { type Pool, type FieldPacket, type RowDataPacket, type ResultSetHeader } from 'mysql2/promise'
 
+// Alias para aceitar unknown[] e fazer cast internamente
+type Params = unknown[]
+
 // HostGator plano compartilhado tem limite restrito de conexoes simultaneas.
 // Usamos um Connection Pool com limite de 1 conexao para garantir que nao
 // excedemos o limite do servidor.
@@ -42,47 +45,54 @@ function getPool(): Pool {
   return pool
 }
 
-export async function query<T = RowDataPacket>(sql: string, params?: unknown[]): Promise<T[]> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyParams = any[]
+
+async function runQuery<T = RowDataPacket>(p: Pool, sql: string, params: AnyParams): Promise<T[]> {
+  const [rows] = await p.execute<T[] & RowDataPacket[]>(sql, params)
+  return rows
+}
+
+async function runExecute(p: Pool, sql: string, params: AnyParams): Promise<ResultSetHeader> {
+  const [result] = await p.execute<ResultSetHeader>(sql, params)
+  return result
+}
+
+async function resetPool(): Promise<Pool> {
+  if (pool) {
+    try { await pool.end() } catch { /* ignore */ }
+    pool = null
+  }
+  return getPool()
+}
+
+export async function query<T = RowDataPacket>(sql: string, params?: Params): Promise<T[]> {
   const p = getPool()
   try {
-    const [rows] = await p.execute<T[] & RowDataPacket[]>(sql, params ?? [])
-    return rows
+    return await runQuery<T>(p, sql, (params ?? []) as AnyParams)
   } catch (err: unknown) {
     const error = err as { code?: string; message?: string }
-    // Se for erro de conexao, tenta resetar o pool
     if (error?.code === 'ECONNRESET' || error?.code === 'PROTOCOL_CONNECTION_LOST') {
-      if (pool) {
-        try { await pool.end() } catch { /* ignore */ }
-        pool = null
-      }
-      // Retry uma vez
-      const newPool = getPool()
-      const [rows] = await newPool.execute<T[] & RowDataPacket[]>(sql, params ?? [])
-      return rows
+      return await runQuery<T>(await resetPool(), sql, (params ?? []) as AnyParams)
     }
     throw err
   }
 }
 
-export async function queryOne<T = RowDataPacket>(sql: string, params?: unknown[]): Promise<T | null> {
+export async function queryOne<T = RowDataPacket>(sql: string, params?: Params): Promise<T | null> {
   const rows = await query<T>(sql, params)
   return rows.length > 0 ? rows[0] : null
 }
 
-export async function execute(sql: string, params?: unknown[]): Promise<{ insertId: number; affectedRows: number }> {
+export async function execute(sql: string, params?: Params): Promise<{ insertId: number; affectedRows: number }> {
   const p = getPool()
   try {
-    const [result] = await p.execute<ResultSetHeader>(sql, params ?? [])
+    const result = await runExecute(p, sql, (params ?? []) as AnyParams)
     return { insertId: result.insertId, affectedRows: result.affectedRows }
   } catch (err: unknown) {
     const error = err as { code?: string }
     if (error?.code === 'ECONNRESET' || error?.code === 'PROTOCOL_CONNECTION_LOST') {
-      if (pool) {
-        try { await pool.end() } catch { /* ignore */ }
-        pool = null
-      }
-      const newPool = getPool()
-      const [result] = await newPool.execute<ResultSetHeader>(sql, params ?? [])
+      const result = await runExecute(await resetPool(), sql, (params ?? []) as AnyParams)
       return { insertId: result.insertId, affectedRows: result.affectedRows }
     }
     throw err
