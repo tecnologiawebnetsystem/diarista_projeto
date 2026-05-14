@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { User, ShieldCheck, ChevronRight, Lock, Delete, ArrowLeft, Users } from 'lucide-react'
@@ -11,7 +11,7 @@ const ADMIN_PIN_LENGTH = 6
 
 export default function LoginPage() {
   const router = useRouter()
-  const { loginAsDiarista, loginAsAdmin } = useAuth()
+  const { loginAsDiarista, loginAsAdmin, role } = useAuth()
   const [screen, setScreen] = useState<'home' | 'admin-pin' | 'diarista-select'>('home')
   const [pin, setPin] = useState('')
   const [error, setError] = useState(false)
@@ -19,6 +19,17 @@ export default function LoginPage() {
   const [shake, setShake] = useState(false)
   const [diaristas, setDiaristas] = useState<Diarista[]>([])
   const [loadingDiaristas, setLoadingDiaristas] = useState(false)
+  // pendingNav guarda para onde navegar após o role ser commitado no contexto
+  const pendingNav = useRef<'/admin' | '/diarista' | null>(null)
+
+  // Navega somente depois que o role foi commitado no contexto
+  useEffect(() => {
+    if (pendingNav.current && role !== null) {
+      const dest = pendingNav.current
+      pendingNav.current = null
+      router.push(dest)
+    }
+  }, [role, router])
 
   useEffect(() => {
     loadDiaristas()
@@ -53,8 +64,8 @@ export default function LoginPage() {
           if (data.length > 0) {
             setDiaristas(data)
             if (data.length === 1) {
+              pendingNav.current = '/diarista'
               loginAsDiarista(data[0])
-              router.push('/diarista')
             } else {
               setScreen('diarista-select')
             }
@@ -70,8 +81,8 @@ export default function LoginPage() {
 
     if (diaristas.length === 1) {
       // Apenas 1 diarista - entra direto
+      pendingNav.current = '/diarista'
       loginAsDiarista(diaristas[0])
-      router.push('/diarista')
     } else {
       setScreen('diarista-select')
     }
@@ -79,8 +90,8 @@ export default function LoginPage() {
 
   const handleSelectDiarista = (d: Diarista) => {
     // Seleciona e entra direto sem PIN
+    pendingNav.current = '/diarista'
     loginAsDiarista(d)
-    router.push('/diarista')
   }
 
   const triggerShake = () => {
@@ -98,7 +109,8 @@ export default function LoginPage() {
       setLoading(true)
       const success = await loginAsAdmin(next)
       if (success) {
-        router.push('/admin')
+        pendingNav.current = '/admin'
+        // a navegação ocorre no useEffect que observa `role`
       } else {
         setError(true)
         triggerShake()
