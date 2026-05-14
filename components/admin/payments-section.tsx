@@ -1,6 +1,17 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+
+// Formata datas vindas do MySQL (pode vir como "2026-04-01" ou "2026-04-01T03:00:00.000Z")
+function formatDateBR(raw: string | null | undefined): string {
+  if (!raw) return ''
+  // Pega apenas a parte da data (YYYY-MM-DD) para evitar problemas de fuso
+  const datePart = raw.includes('T') ? raw.split('T')[0] : raw
+  const [year, month, day] = datePart.split('-')
+  if (!year || !month || !day) return raw
+  return `${day}/${month}/${year}`
+}
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -115,10 +126,10 @@ export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: 
         )
         const laundryData: { ironed: boolean | number; washed: boolean | number }[] = lwRes.ok ? await lwRes.json() : []
 
-        const heavyValue = diarista.heavy_cleaning_value ?? 250
-        const lightValue = diarista.light_cleaning_value ?? 150
-        const ironingValue = diarista.ironing_value ?? 50
-        const monthlyWashingValue = diarista.washing_value ?? 300
+        const heavyValue = Number(diarista.heavy_cleaning_value ?? 250) || 0
+        const lightValue = Number(diarista.light_cleaning_value ?? 150) || 0
+        const ironingValue = Number(diarista.ironing_value ?? 50) || 0
+        const monthlyWashingValue = Number(diarista.washing_value ?? 300) || 0
         const weeksInMonth = getWeeksInMonth(month, year)
         const washingValuePerWeek = monthlyWashingValue / weeksInMonth
 
@@ -371,7 +382,7 @@ export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: 
                             {mp.payment_date && (
                               <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
-                                Pago em {new Date(mp.payment_date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                                Pago em {formatDateBR(mp.payment_date)}
                               </span>
                             )}
                           </div>
@@ -524,7 +535,7 @@ export function PaymentsSection({ diaristas, selectedDiaristaId, month, year }: 
                       </p>
                       {isPaid && p.paid_at && (
                         <p className="text-[10px] text-green-500/70 mt-0.5">
-                          Pago em {new Date(p.paid_at).toLocaleDateString('pt-BR')}
+                          Pago em {formatDateBR(p.paid_at)}
                         </p>
                       )}
 

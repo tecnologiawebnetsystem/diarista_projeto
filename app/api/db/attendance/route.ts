@@ -38,10 +38,31 @@ export async function POST(request: NextRequest) {
     const { date, day_type, present = true, start_time, end_time, notes, diarista_id, checked_in_by_diarista = false } = body
     const id = generateUUID()
 
-    await execute(
-      'INSERT INTO attendance (id, date, day_type, present, start_time, end_time, notes, diarista_id, checked_in_by_diarista) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [id, date, day_type, present ? 1 : 0, start_time || null, end_time || null, notes || null, diarista_id || null, checked_in_by_diarista ? 1 : 0]
-    )
+    // Verifica se a coluna checked_in_by_diarista existe na tabela
+    let hasCheckedInCol = false
+    try {
+      const cols = await query<{ Field: string }>(
+        "SHOW COLUMNS FROM attendance LIKE 'checked_in_by_diarista'",
+        []
+      )
+      hasCheckedInCol = cols.length > 0
+    } catch {
+      hasCheckedInCol = false
+    }
+
+    if (hasCheckedInCol) {
+      await execute(
+        'INSERT INTO attendance (id, date, day_type, present, start_time, end_time, notes, diarista_id, checked_in_by_diarista) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, date, day_type, present ? 1 : 0, start_time || null, end_time || null, notes || null, diarista_id || null, checked_in_by_diarista ? 1 : 0]
+      )
+    } else {
+      // Coluna ainda não existe no banco — insere sem ela
+      await execute(
+        'INSERT INTO attendance (id, date, day_type, present, start_time, end_time, notes, diarista_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, date, day_type, present ? 1 : 0, start_time || null, end_time || null, notes || null, diarista_id || null]
+      )
+    }
+
     const created = await queryOne('SELECT * FROM attendance WHERE id = ?', [id])
     return NextResponse.json(created, { status: 201 })
   } catch (error) {
