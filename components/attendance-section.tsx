@@ -56,7 +56,11 @@ export function AttendanceSection({ month, year, isAdmin, readOnly = false, diar
 
   const attendanceMap = useMemo(() => {
     const map: Record<string, typeof attendance[0]> = {}
-    attendance.forEach(a => { map[a.date] = a })
+    attendance.forEach(a => {
+      // MySQL pode retornar date como "2026-05-05T03:00:00.000Z" — normaliza para "2026-05-05"
+      const key = a.date.includes('T') ? a.date.split('T')[0] : a.date
+      map[key] = { ...a, date: key }
+    })
     return map
   }, [attendance])
 

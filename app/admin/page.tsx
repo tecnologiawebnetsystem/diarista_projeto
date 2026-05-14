@@ -9,7 +9,7 @@ import {
   ShieldCheck, FileDown, Bus, Plus, AlertTriangle,
   CheckCircle, XCircle, Trash2, Edit2, X,
   Users, Phone, Hash, UserPlus, UserX, UserCheck, Eye, EyeOff,
-  MapPin, Building2, DollarSign, Settings, HandCoins
+  MapPin, Building2, DollarSign, Settings, HandCoins, RotateCcw
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -389,10 +389,6 @@ export default function AdminPage() {
     return sum + services
   }, 0)
   const grandTotal = attendanceTotal + laundryTotal
-  // Transporte agora é independente de lavanderia - conta todas as semanas pagas
-  const transportPaidTotal = Number(laundryWeeks
-    .filter(w => w.paid_at)
-    .reduce((sum, w) => sum + (Number(w.transport_fee) || 0), 0)) || 0
   const warnings = notes.filter(n => n.is_warning)
   const years = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i)
 
@@ -486,19 +482,7 @@ export default function AdminPage() {
                 </div>
                 <p className="text-3xl font-bold">R$ {(Number(grandTotal) || 0).toFixed(2)}</p>
               </div>
-              {transportPaidTotal > 0 && (
-                <>
-                  <div className="w-px h-12 bg-white/20 mx-3" />
-                  <div className="text-center">
-                    <div className="flex items-center justify-center gap-1 mb-1">
-                      <Bus className="h-3.5 w-3.5 opacity-80" />
-                      <p className="text-xs opacity-80">Transporte</p>
-                    </div>
-                    <p className="text-xl font-bold">R$ {(Number(transportPaidTotal) || 0).toFixed(2)}</p>
-                    <p className="text-[10px] opacity-60">pago</p>
-                  </div>
-                </>
-              )}
+
             </div>
             {!hasActivity && (
               <p className="text-xs opacity-60 text-center mt-1">Nenhuma atividade registrada neste mes</p>
@@ -513,20 +497,42 @@ export default function AdminPage() {
         {/* RESUMO */}
         {activeTab === 'resumo' && (
           <>
-            <Button
-              variant="outline"
-              className="w-full h-11"
-              onClick={() => {
-                const url = `/api/report?month=${selectedMonth}&year=${selectedYear}${selectedDiaristaId ? `&diarista_id=${selectedDiaristaId}` : ''}`
-                window.open(url, '_blank')
-              }}
-            >
-              <FileDown className="h-4 w-4 mr-2" />
-              Gerar Relatorio Mensal
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1 h-11"
+                onClick={() => {
+                  const url = `/api/report?month=${selectedMonth}&year=${selectedYear}${selectedDiaristaId ? `&diarista_id=${selectedDiaristaId}` : ''}`
+                  window.open(url, '_blank')
+                }}
+              >
+                <FileDown className="h-4 w-4 mr-2" />
+                Gerar Relatorio
+              </Button>
+              <Button
+                variant="outline"
+                className="h-11 px-3 border-destructive/40 text-destructive hover:bg-destructive/10"
+                onClick={async () => {
+                  const monthName = new Date(selectedYear, selectedMonth - 1).toLocaleString('pt-BR', { month: 'long' })
+                  const confirmMsg = `Zerar TODOS os dados de ${monthName}/${selectedYear}${selectedDiaristaId ? ` da diarista selecionada` : ''}?\n\nEsta acao nao pode ser desfeita.`
+                  if (!confirm(confirmMsg)) return
+                  const params = new URLSearchParams({ month: String(selectedMonth), year: String(selectedYear) })
+                  if (selectedDiaristaId) params.set('diarista_id', selectedDiaristaId)
+                  const res = await fetch(`/api/db/clear-month?${params}`, { method: 'DELETE' })
+                  if (res.ok) {
+                    alert(`Dados de ${monthName}/${selectedYear} removidos com sucesso!`)
+                    window.location.reload()
+                  } else {
+                    alert('Erro ao limpar dados. Tente novamente.')
+                  }
+                }}
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+            </div>
             <MonthlyPaymentSection month={selectedMonth} year={selectedYear} isAdmin={true} hasActivity={hasActivity} diaristaId={selectedDiaristaId} diaristaName={selectedDiarista?.name} />
             <AttendanceSection month={selectedMonth} year={selectedYear} readOnly diaristaId={selectedDiaristaId} workSchedule={selectedDiarista?.work_schedule} clients={activeClients} />
-            <LaundrySection month={selectedMonth} year={selectedYear} isAdmin diaristaId={selectedDiaristaId} diaristaIroningValue={selectedDiarista?.ironing_value} diaristaWashingValue={selectedDiarista?.washing_value} diaristaTransportValue={selectedDiarista?.transport_value} />
+            <LaundrySection month={selectedMonth} year={selectedYear} isAdmin diaristaId={selectedDiaristaId} diaristaIroningValue={Number(selectedDiarista?.ironing_value) || 0} diaristaWashingValue={Number(selectedDiarista?.washing_value) || 0} diaristaTransportValue={Number(selectedDiarista?.transport_value) || 0} />
           </>
         )}
 
@@ -537,12 +543,12 @@ export default function AdminPage() {
 
         {/* LAVANDERIA */}
         {activeTab === 'lavanderia' && (
-          <LaundrySection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} onDataChange={refetchLaundry} diaristaIroningValue={selectedDiarista?.ironing_value} diaristaWashingValue={selectedDiarista?.washing_value} diaristaTransportValue={selectedDiarista?.transport_value} />
+          <LaundrySection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} onDataChange={refetchLaundry} diaristaIroningValue={Number(selectedDiarista?.ironing_value) || 0} diaristaWashingValue={Number(selectedDiarista?.washing_value) || 0} diaristaTransportValue={Number(selectedDiarista?.transport_value) || 0} />
         )}
 
         {/* TRANSPORTE */}
         {activeTab === 'transporte' && (
-          <TransportSection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} onDataChange={refetchLaundry} diaristaTransportValue={selectedDiarista?.transport_value} />
+          <TransportSection month={selectedMonth} year={selectedYear} diaristaId={selectedDiaristaId} onDataChange={refetchLaundry} diaristaTransportValue={Number(selectedDiarista?.transport_value) || 0} />
         )}
 
         {/* NOTAS */}

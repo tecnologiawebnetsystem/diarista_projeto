@@ -56,12 +56,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { month, year, diarista_id, monthly_value, payment_date, paid_at, receipt_url, notes: paymentNotes, hour_limit, loan_deduction } = body
 
-    // Buscar valor mensal da config se nao fornecido
-    let resolvedValue = monthly_value
-    if (!resolvedValue) {
-      const cfgRows = await query<{ key: string; value: number }>('SELECT `key`, value FROM config WHERE `key` = ?', ['monthly_salary'])
-      resolvedValue = cfgRows[0]?.value || 2000
-    }
+    // Usa o valor fornecido pelo caller (calculado em tempo real: attendanceTotal + laundryTotal)
+    const resolvedValue = monthly_value || 0
 
     const dueDate = calculate5thBusinessDay(Number(month), Number(year))
     const id = generateUUID()
