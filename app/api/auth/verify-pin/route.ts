@@ -18,11 +18,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Configuracao admin_pin nao encontrada' }, { status: 500 })
     }
 
-    // O valor vem como numero float do MySQL (ex: "123456.00"), converte para inteiro antes de comparar
-    const correctPin = String(Math.round(Number(row.value)))
-    const providedPin = pin.toString().trim()
+    const rawValue = String(row.value ?? '').trim()
+    const providedPin = String(pin).trim()
 
-    if (providedPin === correctPin) {
+    // Aceita tanto "123456" quanto "123456.00" (valor numérico no banco)
+    const correctPinStr = rawValue
+    const correctPinNum = String(Math.round(Number(rawValue)))
+
+    const match = providedPin === correctPinStr || providedPin === correctPinNum
+
+    if (match) {
       return NextResponse.json({ success: true })
     }
 
