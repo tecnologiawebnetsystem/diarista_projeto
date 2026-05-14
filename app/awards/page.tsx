@@ -85,7 +85,7 @@ export default function AwardsPage() {
                   <Trophy className="h-4 w-4 opacity-80" />
                   <p className="text-xs opacity-80">Período Atual</p>
                 </div>
-                <p className="text-4xl font-bold mb-2">R$ {currentPeriod.value.toFixed(2)}</p>
+                <p className="text-4xl font-bold mb-2">R$ {(Number(currentPeriod.value) || 0).toFixed(2)}</p>
                 <Badge
                   variant={currentPeriod.status === 'awarded' ? 'default' :
                            currentPeriod.status === 'disqualified' ? 'destructive' : 'outline'}
@@ -191,7 +191,7 @@ export default function AwardsPage() {
                       <p className="text-[11px] text-muted-foreground">{award.warnings_count} advertência(s)</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-base font-bold">R$ {award.value.toFixed(2)}</p>
+                      <p className="text-base font-bold">R$ {(Number(award.value) || 0).toFixed(2)}</p>
                       <Badge
                         variant={award.status === 'awarded' ? 'default' :
                                  award.status === 'disqualified' ? 'destructive' : 'secondary'}

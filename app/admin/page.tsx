@@ -1331,16 +1331,16 @@ export default function AdminPage() {
                             {/* Valores resumo */}
                             <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
                               <span className="text-[10px] text-muted-foreground">
-                                Pesada: <strong className="text-foreground">R$ {(d.heavy_cleaning_value ?? 0).toFixed(2)}</strong>
+                                Pesada: <strong className="text-foreground">R$ {(Number(d.heavy_cleaning_value) || 0).toFixed(2)}</strong>
                               </span>
                               <span className="text-[10px] text-muted-foreground">
-                                Leve: <strong className="text-foreground">R$ {(d.light_cleaning_value ?? 0).toFixed(2)}</strong>
+                                Leve: <strong className="text-foreground">R$ {(Number(d.light_cleaning_value) || 0).toFixed(2)}</strong>
                               </span>
                               <span className="text-[10px] text-muted-foreground">
-                                Lav: <strong className="text-foreground">R$ {(d.washing_value ?? 0).toFixed(2)}</strong>
+                                Lav: <strong className="text-foreground">R$ {(Number(d.washing_value) || 0).toFixed(2)}</strong>
                               </span>
                               <span className="text-[10px] text-muted-foreground">
-                                Pass: <strong className="text-foreground">R$ {(d.ironing_value ?? 0).toFixed(2)}</strong>
+                                Pass: <strong className="text-foreground">R$ {(Number(d.ironing_value) || 0).toFixed(2)}</strong>
                               </span>
                             </div>
                           </div>
