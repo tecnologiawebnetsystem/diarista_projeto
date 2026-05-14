@@ -27,18 +27,55 @@ const DB_CONFIG: mysql.ConnectionOptions = {
 
 let connection: Connection | null = null
 let connectionPromise: Promise<Connection> | null = null
+let lastConnectionError: number = 0
+const CONNECTION_COOLDOWN = 10000 // 10 segundos de espera após erro de conexão
 
-async function createConnection(): Promise<Connection> {
-  const conn = await mysql.createConnection(DB_CONFIG)
-  connection = conn
-  connectionPromise = null
-  return conn
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function createConnectionWithRetry(retries = 3): Promise<Connection> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const conn = await mysql.createConnection(DB_CONFIG)
+      connection = conn
+      lastConnectionError = 0
+      return conn
+    } catch (err: unknown) {
+      const error = err as { code?: string }
+      console.error(`[v0] Connection attempt ${i + 1}/${retries} failed:`, error?.code || err)
+      
+      // Se for erro de muitas conexões, esperar mais tempo
+      if (error?.code === 'ER_TOO_MANY_USER_CONNECTIONS') {
+        lastConnectionError = Date.now()
+        if (i < retries - 1) {
+          const waitTime = (i + 1) * 5000 // 5s, 10s, 15s
+          console.log(`[v0] Waiting ${waitTime}ms before retry...`)
+          await sleep(waitTime)
+        }
+      } else {
+        // Outros erros, falhar imediatamente
+        throw err
+      }
+    }
+  }
+  throw new Error('Failed to connect after multiple retries')
 }
 
 async function getConnection(): Promise<Connection> {
   // Se já há uma conexão sendo criada, aguardar ela
   if (connectionPromise) {
     return connectionPromise
+  }
+
+  // Se houve erro recente de conexão, aguardar cooldown
+  if (lastConnectionError > 0) {
+    const elapsed = Date.now() - lastConnectionError
+    if (elapsed < CONNECTION_COOLDOWN) {
+      const waitTime = CONNECTION_COOLDOWN - elapsed
+      console.log(`[v0] Connection cooldown, waiting ${waitTime}ms...`)
+      await sleep(waitTime)
+    }
   }
 
   // Se já temos conexão válida, testar e retornar
@@ -54,10 +91,12 @@ async function getConnection(): Promise<Connection> {
 
   // Criar nova conexão - guarda a Promise ANTES de await
   // para que outras chamadas concorrentes aguardem esta mesma Promise
-  connectionPromise = createConnection().catch(err => {
+  connectionPromise = createConnectionWithRetry().catch(err => {
     connectionPromise = null
     connection = null
     throw err
+  }).finally(() => {
+    connectionPromise = null
   })
 
   return connectionPromise
