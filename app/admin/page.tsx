@@ -341,9 +341,9 @@ export default function AdminPage() {
   }
   // Get values from selected diarista
   const selectedDiarista = allDiaristas.find(d => d.id === selectedDiaristaId)
-  const ironingValue = selectedDiarista?.ironing_value ?? 50
+  const ironingValue = Number(selectedDiarista?.ironing_value ?? 50) || 0
   // washing_value agora é o valor MENSAL, precisa calcular por semana
-  const monthlyWashingValue = selectedDiarista?.washing_value ?? 300
+  const monthlyWashingValue = Number(selectedDiarista?.washing_value ?? 300) || 0
   // Calcula semanas do mês atual
   const getWeeksInMonth = (m: number, y: number) => {
     const lastDay = new Date(y, m, 0).getDate()
@@ -378,8 +378,8 @@ export default function AdminPage() {
   const presentDays = attendance.filter(a => a.present)
   const hasActivity = presentDays.length > 0 || laundryWeeks.some(w => w.ironed || w.washed)
 
-  const heavyCleaningValue = selectedDiarista?.heavy_cleaning_value ?? 250
-  const lightCleaningValue = selectedDiarista?.light_cleaning_value ?? 150
+  const heavyCleaningValue = Number(selectedDiarista?.heavy_cleaning_value ?? 250) || 0
+  const lightCleaningValue = Number(selectedDiarista?.light_cleaning_value ?? 150) || 0
   const heavyDays = presentDays.filter(a => a.day_type === 'heavy_cleaning')
   const lightDays = presentDays.filter(a => a.day_type === 'light_cleaning')
   const attendanceTotal = (heavyDays.length * heavyCleaningValue) + (lightDays.length * lightCleaningValue)
