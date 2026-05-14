@@ -23,11 +23,14 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('ErrorBoundary caught:', error, errorInfo)
+    console.error('[v0] ErrorBoundary caught error:', error.message)
+    console.error('[v0] ErrorBoundary error stack:', error.stack)
+    console.error('[v0] ErrorBoundary componentStack:', errorInfo.componentStack)
   }
 
   render() {
     if (this.state.hasError) {
+      const errorMessage = this.state.error?.message || 'Erro desconhecido'
       return this.props.fallback || (
         <div className="min-h-dvh bg-background flex items-center justify-center p-6">
           <div className="text-center max-w-sm">
@@ -38,6 +41,11 @@ export class ErrorBoundary extends Component<Props, State> {
             <p className="text-sm text-muted-foreground mb-4">
               Ocorreu um erro inesperado. Tente recarregar a pagina.
             </p>
+            {process.env.NODE_ENV === 'development' && (
+              <p className="text-xs text-destructive mb-4 p-2 bg-destructive/10 rounded break-all">
+                {errorMessage}
+              </p>
+            )}
             <button
               onClick={() => {
                 this.setState({ hasError: false, error: null })

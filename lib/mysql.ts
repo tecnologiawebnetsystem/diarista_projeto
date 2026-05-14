@@ -16,7 +16,8 @@ const DB_CONFIG: mysql.ConnectionOptions = {
       return field.string() === '1'
     }
     if (field.type === 'JSON') {
-      const val = field.string()
+      // Usar utf8 conforme recomendado pelo mysql2 para evitar dados BINARY
+      const val = field.string('utf8')
       if (!val) return null
       try { return JSON.parse(val) } catch { return val }
     }
@@ -24,9 +25,21 @@ const DB_CONFIG: mysql.ConnectionOptions = {
   },
 }
 
+// Versão do cache de conexão - incrementar para forçar reconexão
+const CONNECTION_VERSION = 2
 let connection: Connection | null = null
+let connectionVersion = 0
 
 async function getConnection(): Promise<Connection> {
+  // Invalida conexão se a versão mudou
+  if (connectionVersion !== CONNECTION_VERSION) {
+    if (connection) {
+      try { await connection.end() } catch { /* ignore */ }
+    }
+    connection = null
+    connectionVersion = CONNECTION_VERSION
+  }
+  
   if (connection) {
     try {
       await connection.ping()
