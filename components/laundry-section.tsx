@@ -53,14 +53,14 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
   const weeksOfMonth = getWeeksOfMonth(month, year)
   const weeksInMonth = weeksOfMonth.length
   
-  // Valor mensal de lavagem (washing_value agora é mensal)
-  const monthlyWashingValue = diaristaWashingValue ?? 300
+  // Valor mensal de lavagem — força conversão numérica pois o MySQL retorna strings
+  const monthlyWashingValue = Number(diaristaWashingValue ?? 300) || 0
   
   // Calcula o valor por semana baseado no valor mensal dividido pelo numero de semanas
-  const washingValuePerWeek = monthlyWashingValue / weeksInMonth
+  const washingValuePerWeek = weeksInMonth > 0 ? monthlyWashingValue / weeksInMonth : 0
   
-  const ironingValue = diaristaIroningValue ?? 50
-  const transportValue = diaristaTransportValue ?? 30
+  const ironingValue = Number(diaristaIroningValue ?? 50) || 0
+  const transportValue = Number(diaristaTransportValue ?? 30) || 0
 
   const handleIronedChange = async (weekNumber: number, checked: boolean) => {
     const week = laundryWeeks.find(w => w.week_number === weekNumber)
@@ -144,7 +144,7 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
           </CardTitle>
           {totalLaundry > 0 && (
             <span className="text-sm font-bold text-primary">
-              R$ {totalLaundry.toFixed(2)}
+              R$ {(Number(totalLaundry) || 0).toFixed(2)}
             </span>
           )}
         </div>
@@ -165,7 +165,7 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
               <Calculator className="h-3.5 w-3.5 text-muted-foreground" />
               <div>
                 <p className="text-[10px] text-muted-foreground">Valor Mensal</p>
-                <p className="text-xs font-bold">R$ {monthlyWashingValue.toFixed(2)}</p>
+                <p className="text-xs font-bold">R$ {(Number(monthlyWashingValue) || 0).toFixed(2)}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 bg-background/50 rounded-lg px-2.5 py-2">
@@ -177,12 +177,12 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
             </div>
           </div>
           <div className="bg-background/80 rounded-lg px-3 py-2 text-center">
-            <p className="text-[10px] text-muted-foreground">Valor por semana (R$ {monthlyWashingValue.toFixed(2)} / {weeksInMonth})</p>
-            <p className="text-sm font-bold text-primary">R$ {washingValuePerWeek.toFixed(2)} por semana</p>
+            <p className="text-[10px] text-muted-foreground">Valor por semana (R$ {(Number(monthlyWashingValue) || 0).toFixed(2)} / {weeksInMonth})</p>
+            <p className="text-sm font-bold text-primary">R$ {(Number(washingValuePerWeek) || 0).toFixed(2)} por semana</p>
           </div>
           <div className="flex items-center gap-2 pt-1">
             <div className="flex-1 border-t border-border/50" />
-            <p className="text-[9px] text-muted-foreground">Passar roupa: R$ {ironingValue.toFixed(2)} / semana</p>
+            <p className="text-[9px] text-muted-foreground">Passar roupa: R$ {(Number(ironingValue) || 0).toFixed(2)} / semana</p>
             <div className="flex-1 border-t border-border/50" />
           </div>
         </div>
@@ -200,7 +200,7 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
               <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
                 <span className="text-sm font-semibold">{weekLabel}</span>
                 <span className={`text-sm font-bold ${hasAnyService ? 'text-primary' : 'text-muted-foreground'}`}>
-                  R$ {weekTotal.toFixed(2)}
+                  R$ {(Number(weekTotal) || 0).toFixed(2)}
                 </span>
               </div>
 
@@ -228,7 +228,7 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
                     {ironed ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <Circle className="h-4 w-4 shrink-0" />}
                     <div className="text-left">
                       <p className="text-xs font-medium leading-tight">Passou roupa</p>
-                      <p className="text-[11px] opacity-70">R$ {ironingValue.toFixed(2)}</p>
+                      <p className="text-[11px] opacity-70">R$ {(Number(ironingValue) || 0).toFixed(2)}</p>
                     </div>
                   </button>
                   <button
@@ -240,7 +240,7 @@ export function LaundrySection({ month, year, isAdmin = false, diaristaId, onDat
                     {washed ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <Circle className="h-4 w-4 shrink-0" />}
                     <div className="text-left">
                       <p className="text-xs font-medium leading-tight">Lavou roupa</p>
-                      <p className="text-[11px] opacity-70">R$ {washingValuePerWeek.toFixed(2)}</p>
+                      <p className="text-[11px] opacity-70">R$ {(Number(washingValuePerWeek) || 0).toFixed(2)}</p>
                     </div>
                   </button>
                 </div>
