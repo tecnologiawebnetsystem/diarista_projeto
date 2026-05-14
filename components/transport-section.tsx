@@ -88,8 +88,8 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
             week_number: existing.week_number,
             month: existing.month,
             year: existing.year,
-            transport_fee: existing.transport_fee || transportValue,
-            transport_paid_amount: existing.transport_paid_amount || 0,
+            transport_fee: Number(existing.transport_fee) || transportValue,
+            transport_paid_amount: Number(existing.transport_paid_amount) || 0,
             receipt_url: existing.receipt_url,
             paid_at: existing.paid_at,
             ironed: existing.ironed,
@@ -268,6 +268,17 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
     } catch (error) {
       console.error('Error removing transport receipt:', error)
     }
+  }
+
+  if (!diaristaId) {
+    return (
+      <Card>
+        <CardContent className="py-10 flex flex-col items-center justify-center gap-2 text-center">
+          <Bus className="h-8 w-8 text-muted-foreground/40" />
+          <p className="text-sm text-muted-foreground">Selecione uma diarista para ver o transporte</p>
+        </CardContent>
+      </Card>
+    )
   }
 
   if (loading) {

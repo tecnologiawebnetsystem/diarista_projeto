@@ -40,14 +40,13 @@ export async function GET(request: NextRequest) {
       attParams.push(`${filterYear}-01-01`, `${filterYear}-12-31`)
     }
     if (filterMonth && filterYear) {
-      // already filtered by year above, add month filter
       attSql = 'SELECT * FROM attendance WHERE present = 1 AND MONTH(date) = ? AND YEAR(date) = ?'
       attParams.length = 0
       attParams.push(filterMonth, filterYear)
       if (diaristaId) { attSql += ' AND diarista_id = ?'; attParams.push(diaristaId) }
     }
     attSql += ' ORDER BY date DESC'
-    const attendanceData = await query<{ date: string; day_type: string; present: number }>(attSql, attParams)
+    const attendanceData = await query<{ date: string; day_type: string; present: number; diarista_id: string }>(attSql, attParams)
 
     // Buscar pagamentos mensais
     let paymentSql = 'SELECT * FROM monthly_payments WHERE 1=1'
@@ -63,12 +62,12 @@ export async function GET(request: NextRequest) {
     if (filterYear) { laundrySql += ' AND year = ?'; laundryParams.push(filterYear) }
     laundrySql += ' ORDER BY year DESC, month DESC'
     const laundries = await query<{
-      year: number; month: number; ironed: number; washed: number; transport_fee: number; paid_at: string | null
+      year: number; month: number; ironed: number; washed: number; transport_fee: number; paid_at: string | null; diarista_id: string
     }>(laundrySql, laundryParams)
 
     // Montar registros de presenca agrupados por mes
     type Record_ = {
-      id: string; month: number; year: number; type: string
+      id: string; diarista_id: string | null; month: number; year: number; type: string
       description: string; amount: number; status: string; paid_at: string | null; receipt_url: string | null
     }
     const allRecords: Record_[] = []
@@ -88,8 +87,10 @@ export async function GET(request: NextRequest) {
         const light = days.filter(a => a.day_type === 'light_cleaning').length
         const total = heavy * heavyCleaningValue + light * lightCleaningValue
         const payment = payments.find(p => p.month === m && p.year === y)
+        const firstDay = days[0]
         allRecords.push({
           id: `attendance-${key}`,
+          diarista_id: diaristaId || firstDay?.diarista_id || null,
           month: m, year: y, type: 'attendance',
           description: `Limpeza (${heavy} pesada, ${light} leve)`,
           amount: total,
@@ -116,18 +117,20 @@ export async function GET(request: NextRequest) {
 
         const total = activeWeeks.reduce((sum, w) => sum + (w.ironed ? ironingValue : 0) + (w.washed ? washingValue : 0), 0)
         allRecords.push({
-          id: `laundry-${key}`, month: m, year: y, type: 'laundry',
+          id: `laundry-${key}`, diarista_id: diaristaId || weeks[0]?.diarista_id || null,
+          month: m, year: y, type: 'laundry',
           description: `Lavanderia (${activeWeeks.length} semana${activeWeeks.length > 1 ? 's' : ''})`,
           amount: total, status: 'pending', paid_at: null, receipt_url: null,
         })
 
-        const transportWeeks = activeWeeks.filter(w => w.transport_fee > 0)
+        const transportWeeks = activeWeeks.filter(w => Number(w.transport_fee) > 0)
         if (transportWeeks.length > 0) {
-          const transportTotal = transportWeeks.reduce((sum, w) => sum + (w.transport_fee || 0), 0)
+          const transportTotal = transportWeeks.reduce((sum, w) => sum + (Number(w.transport_fee) || 0), 0)
           const transportPaid = transportWeeks.filter(w => w.paid_at)
           const allPaid = transportPaid.length === transportWeeks.length
           allRecords.push({
-            id: `transport-${key}`, month: m, year: y, type: 'transport',
+            id: `transport-${key}`, diarista_id: diaristaId || weeks[0]?.diarista_id || null,
+            month: m, year: y, type: 'transport',
             description: `Transporte (${transportWeeks.length} semana${transportWeeks.length > 1 ? 's' : ''})`,
             amount: transportTotal,
             status: allPaid ? 'paid' : 'pending',
