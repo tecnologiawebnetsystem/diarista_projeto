@@ -389,10 +389,6 @@ export default function AdminPage() {
     return sum + services
   }, 0)
   const grandTotal = attendanceTotal + laundryTotal
-  // Transporte agora é independente de lavanderia - conta todas as semanas pagas
-  const transportPaidTotal = Number(laundryWeeks
-    .filter(w => w.paid_at)
-    .reduce((sum, w) => sum + (Number(w.transport_fee) || 0), 0)) || 0
   const warnings = notes.filter(n => n.is_warning)
   const years = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i)
 
@@ -486,19 +482,7 @@ export default function AdminPage() {
                 </div>
                 <p className="text-3xl font-bold">R$ {(Number(grandTotal) || 0).toFixed(2)}</p>
               </div>
-              {transportPaidTotal > 0 && (
-                <>
-                  <div className="w-px h-12 bg-white/20 mx-3" />
-                  <div className="text-center">
-                    <div className="flex items-center justify-center gap-1 mb-1">
-                      <Bus className="h-3.5 w-3.5 opacity-80" />
-                      <p className="text-xs opacity-80">Transporte</p>
-                    </div>
-                    <p className="text-xl font-bold">R$ {(Number(transportPaidTotal) || 0).toFixed(2)}</p>
-                    <p className="text-[10px] opacity-60">pago</p>
-                  </div>
-                </>
-              )}
+
             </div>
             {!hasActivity && (
               <p className="text-xs opacity-60 text-center mt-1">Nenhuma atividade registrada neste mes</p>
