@@ -1,6 +1,16 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+
+// Formata datas vindas do MySQL (pode vir como "2026-04-01" ou "2026-04-01T03:00:00.000Z")
+function formatDateBR(raw: string | null | undefined): string {
+  if (!raw) return ''
+  const datePart = raw.includes('T') ? raw.split('T')[0] : raw
+  const [year, month, day] = datePart.split('-')
+  if (!year || !month || !day) return raw
+  return `${day}/${month}/${year}`
+}
+
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { DollarSign, CheckCircle, Clock, Receipt, ChevronRight, Calendar, Bus, FileText } from 'lucide-react'
@@ -184,7 +194,7 @@ export function MyPaymentsSection({ diaristaId, month, year }: MyPaymentsSection
                 {currentMonthPayment.paid_at && currentMonthPayment.payment_date && (
                   <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
-                    em {new Date(currentMonthPayment.payment_date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                    em {formatDateBR(currentMonthPayment.payment_date)}
                   </span>
                 )}
                 {currentMonthPayment.receipt_url && (
@@ -282,7 +292,7 @@ export function MyPaymentsSection({ diaristaId, month, year }: MyPaymentsSection
                       </p>
                       {mp.payment_date && (
                         <p className="text-[10px] text-muted-foreground">
-                          Pago em {new Date(mp.payment_date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                          Pago em {formatDateBR(mp.payment_date)}
                         </p>
                       )}
                     </div>
