@@ -28,18 +28,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [selectedDiaristaId, setSelectedDiaristaId] = useState<string | null>(null)
 
   useEffect(() => {
-    const savedRole = sessionStorage.getItem('limpp_day_role') as UserRole
-    const savedDiaristaId = sessionStorage.getItem('limpp_day_diarista_id')
-    const savedDiaristaName = sessionStorage.getItem('limpp_day_diarista_name')
+    try {
+      const savedRole = sessionStorage.getItem('limpp_day_role') as UserRole
+      const savedDiaristaId = sessionStorage.getItem('limpp_day_diarista_id')
+      const savedDiaristaName = sessionStorage.getItem('limpp_day_diarista_name')
 
-    if (savedRole) {
-      setRole(savedRole)
-      setIsAuthenticated(true)
-      if (savedRole === 'diarista' && savedDiaristaId && savedDiaristaName) {
-        setDiarista({ id: savedDiaristaId, name: savedDiaristaName } as Diarista)
+      if (savedRole) {
+        setRole(savedRole)
+        setIsAuthenticated(true)
+        if (savedRole === 'diarista' && savedDiaristaId && savedDiaristaName) {
+          setDiarista({ id: savedDiaristaId, name: savedDiaristaName } as Diarista)
+        }
       }
+    } catch (error) {
+      console.error('[v0] Error reading sessionStorage:', error)
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }, [])
 
   const loginAsDiarista = (d: Diarista) => {

@@ -390,9 +390,9 @@ export default function AdminPage() {
   }, 0)
   const grandTotal = attendanceTotal + laundryTotal
   // Transporte agora é independente de lavanderia - conta todas as semanas pagas
-  const transportPaidTotal = laundryWeeks
+  const transportPaidTotal = Number(laundryWeeks
     .filter(w => w.paid_at)
-    .reduce((sum, w) => sum + (w.transport_fee || 0), 0)
+    .reduce((sum, w) => sum + (Number(w.transport_fee) || 0), 0)) || 0
   const warnings = notes.filter(n => n.is_warning)
   const years = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i)
 

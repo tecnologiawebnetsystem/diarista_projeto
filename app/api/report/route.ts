@@ -99,10 +99,10 @@ export async function GET(request: NextRequest) {
     }, 0)
 
     // Transporte agora é independente de lavanderia - conta todas as semanas
-    const transportTotal = (laundryData || []).reduce((sum, w) => {
-      return sum + (w.transport_fee || 0)
-    }, 0)
-    const transportPaidTotal = (laundryData || []).filter((w) => w.paid_at).reduce((sum, w) => sum + (w.transport_fee || 0), 0)
+    const transportTotal = Number((laundryData || []).reduce((sum, w) => {
+      return sum + (Number(w.transport_fee) || 0)
+    }, 0)) || 0
+    const transportPaidTotal = Number((laundryData || []).filter((w) => w.paid_at).reduce((sum, w) => sum + (Number(w.transport_fee) || 0), 0)) || 0
 
     const warnings = (notesData || []).filter((n) => n.is_warning).length
     const grandTotal = attendanceTotal + laundryTotal
