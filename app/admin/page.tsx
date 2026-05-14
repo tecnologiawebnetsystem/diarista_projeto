@@ -484,7 +484,7 @@ export default function AdminPage() {
                   <TrendingUp className="h-3.5 w-3.5 opacity-80" />
                   <p className="text-xs opacity-80">Total do Mes</p>
                 </div>
-                <p className="text-3xl font-bold">R$ {grandTotal.toFixed(2)}</p>
+                <p className="text-3xl font-bold">R$ {(Number(grandTotal) || 0).toFixed(2)}</p>
               </div>
               {transportPaidTotal > 0 && (
                 <>
@@ -494,7 +494,7 @@ export default function AdminPage() {
                       <Bus className="h-3.5 w-3.5 opacity-80" />
                       <p className="text-xs opacity-80">Transporte</p>
                     </div>
-                    <p className="text-xl font-bold">R$ {transportPaidTotal.toFixed(2)}</p>
+                    <p className="text-xl font-bold">R$ {(Number(transportPaidTotal) || 0).toFixed(2)}</p>
                     <p className="text-[10px] opacity-60">pago</p>
                   </div>
                 </>
