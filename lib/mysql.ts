@@ -25,31 +25,38 @@ const DB_CONFIG: mysql.ConnectionOptions = {
   },
 }
 
-// Versão do cache de conexão - incrementar para forçar reconexão
-const CONNECTION_VERSION = 2
 let connection: Connection | null = null
-let connectionVersion = 0
+let connectionPromise: Promise<Connection> | null = null
 
 async function getConnection(): Promise<Connection> {
-  // Invalida conexão se a versão mudou
-  if (connectionVersion !== CONNECTION_VERSION) {
-    if (connection) {
-      try { await connection.end() } catch { /* ignore */ }
-    }
-    connection = null
-    connectionVersion = CONNECTION_VERSION
-  }
-  
+  // Se já temos conexão válida, testar e retornar
   if (connection) {
     try {
       await connection.ping()
       return connection
     } catch {
+      // Conexão morreu, resetar
       connection = null
+      connectionPromise = null
     }
   }
-  connection = await mysql.createConnection(DB_CONFIG)
-  return connection
+
+  // Se já há uma conexão sendo criada, aguardar
+  if (connectionPromise) {
+    return connectionPromise
+  }
+
+  // Criar nova conexão com mutex via Promise
+  connectionPromise = mysql.createConnection(DB_CONFIG).then(conn => {
+    connection = conn
+    connectionPromise = null
+    return conn
+  }).catch(err => {
+    connectionPromise = null
+    throw err
+  })
+
+  return connectionPromise
 }
 
 // mysql2 usa um tipo interno para os valores de parametros.
