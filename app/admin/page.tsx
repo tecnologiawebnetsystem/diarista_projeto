@@ -484,7 +484,7 @@ export default function AdminPage() {
                   <TrendingUp className="h-3.5 w-3.5 opacity-80" />
                   <p className="text-xs opacity-80">Total do Mes</p>
                 </div>
-                <p className="text-3xl font-bold">R$ {grandTotal.toFixed(2)}</p>
+                <p className="text-3xl font-bold">R$ {(Number(grandTotal) || 0).toFixed(2)}</p>
               </div>
               {transportPaidTotal > 0 && (
                 <>
@@ -494,7 +494,7 @@ export default function AdminPage() {
                       <Bus className="h-3.5 w-3.5 opacity-80" />
                       <p className="text-xs opacity-80">Transporte</p>
                     </div>
-                    <p className="text-xl font-bold">R$ {transportPaidTotal.toFixed(2)}</p>
+                    <p className="text-xl font-bold">R$ {(Number(transportPaidTotal) || 0).toFixed(2)}</p>
                     <p className="text-[10px] opacity-60">pago</p>
                   </div>
                 </>
@@ -1331,16 +1331,16 @@ export default function AdminPage() {
                             {/* Valores resumo */}
                             <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
                               <span className="text-[10px] text-muted-foreground">
-                                Pesada: <strong className="text-foreground">R$ {(d.heavy_cleaning_value ?? 0).toFixed(2)}</strong>
+                                Pesada: <strong className="text-foreground">R$ {(Number(d.heavy_cleaning_value) || 0).toFixed(2)}</strong>
                               </span>
                               <span className="text-[10px] text-muted-foreground">
-                                Leve: <strong className="text-foreground">R$ {(d.light_cleaning_value ?? 0).toFixed(2)}</strong>
+                                Leve: <strong className="text-foreground">R$ {(Number(d.light_cleaning_value) || 0).toFixed(2)}</strong>
                               </span>
                               <span className="text-[10px] text-muted-foreground">
-                                Lav: <strong className="text-foreground">R$ {(d.washing_value ?? 0).toFixed(2)}</strong>
+                                Lav: <strong className="text-foreground">R$ {(Number(d.washing_value) || 0).toFixed(2)}</strong>
                               </span>
                               <span className="text-[10px] text-muted-foreground">
-                                Pass: <strong className="text-foreground">R$ {(d.ironing_value ?? 0).toFixed(2)}</strong>
+                                Pass: <strong className="text-foreground">R$ {(Number(d.ironing_value) || 0).toFixed(2)}</strong>
                               </span>
                             </div>
                           </div>

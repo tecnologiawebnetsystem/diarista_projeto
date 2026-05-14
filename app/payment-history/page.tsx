@@ -61,14 +61,14 @@ export default function PaymentHistoryPage() {
             <CardContent className="p-4 text-center">
               <CheckCircle className="h-5 w-5 text-green-600 mx-auto mb-1" />
               <p className="text-[11px] text-muted-foreground">Total Pago</p>
-              <p className="text-lg font-bold text-green-600">R$ {totalPaid.toFixed(2)}</p>
+              <p className="text-lg font-bold text-green-600">R$ {(Number(totalPaid) || 0).toFixed(2)}</p>
             </CardContent>
           </Card>
           <Card className="border-amber-500/30 bg-amber-500/5">
             <CardContent className="p-4 text-center">
               <Clock className="h-5 w-5 text-amber-600 mx-auto mb-1" />
               <p className="text-[11px] text-muted-foreground">Pendente</p>
-              <p className="text-lg font-bold text-amber-600">R$ {totalPending.toFixed(2)}</p>
+              <p className="text-lg font-bold text-amber-600">R$ {(Number(totalPending) || 0).toFixed(2)}</p>
             </CardContent>
           </Card>
         </div>
@@ -137,7 +137,7 @@ export default function PaymentHistoryPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-base font-bold text-foreground">R$ {record.amount.toFixed(2)}</p>
+                      <p className="text-base font-bold text-foreground">R$ {(Number(record.amount) || 0).toFixed(2)}</p>
                       <Badge
                         variant={record.status === 'paid' ? 'default' : 'secondary'}
                         className={cn(

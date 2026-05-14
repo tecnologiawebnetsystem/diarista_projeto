@@ -104,9 +104,9 @@ export default function DiaristaPage() {
     )
   }
 
-  const ironingValue = currentDiarista?.ironing_value ?? 50
+  const ironingValue = Number(currentDiarista?.ironing_value ?? 50) || 0
   // washing_value agora é o valor MENSAL, precisa calcular por semana
-  const monthlyWashingValue = currentDiarista?.washing_value ?? 300
+  const monthlyWashingValue = Number(currentDiarista?.washing_value ?? 300) || 0
   // Calcula semanas do mês atual
   const getWeeksInMonth = (m: number, y: number) => {
     const lastDay = new Date(y, m, 0).getDate()
@@ -326,7 +326,7 @@ export default function DiaristaPage() {
                   <TrendingUp className="h-3.5 w-3.5 opacity-80" />
                   <p className="text-xs opacity-80">Seus Ganhos no Mes</p>
                 </div>
-                <p className="text-3xl font-bold">R$ {grandTotal.toFixed(2)}</p>
+                <p className="text-3xl font-bold">R$ {(Number(grandTotal) || 0).toFixed(2)}</p>
               </div>
               {transportPaidTotal > 0 && (
                 <>
@@ -336,7 +336,7 @@ export default function DiaristaPage() {
                       <Bus className="h-3.5 w-3.5 opacity-80" />
                       <p className="text-xs opacity-80">Transporte</p>
                     </div>
-                    <p className="text-xl font-bold">R$ {transportPaidTotal.toFixed(2)}</p>
+                    <p className="text-xl font-bold">R$ {(Number(transportPaidTotal) || 0).toFixed(2)}</p>
                     <p className="text-[10px] opacity-60">recebido</p>
                   </div>
                 </>
@@ -444,7 +444,7 @@ export default function DiaristaPage() {
                           <p className="text-xs text-muted-foreground mt-1">Limite: 20:00</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-xl font-bold text-primary">R$ {grandTotal.toFixed(2)}</p>
+                          <p className="text-xl font-bold text-primary">R$ {(Number(grandTotal) || 0).toFixed(2)}</p>
                           <Badge variant={payment?.paid_at ? 'default' : 'outline'} className="text-[10px] mt-1">
                             {payment?.paid_at ? 'Pago' : 'Aguardando'}
                           </Badge>
@@ -571,7 +571,7 @@ export default function DiaristaPage() {
                           <div className="flex items-center justify-between">
                             <p className="text-sm font-semibold">{weekLabel}</p>
                             <p className={`text-sm font-bold ${hasServices ? 'text-primary' : 'text-muted-foreground'}`}>
-                              R$ {services.toFixed(2)}
+                              R$ {(Number(services) || 0).toFixed(2)}
                             </p>
                           </div>
                           {hasServices && (
@@ -640,11 +640,11 @@ export default function DiaristaPage() {
                     {/* Resumo com visual melhorado */}
                     <div className="grid grid-cols-2 gap-3">
                       <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-center">
-                        <p className="text-2xl font-bold text-green-500">R$ {totalPaid.toFixed(2)}</p>
+                        <p className="text-2xl font-bold text-green-500">R$ {(Number(totalPaid) || 0).toFixed(2)}</p>
                         <p className="text-xs text-green-500/80 mt-1">Recebido</p>
                       </div>
                       <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-center">
-                        <p className="text-2xl font-bold text-amber-500">R$ {totalPending.toFixed(2)}</p>
+                        <p className="text-2xl font-bold text-amber-500">R$ {(Number(totalPending) || 0).toFixed(2)}</p>
                         <p className="text-xs text-amber-500/80 mt-1">Pendente</p>
                       </div>
                     </div>
@@ -722,10 +722,10 @@ export default function DiaristaPage() {
                                 <p className={`text-base font-bold ${
                                   isPaidFull ? 'text-green-500' : isPaidHalf ? 'text-yellow-500' : 'text-muted-foreground'
                                 }`}>
-                                  R$ {paidAmount.toFixed(2)}
+                                  R$ {(Number(paidAmount) || 0).toFixed(2)}
                                 </p>
                                 <p className="text-[10px] text-muted-foreground">
-                                  de R$ {transportValue.toFixed(2)}
+                                  de R$ {(Number(transportValue) || 0).toFixed(2)}
                                 </p>
                               </div>
                             </div>
@@ -1028,10 +1028,10 @@ export default function DiaristaPage() {
               <div className="p-4">
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { label: 'Limpeza Pesada', value: currentDiarista?.heavy_cleaning_value ?? 250, color: 'text-destructive' },
-                    { label: 'Limpeza Leve', value: currentDiarista?.light_cleaning_value ?? 150, color: 'text-primary' },
-                    { label: 'Lavagem', value: currentDiarista?.washing_value ?? 75, color: 'text-primary' },
-                    { label: 'Passar Roupa', value: currentDiarista?.ironing_value ?? 50, color: 'text-primary' },
+                    { label: 'Limpeza Pesada', value: Number(currentDiarista?.heavy_cleaning_value ?? 250) || 0, color: 'text-destructive' },
+                    { label: 'Limpeza Leve', value: Number(currentDiarista?.light_cleaning_value ?? 150) || 0, color: 'text-primary' },
+                    { label: 'Lavagem', value: Number(currentDiarista?.washing_value ?? 75) || 0, color: 'text-primary' },
+                    { label: 'Passar Roupa', value: Number(currentDiarista?.ironing_value ?? 50) || 0, color: 'text-primary' },
                   ].map((item, i) => (
                     <div key={i} className="rounded-xl bg-muted/50 p-3.5 text-center border border-border/30">
                       <p className={cn('text-lg font-bold', item.color)}>
