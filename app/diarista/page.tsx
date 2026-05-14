@@ -79,7 +79,7 @@ export default function DiaristaPage() {
       setProfileName(currentDiarista.name)
       setProfilePhone(currentDiarista.phone || '')
     }
-  }, [currentDiarista?.id, currentDiarista?.name, currentDiarista?.phone])
+  }, [currentDiarista])
   const { notifications: dbNotifications, unreadCount, markAsRead, markAllAsRead } = useDbNotifications(diaristaId)
   const [showNotifications, setShowNotifications] = useState(false)
   const { payment } = useMonthlyPayments(selectedMonth, selectedYear, diaristaId)

@@ -45,8 +45,7 @@ function getPool(): Pool {
   return pool
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyParams = any[]
+type AnyParams = unknown[]
 
 async function runQuery<T = RowDataPacket>(p: Pool, sql: string, params: AnyParams): Promise<T[]> {
   const [rows] = await p.execute<T[] & RowDataPacket[]>(sql, params)
