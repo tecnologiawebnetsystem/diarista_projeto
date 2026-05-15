@@ -168,16 +168,19 @@ export default function DiaristaPage() {
   const presentDays = attendances.filter(a => a.present)
   const hasActivity = presentDays.length > 0 || laundryWeeks.some(w => w.ironed || w.washed)
 
-  const heavyCleaningValue = currentDiarista?.heavy_cleaning_value ?? 250
-  const lightCleaningValue = currentDiarista?.light_cleaning_value ?? 150
+  // Só calcula o total quando a diarista estiver carregada
+  const isDataReady = !loadingDiaristas && !loadingAttendance && !loadingLaundry && currentDiarista
+
+  const heavyCleaningValue = Number(currentDiarista?.heavy_cleaning_value) || 0
+  const lightCleaningValue = Number(currentDiarista?.light_cleaning_value) || 0
   const heavyDays = presentDays.filter(a => a.day_type === 'heavy_cleaning')
   const lightDays = presentDays.filter(a => a.day_type === 'light_cleaning')
-  const attendanceTotal = (heavyDays.length * heavyCleaningValue) + (lightDays.length * lightCleaningValue)
+  const attendanceTotal = isDataReady ? (heavyDays.length * heavyCleaningValue) + (lightDays.length * lightCleaningValue) : 0
 
-  const laundryTotal = laundryWeeks.reduce((sum, week) => {
+  const laundryTotal = isDataReady ? laundryWeeks.reduce((sum, week) => {
     const services = (week.ironed ? ironingValue : 0) + (week.washed ? washingValue : 0)
     return sum + services
-  }, 0)
+  }, 0) : 0
   const grandTotal = attendanceTotal + laundryTotal
   // Transporte agora é independente de lavanderia - conta todas as semanas pagas
   const transportPaidTotal = Number(laundryWeeks

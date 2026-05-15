@@ -378,16 +378,19 @@ export default function AdminPage() {
   const presentDays = attendance.filter(a => a.present)
   const hasActivity = presentDays.length > 0 || laundryWeeks.some(w => w.ironed || w.washed)
 
-  const heavyCleaningValue = Number(selectedDiarista?.heavy_cleaning_value ?? 250) || 0
-  const lightCleaningValue = Number(selectedDiarista?.light_cleaning_value ?? 150) || 0
+  // Só calcula o total quando a diarista selecionada estiver carregada
+  const isDataReady = !loadingDiaristas && !loadingAttendance && !loadingLaundry && selectedDiarista
+  
+  const heavyCleaningValue = Number(selectedDiarista?.heavy_cleaning_value) || 0
+  const lightCleaningValue = Number(selectedDiarista?.light_cleaning_value) || 0
   const heavyDays = presentDays.filter(a => a.day_type === 'heavy_cleaning')
   const lightDays = presentDays.filter(a => a.day_type === 'light_cleaning')
-  const attendanceTotal = (heavyDays.length * heavyCleaningValue) + (lightDays.length * lightCleaningValue)
+  const attendanceTotal = isDataReady ? (heavyDays.length * heavyCleaningValue) + (lightDays.length * lightCleaningValue) : 0
 
-  const laundryTotal = laundryWeeks.reduce((sum, week) => {
+  const laundryTotal = isDataReady ? laundryWeeks.reduce((sum, week) => {
     const services = (week.ironed ? ironingValue : 0) + (week.washed ? washingValuePerWeek : 0)
     return sum + services
-  }, 0)
+  }, 0) : 0
   const grandTotal = attendanceTotal + laundryTotal
   const warnings = notes.filter(n => n.is_warning)
   const years = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i)
