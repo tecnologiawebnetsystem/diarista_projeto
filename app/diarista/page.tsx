@@ -18,6 +18,7 @@ import { useAttendance } from '@/hooks/use-attendance'
 import { useLaundryWeeks } from '@/hooks/use-laundry-weeks'
 import { useNotes } from '@/hooks/use-notes'
 import { useAwards } from '@/hooks/use-awards'
+import { useLoans } from '@/hooks/use-loans'
 import { useDiaristas } from '@/hooks/use-diaristas'
 import { useClients } from '@/hooks/use-clients'
 import { ContractViewer } from '@/components/contract-viewer'
@@ -87,6 +88,7 @@ export default function DiaristaPage() {
   const { laundryWeeks, loading: loadingLaundry, refetch: refetchLaundry } = useLaundryWeeks(selectedMonth, selectedYear, diaristaId)
   const { notes } = useNotes(selectedMonth, selectedYear, diaristaId)
   const { currentPeriod: currentPeriodAward } = useAwards(diaristaId)
+  const { activeLoans, totalDebt } = useLoans(diaristaId)
 
   useEffect(() => {
     if (isLoading) return
@@ -319,29 +321,23 @@ export default function DiaristaPage() {
         </div>
       </div>
 
-      {/* Total Card */}
+      {/* Total Card - Ganho Atual */}
       <div className={cn('px-4 pb-3', activeTab === 'perfil' && 'hidden')}>
-        <Card className="gradient-primary text-white shadow-lg">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex-1 text-center">
-                <div className="flex items-center justify-center gap-1 mb-1">
-                  <TrendingUp className="h-3.5 w-3.5 opacity-80" />
-                  <p className="text-xs opacity-80">Seus Ganhos no Mes</p>
+        <Card className="gradient-primary text-white shadow-lg overflow-hidden">
+          <CardContent className="pt-5 pb-5">
+            <div className="text-center">
+              <p className="text-sm opacity-90 mb-1">Seu ganho atual no momento</p>
+              {(loadingDiaristas || loadingAttendance || loadingLaundry) ? (
+                <div className="h-12 flex items-center justify-center">
+                  <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 </div>
-                {(loadingDiaristas || loadingAttendance || loadingLaundry) ? (
-                  <div className="h-9 flex items-center justify-center">
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  </div>
-                ) : (
-                  <p className="text-3xl font-bold">R$ {(Number(grandTotal) || 0).toFixed(2)}</p>
-                )}
-              </div>
-
+              ) : (
+                <p className="text-4xl font-bold tracking-tight">R$ {(Number(grandTotal) || 0).toFixed(2)}</p>
+              )}
+              {!loadingAttendance && !loadingLaundry && !hasActivity && (
+                <p className="text-xs opacity-60 mt-2">Nenhuma atividade registrada neste mes</p>
+              )}
             </div>
-            {!loadingAttendance && !loadingLaundry && !hasActivity && (
-              <p className="text-xs opacity-60 text-center mt-1">Nenhuma atividade registrada neste mes</p>
-            )}
           </CardContent>
         </Card>
       </div>
@@ -394,22 +390,94 @@ export default function DiaristaPage() {
               )
             })()}
 
+            {/* Detalhes do Mes - Grid Profissional */}
             <Card>
-              <CardContent className="py-4 px-4">
-                <div className="flex gap-2">
-                  <div className="flex-1 bg-muted rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-primary">{heavyDays.length}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">Pesada</p>
+              <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <LayoutDashboard className="h-4 w-4 text-primary" />
+                  Resumo do Mes
+                </CardTitle>
+                <CardDescription className="text-xs">Detalhes das suas atividades em {MONTHS[selectedMonth - 1]}</CardDescription>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Limpeza Pesada */}
+                  <div className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border border-amber-500/20 rounded-xl p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                        <Briefcase className="h-4 w-4 text-amber-500" />
+                      </div>
+                      <span className="text-[11px] text-muted-foreground font-medium">Limpeza Pesada</span>
+                    </div>
+                    <p className="text-2xl font-bold text-amber-500">{heavyDays.length}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {heavyDays.length === 1 ? 'dia trabalhado' : 'dias trabalhados'}
+                    </p>
                   </div>
-                  <div className="flex-1 bg-muted rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-primary">{lightDays.length}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">Leve</p>
+
+                  {/* Limpeza Leve */}
+                  <div className="bg-gradient-to-br from-green-500/10 to-green-600/5 border border-green-500/20 rounded-xl p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      </div>
+                      <span className="text-[11px] text-muted-foreground font-medium">Limpeza Leve</span>
+                    </div>
+                    <p className="text-2xl font-bold text-green-500">{lightDays.length}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {lightDays.length === 1 ? 'dia trabalhado' : 'dias trabalhados'}
+                    </p>
                   </div>
-                  <div className="flex-1 bg-muted rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-primary">{notes.length}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{'Anotações'}</p>
+
+                  {/* Lavanderia - Lavou */}
+                  <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 rounded-xl p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                        <WashingMachine className="h-4 w-4 text-blue-500" />
+                      </div>
+                      <span className="text-[11px] text-muted-foreground font-medium">Lavou Roupa</span>
+                    </div>
+                    <p className="text-2xl font-bold text-blue-500">{laundryWeeks.filter(w => w.washed).length}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {laundryWeeks.filter(w => w.washed).length === 1 ? 'semana' : 'semanas'}
+                    </p>
+                  </div>
+
+                  {/* Lavanderia - Passou */}
+                  <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20 rounded-xl p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                        <Receipt className="h-4 w-4 text-purple-500" />
+                      </div>
+                      <span className="text-[11px] text-muted-foreground font-medium">Passou Roupa</span>
+                    </div>
+                    <p className="text-2xl font-bold text-purple-500">{laundryWeeks.filter(w => w.ironed).length}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {laundryWeeks.filter(w => w.ironed).length === 1 ? 'semana' : 'semanas'}
+                    </p>
                   </div>
                 </div>
+
+                {/* Adiantamentos/Emprestimos */}
+                {activeLoans.length > 0 && (
+                  <div className="mt-3 bg-gradient-to-br from-red-500/10 to-red-600/5 border border-red-500/20 rounded-xl p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
+                          <HandCoins className="h-4 w-4 text-red-500" />
+                        </div>
+                        <div>
+                          <span className="text-[11px] text-muted-foreground font-medium block">Adiantamentos</span>
+                          <span className="text-[10px] text-muted-foreground">{activeLoans.length} {activeLoans.length === 1 ? 'ativo' : 'ativos'}</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-red-500">R$ {totalDebt.toFixed(2)}</p>
+                        <p className="text-[10px] text-muted-foreground">saldo devedor</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
