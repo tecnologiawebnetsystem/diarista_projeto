@@ -65,22 +65,22 @@
     --radius: 0.75rem;
   }
 
-  /* Tema Diarista - Azul, Laranja, Amarelo, Verde e Marrom */
+  /* Tema Diarista - Rosa, Laranja, Amarelo, Verde e Marrom */
   .theme-diarista {
-    /* Base colors - Fundo azul escuro profundo */
-    --background: 215 35% 8%;
+    /* Base colors - Fundo rosa escuro suave */
+    --background: 340 25% 8%;
     --foreground: 45 30% 95%;
     
-    /* Card colors - Cards em azul escuro */
-    --card: 215 30% 12%;
+    /* Card colors - Cards em rosa escuro */
+    --card: 340 20% 12%;
     --card-foreground: 45 30% 95%;
     
     /* Popover colors */
-    --popover: 215 30% 12%;
+    --popover: 340 20% 12%;
     --popover-foreground: 45 30% 95%;
     
-    /* Primary - Azul vibrante */
-    --primary: 210 85% 55%;
+    /* Primary - Rosa claro vibrante */
+    --primary: 340 75% 65%;
     --primary-foreground: 0 0% 100%;
     
     /* Secondary - Marrom terroso */
@@ -103,14 +103,14 @@
     --warning: 45 95% 55%;
     --warning-foreground: 30 50% 15%;
     
-    /* Muted colors - Tons de azul acinzentado */
-    --muted: 215 25% 18%;
-    --muted-foreground: 215 15% 55%;
+    /* Muted colors - Tons de rosa acinzentado */
+    --muted: 340 15% 18%;
+    --muted-foreground: 340 10% 55%;
     
     /* Border and input */
-    --border: 215 25% 22%;
-    --input: 215 25% 15%;
-    --ring: 210 85% 55%;
+    --border: 340 15% 22%;
+    --input: 340 15% 15%;
+    --ring: 340 75% 65%;
   }
 }
 
@@ -252,7 +252,7 @@
 
   /* Gradient backgrounds - Diarista theme */
   .theme-diarista .gradient-primary {
-    background: linear-gradient(135deg, hsl(210 85% 55%) 0%, hsl(210 85% 40%) 100%);
+    background: linear-gradient(135deg, hsl(340 75% 65%) 0%, hsl(340 75% 50%) 100%);
   }
   
   .theme-diarista .gradient-accent {
@@ -265,7 +265,7 @@
 
   /* Glow effects - Diarista theme */
   .theme-diarista .glow-primary {
-    box-shadow: 0 0 20px hsl(210 85% 55% / 0.3);
+    box-shadow: 0 0 20px hsl(340 75% 65% / 0.3);
   }
   
   .theme-diarista .glow-accent {
@@ -274,7 +274,7 @@
 
   /* Body background for diarista theme */
   .theme-diarista {
-    background: linear-gradient(135deg, hsl(215 35% 8%) 0%, hsl(215 30% 12%) 100%);
+    background: linear-gradient(135deg, hsl(340 25% 8%) 0%, hsl(340 20% 12%) 100%);
   }
   
   /* Card hover effects - Enhanced for dark */
