@@ -365,11 +365,7 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
         <div className="flex gap-2">
           <div className="flex-1 bg-green-500/10 rounded-lg p-2.5 text-center">
             <p className="text-lg font-bold text-green-500">R$ {(Number(totalPaid) || 0).toFixed(2)}</p>
-            <p className="text-[10px] text-muted-foreground">Pago</p>
-          </div>
-          <div className="flex-1 bg-destructive/10 rounded-lg p-2.5 text-center">
-            <p className="text-lg font-bold text-destructive">R$ {(Number(totalPending) || 0).toFixed(2)}</p>
-            <p className="text-[10px] text-muted-foreground">Pendente</p>
+            <p className="text-[10px] text-muted-foreground">Recebido</p>
           </div>
         </div>
 
