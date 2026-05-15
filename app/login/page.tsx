@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { User, ShieldCheck, ChevronRight, Lock, Delete, ArrowLeft, Users } from 'lucide-react'
+import { UserRound, Briefcase, ChevronRight, Lock, Delete, ArrowLeft, Users, ShieldCheck } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import type { Diarista } from '@/types/database'
 
@@ -358,7 +358,7 @@ export default function LoginPage() {
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight text-foreground mt-6">LIMPP DAY</h1>
           <p className="text-[11px] text-muted-foreground tracking-[0.3em] uppercase font-medium mt-1.5">
-            {'Gestao de Servicos'}
+            {'GESTÃO DE SERVIÇOS'}
           </p>
         </div>
 
@@ -370,7 +370,7 @@ export default function LoginPage() {
             className="w-full flex items-center gap-4 px-5 py-[22px] active:bg-muted/50 transition-all text-left group"
           >
             <div className="w-[52px] h-[52px] rounded-[16px] gradient-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/25 group-active:scale-95 transition-transform">
-              <User className="h-6 w-6 text-primary-foreground" />
+              <UserRound className="h-6 w-6 text-primary-foreground" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-bold text-[15px] text-foreground leading-tight">Diarista</p>
@@ -398,7 +398,7 @@ export default function LoginPage() {
             className="w-full flex items-center gap-4 px-5 py-[22px] active:bg-muted/50 transition-all text-left group"
           >
             <div className="w-[52px] h-[52px] rounded-[16px] bg-muted border border-border flex items-center justify-center shrink-0 group-active:scale-95 transition-transform">
-              <ShieldCheck className="h-6 w-6 text-muted-foreground" />
+              <Briefcase className="h-6 w-6 text-muted-foreground" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-bold text-[15px] text-foreground leading-tight">Administrador</p>
