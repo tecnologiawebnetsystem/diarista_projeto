@@ -965,11 +965,6 @@ export default function DiaristaPage() {
                     </p>
                     <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mt-0.5">clientes</p>
                   </div>
-                  <div className="w-px h-8 bg-border/50" />
-                  <div className="text-center">
-                    <p className="text-xl font-bold text-primary">{currentPeriodAward?.performance_score || 0}</p>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mt-0.5">score</p>
-                  </div>
                 </div>
               </div>
             </div>
