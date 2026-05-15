@@ -58,7 +58,8 @@ export default function DiaristaPage() {
   const currentDate = new Date()
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear())
-  const [activeTab, setActiveTab] = useState<'resumo' | 'checkin' | 'anotacoes' | 'contrato' | 'perfil' | 'pagamentos' | 'emprestimos'>('resumo')
+  const [activeTab, setActiveTab] = useState<'resumo' | 'anotacoes' | 'contrato' | 'perfil' | 'pagamentos' | 'emprestimos'>('resumo')
+  const [expandedDetail, setExpandedDetail] = useState<'heavy' | 'light' | 'washed' | 'ironed' | null>(null)
 
   const { diaristaId } = useAuth()
   const { diaristas: allDiaristas, loading: loadingDiaristas, updateDiarista, refetch: refetchDiaristas } = useDiaristas()
@@ -402,7 +403,10 @@ export default function DiaristaPage() {
               <CardContent className="px-4 pb-4">
                 <div className="grid grid-cols-2 gap-2">
                   {/* Limpeza Pesada */}
-                  <div className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border border-amber-500/20 rounded-xl p-3">
+                  <button 
+                    onClick={() => setExpandedDetail(expandedDetail === 'heavy' ? null : 'heavy')}
+                    className={`bg-gradient-to-br from-amber-500/10 to-amber-600/5 border rounded-xl p-3 text-left transition-all ${expandedDetail === 'heavy' ? 'border-amber-500 ring-1 ring-amber-500/30' : 'border-amber-500/20'}`}
+                  >
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
                         <Briefcase className="h-4 w-4 text-amber-500" />
@@ -413,10 +417,13 @@ export default function DiaristaPage() {
                     <p className="text-[10px] text-muted-foreground mt-0.5">
                       {heavyDays.length === 1 ? 'dia trabalhado' : 'dias trabalhados'}
                     </p>
-                  </div>
+                  </button>
 
                   {/* Limpeza Leve */}
-                  <div className="bg-gradient-to-br from-green-500/10 to-green-600/5 border border-green-500/20 rounded-xl p-3">
+                  <button 
+                    onClick={() => setExpandedDetail(expandedDetail === 'light' ? null : 'light')}
+                    className={`bg-gradient-to-br from-green-500/10 to-green-600/5 border rounded-xl p-3 text-left transition-all ${expandedDetail === 'light' ? 'border-green-500 ring-1 ring-green-500/30' : 'border-green-500/20'}`}
+                  >
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
                         <CheckCircle2 className="h-4 w-4 text-green-500" />
@@ -427,10 +434,13 @@ export default function DiaristaPage() {
                     <p className="text-[10px] text-muted-foreground mt-0.5">
                       {lightDays.length === 1 ? 'dia trabalhado' : 'dias trabalhados'}
                     </p>
-                  </div>
+                  </button>
 
                   {/* Lavanderia - Lavou */}
-                  <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 rounded-xl p-3">
+                  <button 
+                    onClick={() => setExpandedDetail(expandedDetail === 'washed' ? null : 'washed')}
+                    className={`bg-gradient-to-br from-blue-500/10 to-blue-600/5 border rounded-xl p-3 text-left transition-all ${expandedDetail === 'washed' ? 'border-blue-500 ring-1 ring-blue-500/30' : 'border-blue-500/20'}`}
+                  >
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
                         <WashingMachine className="h-4 w-4 text-blue-500" />
@@ -441,10 +451,13 @@ export default function DiaristaPage() {
                     <p className="text-[10px] text-muted-foreground mt-0.5">
                       {laundryWeeks.filter(w => w.washed).length === 1 ? 'semana' : 'semanas'}
                     </p>
-                  </div>
+                  </button>
 
                   {/* Lavanderia - Passou */}
-                  <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20 rounded-xl p-3">
+                  <button 
+                    onClick={() => setExpandedDetail(expandedDetail === 'ironed' ? null : 'ironed')}
+                    className={`bg-gradient-to-br from-purple-500/10 to-purple-600/5 border rounded-xl p-3 text-left transition-all ${expandedDetail === 'ironed' ? 'border-purple-500 ring-1 ring-purple-500/30' : 'border-purple-500/20'}`}
+                  >
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
                         <Receipt className="h-4 w-4 text-purple-500" />
@@ -455,8 +468,133 @@ export default function DiaristaPage() {
                     <p className="text-[10px] text-muted-foreground mt-0.5">
                       {laundryWeeks.filter(w => w.ironed).length === 1 ? 'semana' : 'semanas'}
                     </p>
-                  </div>
+                  </button>
                 </div>
+
+                {/* Detalhes expandidos */}
+                {expandedDetail && (
+                  <div className="mt-3 p-3 rounded-xl bg-muted/50 border border-border animate-in fade-in slide-in-from-top-2 duration-200">
+                    {expandedDetail === 'heavy' && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-amber-500">Dias de Limpeza Pesada</span>
+                          <span className="text-xs text-muted-foreground">Valor: R$ {(Number(currentDiarista?.heavy_cleaning_value) || 0).toFixed(2)}/dia</span>
+                        </div>
+                        {heavyDays.length === 0 ? (
+                          <p className="text-xs text-muted-foreground text-center py-2">Nenhum dia registrado</p>
+                        ) : (
+                          heavyDays.map(day => (
+                            <div key={day.id} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
+                              <span className="text-sm">{format(new Date(day.date + 'T00:00:00'), "dd/MM/yyyy (EEEE)", { locale: ptBR })}</span>
+                              <span className="text-sm font-semibold text-amber-500">R$ {(Number(currentDiarista?.heavy_cleaning_value) || 0).toFixed(2)}</span>
+                            </div>
+                          ))
+                        )}
+                        {heavyDays.length > 0 && (
+                          <div className="flex items-center justify-between pt-2 border-t border-border">
+                            <span className="text-xs font-semibold">Total</span>
+                            <span className="text-sm font-bold text-amber-500">R$ {(heavyDays.length * (Number(currentDiarista?.heavy_cleaning_value) || 0)).toFixed(2)}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {expandedDetail === 'light' && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-green-500">Dias de Limpeza Leve</span>
+                          <span className="text-xs text-muted-foreground">Valor: R$ {(Number(currentDiarista?.light_cleaning_value) || 0).toFixed(2)}/dia</span>
+                        </div>
+                        {lightDays.length === 0 ? (
+                          <p className="text-xs text-muted-foreground text-center py-2">Nenhum dia registrado</p>
+                        ) : (
+                          lightDays.map(day => (
+                            <div key={day.id} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
+                              <span className="text-sm">{format(new Date(day.date + 'T00:00:00'), "dd/MM/yyyy (EEEE)", { locale: ptBR })}</span>
+                              <span className="text-sm font-semibold text-green-500">R$ {(Number(currentDiarista?.light_cleaning_value) || 0).toFixed(2)}</span>
+                            </div>
+                          ))
+                        )}
+                        {lightDays.length > 0 && (
+                          <div className="flex items-center justify-between pt-2 border-t border-border">
+                            <span className="text-xs font-semibold">Total</span>
+                            <span className="text-sm font-bold text-green-500">R$ {(lightDays.length * (Number(currentDiarista?.light_cleaning_value) || 0)).toFixed(2)}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {expandedDetail === 'washed' && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-blue-500">Semanas que Lavou Roupa</span>
+                          <span className="text-xs text-muted-foreground">Valor: R$ {(Number(currentDiarista?.washing_value) || 0).toFixed(2)}/mes</span>
+                        </div>
+                        {laundryWeeks.filter(w => w.washed).length === 0 ? (
+                          <p className="text-xs text-muted-foreground text-center py-2">Nenhuma semana registrada</p>
+                        ) : (
+                          (() => {
+                            const lastDay = new Date(selectedYear, selectedMonth, 0).getDate()
+                            const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+                            const weeksCount = laundryWeeks.filter(w => w.washed).length
+                            const valuePerWeek = (Number(currentDiarista?.washing_value) || 0) / Math.ceil(lastDay / 7)
+                            return laundryWeeks.filter(w => w.washed).map(week => {
+                              const startDay = (week.week_number - 1) * 7 + 1
+                              const endDay = Math.min(week.week_number * 7, lastDay)
+                              return (
+                                <div key={week.id} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
+                                  <span className="text-sm">Semana {week.week_number} ({startDay}-{endDay} {monthNames[selectedMonth - 1]})</span>
+                                  <span className="text-sm font-semibold text-blue-500">R$ {valuePerWeek.toFixed(2)}</span>
+                                </div>
+                              )
+                            })
+                          })()
+                        )}
+                        {laundryWeeks.filter(w => w.washed).length > 0 && (
+                          <div className="flex items-center justify-between pt-2 border-t border-border">
+                            <span className="text-xs font-semibold">Total</span>
+                            <span className="text-sm font-bold text-blue-500">R$ {(() => {
+                              const lastDay = new Date(selectedYear, selectedMonth, 0).getDate()
+                              const weeksCount = laundryWeeks.filter(w => w.washed).length
+                              const valuePerWeek = (Number(currentDiarista?.washing_value) || 0) / Math.ceil(lastDay / 7)
+                              return (weeksCount * valuePerWeek).toFixed(2)
+                            })()}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {expandedDetail === 'ironed' && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-purple-500">Semanas que Passou Roupa</span>
+                          <span className="text-xs text-muted-foreground">Valor: R$ {(Number(currentDiarista?.ironing_value) || 0).toFixed(2)}/semana</span>
+                        </div>
+                        {laundryWeeks.filter(w => w.ironed).length === 0 ? (
+                          <p className="text-xs text-muted-foreground text-center py-2">Nenhuma semana registrada</p>
+                        ) : (
+                          (() => {
+                            const lastDay = new Date(selectedYear, selectedMonth, 0).getDate()
+                            const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+                            return laundryWeeks.filter(w => w.ironed).map(week => {
+                              const startDay = (week.week_number - 1) * 7 + 1
+                              const endDay = Math.min(week.week_number * 7, lastDay)
+                              return (
+                                <div key={week.id} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
+                                  <span className="text-sm">Semana {week.week_number} ({startDay}-{endDay} {monthNames[selectedMonth - 1]})</span>
+                                  <span className="text-sm font-semibold text-purple-500">R$ {(Number(currentDiarista?.ironing_value) || 0).toFixed(2)}</span>
+                                </div>
+                              )
+                            })
+                          })()
+                        )}
+                        {laundryWeeks.filter(w => w.ironed).length > 0 && (
+                          <div className="flex items-center justify-between pt-2 border-t border-border">
+                            <span className="text-xs font-semibold">Total</span>
+                            <span className="text-sm font-bold text-purple-500">R$ {(laundryWeeks.filter(w => w.ironed).length * (Number(currentDiarista?.ironing_value) || 0)).toFixed(2)}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Adiantamentos/Emprestimos */}
                 {activeLoans.length > 0 && (
@@ -595,17 +733,6 @@ export default function DiaristaPage() {
         {/* EMPRESTIMOS */}
         {activeTab === 'emprestimos' && diaristaId && (
           <MyLoansSection diaristaId={diaristaId} />
-        )}
-
-        {/* CHECK-IN */}
-        {activeTab === 'checkin' && diaristaId && (
-          <CheckInSection
-            month={selectedMonth}
-            year={selectedYear}
-            diaristaId={diaristaId}
-            workSchedule={currentDiarista?.work_schedule}
-            clients={activeClients}
-          />
         )}
 
         {/* PERFIL */}
@@ -831,7 +958,6 @@ export default function DiaristaPage() {
         <div className="flex items-stretch h-12 justify-center gap-1 px-2">
           {([
             { key: 'resumo',      label: 'Inicio',      Icon: LayoutDashboard, color: 'text-orange-500', bgColor: 'bg-orange-500/10' },
-            { key: 'checkin',     label: 'Check-in',    Icon: CalendarCheck, color: 'text-green-500', bgColor: 'bg-green-500/10' },
             { key: 'pagamentos',  label: 'Pagamentos',  Icon: DollarSign, color: 'text-emerald-500', bgColor: 'bg-emerald-500/10' },
             { key: 'emprestimos', label: 'Emprestimos', Icon: HandCoins, color: 'text-orange-400', bgColor: 'bg-orange-400/10' },
             { key: 'anotacoes',   label: warnings.length > 0 ? `Notas (${warnings.length})` : 'Notas', Icon: FileText, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
