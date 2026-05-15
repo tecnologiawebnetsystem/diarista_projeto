@@ -60,7 +60,7 @@ export default function DiaristaPage() {
   const [activeTab, setActiveTab] = useState<'resumo' | 'presenca' | 'checkin' | 'lavanderia' | 'transporte' | 'anotacoes' | 'contrato' | 'perfil' | 'pagamentos' | 'emprestimos'>('resumo')
 
   const { diaristaId } = useAuth()
-  const { diaristas: allDiaristas, updateDiarista, refetch: refetchDiaristas } = useDiaristas()
+  const { diaristas: allDiaristas, loading: loadingDiaristas, updateDiarista, refetch: refetchDiaristas } = useDiaristas()
   const { activeClients } = useClients()
   const currentDiarista = allDiaristas.find(d => d.id === diaristaId)
   const getClientName = (clientId?: string | null) => clientId ? activeClients.find(c => c.id === clientId)?.name : null
@@ -83,8 +83,8 @@ export default function DiaristaPage() {
   const { notifications: dbNotifications, unreadCount, markAsRead, markAllAsRead } = useDbNotifications(diaristaId)
   const [showNotifications, setShowNotifications] = useState(false)
   const { payment } = useMonthlyPayments(selectedMonth, selectedYear, diaristaId)
-  const { attendance: attendances, refetch: refetchAttendance } = useAttendance(selectedMonth, selectedYear, diaristaId)
-  const { laundryWeeks, refetch: refetchLaundry } = useLaundryWeeks(selectedMonth, selectedYear, diaristaId)
+  const { attendance: attendances, loading: loadingAttendance, refetch: refetchAttendance } = useAttendance(selectedMonth, selectedYear, diaristaId)
+  const { laundryWeeks, loading: loadingLaundry, refetch: refetchLaundry } = useLaundryWeeks(selectedMonth, selectedYear, diaristaId)
   const { notes } = useNotes(selectedMonth, selectedYear, diaristaId)
   const { currentPeriod: currentPeriodAward } = useAwards(diaristaId)
 
@@ -326,9 +326,15 @@ export default function DiaristaPage() {
                   <TrendingUp className="h-3.5 w-3.5 opacity-80" />
                   <p className="text-xs opacity-80">Seus Ganhos no Mes</p>
                 </div>
-                <p className="text-3xl font-bold">R$ {(Number(grandTotal) || 0).toFixed(2)}</p>
+                {(loadingDiaristas || loadingAttendance || loadingLaundry) ? (
+                  <div className="h-9 flex items-center justify-center">
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  </div>
+                ) : (
+                  <p className="text-3xl font-bold">R$ {(Number(grandTotal) || 0).toFixed(2)}</p>
+                )}
               </div>
-              {transportPaidTotal > 0 && (
+              {!loadingLaundry && transportPaidTotal > 0 && (
                 <>
                   <div className="w-px h-12 bg-white/20 mx-3" />
                   <div className="text-center">
@@ -342,7 +348,7 @@ export default function DiaristaPage() {
                 </>
               )}
             </div>
-            {!hasActivity && (
+            {!loadingAttendance && !loadingLaundry && !hasActivity && (
               <p className="text-xs opacity-60 text-center mt-1">Nenhuma atividade registrada neste mes</p>
             )}
           </CardContent>

@@ -130,8 +130,8 @@ export default function AdminPage() {
 
 
   const { payment } = useMonthlyPayments(selectedMonth, selectedYear, selectedDiaristaId)
-  const { attendance, refetch: refetchAttendance } = useAttendance(selectedMonth, selectedYear, selectedDiaristaId)
-  const { laundryWeeks, refetch: refetchLaundry } = useLaundryWeeks(selectedMonth, selectedYear, selectedDiaristaId)
+  const { attendance, loading: loadingAttendance, refetch: refetchAttendance } = useAttendance(selectedMonth, selectedYear, selectedDiaristaId)
+  const { laundryWeeks, loading: loadingLaundry, refetch: refetchLaundry } = useLaundryWeeks(selectedMonth, selectedYear, selectedDiaristaId)
   const { notes, addNote, updateNote, deleteNote } = useNotes(selectedMonth, selectedYear, selectedDiaristaId)
   const { sendNotification } = useDbNotifications()
   const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0)
@@ -480,11 +480,17 @@ export default function AdminPage() {
                   <TrendingUp className="h-3.5 w-3.5 opacity-80" />
                   <p className="text-xs opacity-80">Total do Mes</p>
                 </div>
-                <p className="text-3xl font-bold">R$ {(Number(grandTotal) || 0).toFixed(2)}</p>
+                {(loadingDiaristas || loadingAttendance || loadingLaundry) ? (
+                  <div className="h-9 flex items-center justify-center">
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  </div>
+                ) : (
+                  <p className="text-3xl font-bold">R$ {(Number(grandTotal) || 0).toFixed(2)}</p>
+                )}
               </div>
 
             </div>
-            {!hasActivity && (
+            {!loadingAttendance && !loadingLaundry && !hasActivity && (
               <p className="text-xs opacity-60 text-center mt-1">Nenhuma atividade registrada neste mes</p>
             )}
           </CardContent>
