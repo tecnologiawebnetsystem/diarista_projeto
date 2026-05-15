@@ -130,8 +130,8 @@ export default function AdminPage() {
 
 
   const { payment } = useMonthlyPayments(selectedMonth, selectedYear, selectedDiaristaId)
-  const { attendance, refetch: refetchAttendance } = useAttendance(selectedMonth, selectedYear, selectedDiaristaId)
-  const { laundryWeeks, refetch: refetchLaundry } = useLaundryWeeks(selectedMonth, selectedYear, selectedDiaristaId)
+  const { attendance, loading: loadingAttendance, refetch: refetchAttendance } = useAttendance(selectedMonth, selectedYear, selectedDiaristaId)
+  const { laundryWeeks, loading: loadingLaundry, refetch: refetchLaundry } = useLaundryWeeks(selectedMonth, selectedYear, selectedDiaristaId)
   const { notes, addNote, updateNote, deleteNote } = useNotes(selectedMonth, selectedYear, selectedDiaristaId)
   const { sendNotification } = useDbNotifications()
   const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0)
@@ -378,16 +378,19 @@ export default function AdminPage() {
   const presentDays = attendance.filter(a => a.present)
   const hasActivity = presentDays.length > 0 || laundryWeeks.some(w => w.ironed || w.washed)
 
-  const heavyCleaningValue = Number(selectedDiarista?.heavy_cleaning_value ?? 250) || 0
-  const lightCleaningValue = Number(selectedDiarista?.light_cleaning_value ?? 150) || 0
+  // Só calcula o total quando a diarista selecionada estiver carregada
+  const isDataReady = !loadingDiaristas && !loadingAttendance && !loadingLaundry && selectedDiarista
+  
+  const heavyCleaningValue = Number(selectedDiarista?.heavy_cleaning_value) || 0
+  const lightCleaningValue = Number(selectedDiarista?.light_cleaning_value) || 0
   const heavyDays = presentDays.filter(a => a.day_type === 'heavy_cleaning')
   const lightDays = presentDays.filter(a => a.day_type === 'light_cleaning')
-  const attendanceTotal = (heavyDays.length * heavyCleaningValue) + (lightDays.length * lightCleaningValue)
+  const attendanceTotal = isDataReady ? (heavyDays.length * heavyCleaningValue) + (lightDays.length * lightCleaningValue) : 0
 
-  const laundryTotal = laundryWeeks.reduce((sum, week) => {
+  const laundryTotal = isDataReady ? laundryWeeks.reduce((sum, week) => {
     const services = (week.ironed ? ironingValue : 0) + (week.washed ? washingValuePerWeek : 0)
     return sum + services
-  }, 0)
+  }, 0) : 0
   const grandTotal = attendanceTotal + laundryTotal
   const warnings = notes.filter(n => n.is_warning)
   const years = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i)
@@ -480,11 +483,17 @@ export default function AdminPage() {
                   <TrendingUp className="h-3.5 w-3.5 opacity-80" />
                   <p className="text-xs opacity-80">Total do Mes</p>
                 </div>
-                <p className="text-3xl font-bold">R$ {(Number(grandTotal) || 0).toFixed(2)}</p>
+                {(loadingDiaristas || loadingAttendance || loadingLaundry) ? (
+                  <div className="h-9 flex items-center justify-center">
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  </div>
+                ) : (
+                  <p className="text-3xl font-bold">R$ {(Number(grandTotal) || 0).toFixed(2)}</p>
+                )}
               </div>
 
             </div>
-            {!hasActivity && (
+            {!loadingAttendance && !loadingLaundry && !hasActivity && (
               <p className="text-xs opacity-60 text-center mt-1">Nenhuma atividade registrada neste mes</p>
             )}
           </CardContent>

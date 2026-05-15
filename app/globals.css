@@ -14,7 +14,7 @@
 
 @layer base {
   :root {
-    /* Tema Dark Profissional - Preto com Azul e Vermelho */
+    /* Tema Dark Profissional - Admin (Preto com Laranja) */
     
     /* Base colors - Fundo preto profundo */
     --background: 0 0% 7%;
@@ -63,6 +63,54 @@
     
     /* Radius */
     --radius: 0.75rem;
+  }
+
+  /* Tema Diarista - Rosa, Laranja, Amarelo, Verde e Marrom */
+  .theme-diarista {
+    /* Base colors - Fundo rosa escuro suave */
+    --background: 340 25% 8%;
+    --foreground: 45 30% 95%;
+    
+    /* Card colors - Cards em rosa escuro */
+    --card: 340 20% 12%;
+    --card-foreground: 45 30% 95%;
+    
+    /* Popover colors */
+    --popover: 340 20% 12%;
+    --popover-foreground: 45 30% 95%;
+    
+    /* Primary - Rosa claro vibrante */
+    --primary: 340 75% 65%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Secondary - Marrom terroso */
+    --secondary: 30 45% 25%;
+    --secondary-foreground: 40 60% 85%;
+    
+    /* Accent - Laranja quente */
+    --accent: 28 90% 55%;
+    --accent-foreground: 0 0% 100%;
+    
+    /* Destructive - Vermelho suave */
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Success - Verde natureza */
+    --success: 145 65% 45%;
+    --success-foreground: 0 0% 100%;
+    
+    /* Warning - Amarelo dourado */
+    --warning: 45 95% 55%;
+    --warning-foreground: 30 50% 15%;
+    
+    /* Muted colors - Tons de rosa acinzentado */
+    --muted: 340 15% 18%;
+    --muted-foreground: 340 10% 55%;
+    
+    /* Border and input */
+    --border: 340 15% 22%;
+    --input: 340 15% 15%;
+    --ring: 340 75% 65%;
   }
 }
 
@@ -175,7 +223,21 @@
     border-color: hsl(var(--border));
   }
 
-  /* Gradient backgrounds - Dark theme */
+  /* Tabs diarista com cores variadas */
+  .theme-diarista .tab-pill-active {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    border-color: hsl(var(--primary));
+    box-shadow: 0 1px 4px hsl(var(--primary) / 0.4);
+  }
+
+  .theme-diarista .tab-pill-inactive {
+    background-color: hsl(var(--card));
+    color: hsl(var(--muted-foreground));
+    border-color: hsl(var(--border));
+  }
+
+  /* Gradient backgrounds - Admin theme (default) */
   .gradient-primary {
     background: linear-gradient(135deg, hsl(25 95% 48%) 0%, hsl(25 95% 35%) 100%);
   }
@@ -186,6 +248,33 @@
   
   .gradient-destructive {
     background: linear-gradient(135deg, hsl(0 85% 55%) 0%, hsl(0 85% 35%) 100%);
+  }
+
+  /* Gradient backgrounds - Diarista theme */
+  .theme-diarista .gradient-primary {
+    background: linear-gradient(135deg, hsl(340 75% 65%) 0%, hsl(340 75% 50%) 100%);
+  }
+  
+  .theme-diarista .gradient-accent {
+    background: linear-gradient(135deg, hsl(28 90% 55%) 0%, hsl(28 90% 42%) 100%);
+  }
+  
+  .theme-diarista .gradient-destructive {
+    background: linear-gradient(135deg, hsl(0 70% 50%) 0%, hsl(0 70% 38%) 100%);
+  }
+
+  /* Glow effects - Diarista theme */
+  .theme-diarista .glow-primary {
+    box-shadow: 0 0 20px hsl(340 75% 65% / 0.3);
+  }
+  
+  .theme-diarista .glow-accent {
+    box-shadow: 0 0 20px hsl(28 90% 55% / 0.3);
+  }
+
+  /* Body background for diarista theme */
+  .theme-diarista {
+    background: linear-gradient(135deg, hsl(340 25% 8%) 0%, hsl(340 20% 12%) 100%);
   }
   
   /* Card hover effects - Enhanced for dark */

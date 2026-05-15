@@ -3,7 +3,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ReceiptUpload } from '@/components/receipt-upload'
-import { Bus, CheckCircle2, Circle, ChevronDown, ChevronUp } from 'lucide-react'
+import { Bus, CheckCircle2, Circle, ChevronDown, ChevronUp, History, X, ExternalLink } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 
 
 interface TransportWeek {
@@ -58,6 +61,9 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
   const [transportWeeks, setTransportWeeks] = useState<TransportWeek[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null)
+  const [showHistory, setShowHistory] = useState(false)
+  const [historyPayments, setHistoryPayments] = useState<TransportWeek[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
   const transportValue = diaristaTransportValue ?? 30
 
   const weeksOfMonth = getWeeksOfMonth(month, year)
@@ -83,13 +89,15 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
       for (let i = 1; i <= weeksCount; i++) {
         const existing = existingWeeks?.find((w: TransportWeek) => w.week_number === i)
         if (existing) {
+          // Garante que o valor pago nao ultrapasse o valor do transporte
+          const paidAmount = Math.min(Number(existing.transport_paid_amount) || 0, transportValue)
           weeks.push({
             id: existing.id,
             week_number: existing.week_number,
             month: existing.month,
             year: existing.year,
             transport_fee: Number(existing.transport_fee) || transportValue,
-            transport_paid_amount: Number(existing.transport_paid_amount) || 0,
+            transport_paid_amount: paidAmount,
             receipt_url: existing.receipt_url,
             paid_at: existing.paid_at,
             ironed: existing.ironed,
@@ -125,10 +133,40 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
     fetchTransportWeeks()
   }, [fetchTransportWeeks])
 
-  const totalTransport = transportWeeks.length * transportValue
-  // Soma os valores parciais pagos de cada semana
-  const totalPaid = transportWeeks.reduce((sum, w) => sum + (w.transport_paid_amount || 0), 0)
-  const totalPending = totalTransport - totalPaid
+  // Busca historico de pagamentos de transporte a partir de 01/06/2026
+  const fetchTransportHistory = useCallback(async () => {
+    if (!diaristaId) return
+
+    try {
+      setLoadingHistory(true)
+      // Busca todos os registros de laundry_weeks com transport_paid_amount > 0
+      // a partir de junho de 2026
+      const res = await fetch(`/api/db/laundry-weeks/transport-history?diarista_id=${diaristaId}&from_month=6&from_year=2026`)
+      if (!res.ok) throw new Error('Falha ao buscar historico')
+      const data: TransportWeek[] = await res.json()
+      setHistoryPayments(data)
+    } catch (error) {
+      console.error('Error fetching transport history:', error)
+      setHistoryPayments([])
+    } finally {
+      setLoadingHistory(false)
+    }
+  }, [diaristaId])
+
+  const handleOpenHistory = () => {
+    setShowHistory(true)
+    fetchTransportHistory()
+  }
+
+  // Usa apenas os transportWeeks ja filtrados (ja vem do fetch com mes/ano/diarista corretos)
+  // e limita ao numero de semanas do mes atual
+  const totalTransport = weeksCount * transportValue
+  // Soma os valores parciais pagos de cada semana, garantindo que cada valor seja no maximo transportValue
+  const totalPaid = transportWeeks.slice(0, weeksCount).reduce((sum, w) => {
+    const paidAmount = Math.min(Number(w.transport_paid_amount) || 0, transportValue)
+    return sum + paidAmount
+  }, 0)
+  const totalPending = Math.max(0, totalTransport - totalPaid)
 
   // Paga um valor parcial ou total do transporte
   // type: 'ida' = metade, 'volta' = outra metade, 'completo' = total
@@ -299,12 +337,23 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
             <Bus className="h-4 w-4 text-primary" />
             Transporte Semanal
           </CardTitle>
-          {totalTransport > 0 && (
-            <div className="text-right">
-              <span className="text-sm font-bold text-primary">R$ {(Number(totalPaid) || 0).toFixed(2)}</span>
-              <span className="text-[10px] text-muted-foreground ml-1">pago</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleOpenHistory}
+              className="h-8 px-2 text-muted-foreground hover:text-primary"
+              title="Historico de Pagamentos"
+            >
+              <History className="h-4 w-4" />
+            </Button>
+            {totalTransport > 0 && (
+              <div className="text-right">
+                <span className="text-sm font-bold text-primary">R$ {(Number(totalPaid) || 0).toFixed(2)}</span>
+                <span className="text-[10px] text-muted-foreground ml-1">pago</span>
+              </div>
+            )}
+          </div>
         </div>
         <p className="text-[11px] text-muted-foreground mt-1">
           Marque como pago e anexe o comprovante
@@ -316,18 +365,15 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
         <div className="flex gap-2">
           <div className="flex-1 bg-green-500/10 rounded-lg p-2.5 text-center">
             <p className="text-lg font-bold text-green-500">R$ {(Number(totalPaid) || 0).toFixed(2)}</p>
-            <p className="text-[10px] text-muted-foreground">Pago</p>
-          </div>
-          <div className="flex-1 bg-destructive/10 rounded-lg p-2.5 text-center">
-            <p className="text-lg font-bold text-destructive">R$ {(Number(totalPending) || 0).toFixed(2)}</p>
-            <p className="text-[10px] text-muted-foreground">Pendente</p>
+            <p className="text-[10px] text-muted-foreground">Recebido</p>
           </div>
         </div>
 
         {/* Semanas */}
-        {transportWeeks.map((week) => {
-          const isPaidFull = week.transport_paid_amount >= transportValue
-          const isPaidHalf = week.transport_paid_amount > 0 && week.transport_paid_amount < transportValue
+        {transportWeeks.slice(0, weeksCount).map((week) => {
+          const paidValue = Math.min(week.transport_paid_amount || 0, transportValue)
+          const isPaidFull = paidValue >= transportValue
+          const isPaidHalf = paidValue > 0 && paidValue < transportValue
           const isExpanded = expandedWeek === week.week_number
           const hasLaundry = week.ironed || week.washed
           const weekInfo = weeksOfMonth.find(w => w.weekNumber === week.week_number)
@@ -335,7 +381,7 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
             ? `${weekInfo.startDay}-${weekInfo.endDay} ${monthAbbr}` 
             : `Semana ${week.week_number}`
           const halfValue = transportValue / 2
-          const paidAmount = week.transport_paid_amount || 0
+          const paidAmount = paidValue // Ja limitado ao transportValue
 
           return (
             <div key={week.id} className="rounded-xl border border-border overflow-hidden">
@@ -461,6 +507,72 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
           )
         })}
       </CardContent>
+
+      {/* Modal de Historico de Pagamentos */}
+      <Dialog open={showHistory} onOpenChange={setShowHistory}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5 text-primary" />
+              Historico de Pagamentos
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+            {loadingHistory ? (
+              <div className="py-8 flex items-center justify-center">
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : historyPayments.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground">
+                <Bus className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Nenhum pagamento registrado</p>
+                <p className="text-xs">A partir de Junho/2026</p>
+              </div>
+            ) : (
+              historyPayments.map((payment) => {
+                const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+                const paidDate = payment.paid_at ? new Date(payment.paid_at) : null
+                
+                return (
+                  <div 
+                    key={payment.id} 
+                    className="rounded-lg border border-border p-3 space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold">
+                          Semana {payment.week_number} - {monthNames[payment.month - 1]}/{payment.year}
+                        </p>
+                        {paidDate && (
+                          <p className="text-xs text-muted-foreground">
+                            Pago em: {paidDate.toLocaleDateString('pt-BR')}
+                          </p>
+                        )}
+                      </div>
+                      <span className="text-sm font-bold text-green-500">
+                        R$ {(Number(payment.transport_paid_amount) || 0).toFixed(2)}
+                      </span>
+                    </div>
+                    
+                    {payment.receipt_url && (
+                      <a
+                        href={payment.receipt_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-xs text-primary hover:underline"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Ver comprovante
+                      </a>
+                    )}
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }
