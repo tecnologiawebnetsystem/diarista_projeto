@@ -89,13 +89,15 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
       for (let i = 1; i <= weeksCount; i++) {
         const existing = existingWeeks?.find((w: TransportWeek) => w.week_number === i)
         if (existing) {
+          // Garante que o valor pago nao ultrapasse o valor do transporte
+          const paidAmount = Math.min(Number(existing.transport_paid_amount) || 0, transportValue)
           weeks.push({
             id: existing.id,
             week_number: existing.week_number,
             month: existing.month,
             year: existing.year,
             transport_fee: Number(existing.transport_fee) || transportValue,
-            transport_paid_amount: Number(existing.transport_paid_amount) || 0,
+            transport_paid_amount: paidAmount,
             receipt_url: existing.receipt_url,
             paid_at: existing.paid_at,
             ironed: existing.ironed,
@@ -156,10 +158,17 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
     fetchTransportHistory()
   }
 
-  const totalTransport = transportWeeks.length * transportValue
-  // Soma os valores parciais pagos de cada semana
-  const totalPaid = transportWeeks.reduce((sum, w) => sum + (w.transport_paid_amount || 0), 0)
-  const totalPending = totalTransport - totalPaid
+  // Calcula apenas para as semanas do mes atual (maximo weeksCount semanas)
+  const currentMonthWeeks = transportWeeks.filter(w => w.month === month && w.year === year).slice(0, weeksCount)
+  const totalTransport = weeksCount * transportValue
+  // Soma os valores parciais pagos de cada semana, garantindo que cada valor seja no maximo transportValue
+  const totalPaid = currentMonthWeeks.reduce((sum, w) => {
+    const paidAmount = Math.min(Number(w.transport_paid_amount) || 0, transportValue)
+    console.log('[v0] Week', w.week_number, 'transport_paid_amount:', w.transport_paid_amount, '-> limited to:', paidAmount)
+    return sum + paidAmount
+  }, 0)
+  console.log('[v0] Transport totals - weeksCount:', weeksCount, 'totalTransport:', totalTransport, 'totalPaid:', totalPaid)
+  const totalPending = Math.max(0, totalTransport - totalPaid)
 
   // Paga um valor parcial ou total do transporte
   // type: 'ida' = metade, 'volta' = outra metade, 'completo' = total
@@ -367,9 +376,10 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
         </div>
 
         {/* Semanas */}
-        {transportWeeks.map((week) => {
-          const isPaidFull = week.transport_paid_amount >= transportValue
-          const isPaidHalf = week.transport_paid_amount > 0 && week.transport_paid_amount < transportValue
+        {currentMonthWeeks.map((week) => {
+          const paidValue = Math.min(week.transport_paid_amount || 0, transportValue)
+          const isPaidFull = paidValue >= transportValue
+          const isPaidHalf = paidValue > 0 && paidValue < transportValue
           const isExpanded = expandedWeek === week.week_number
           const hasLaundry = week.ironed || week.washed
           const weekInfo = weeksOfMonth.find(w => w.weekNumber === week.week_number)
@@ -377,7 +387,7 @@ export function TransportSection({ month, year, diaristaId, onDataChange, diaris
             ? `${weekInfo.startDay}-${weekInfo.endDay} ${monthAbbr}` 
             : `Semana ${week.week_number}`
           const halfValue = transportValue / 2
-          const paidAmount = week.transport_paid_amount || 0
+          const paidAmount = paidValue // Ja limitado ao transportValue
 
           return (
             <div key={week.id} className="rounded-xl border border-border overflow-hidden">
