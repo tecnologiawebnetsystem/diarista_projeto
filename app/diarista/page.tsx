@@ -59,7 +59,7 @@ export default function DiaristaPage() {
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear())
   const [activeTab, setActiveTab] = useState<'resumo' | 'anotacoes' | 'contrato' | 'perfil' | 'pagamentos' | 'emprestimos'>('resumo')
-  const [expandedDetail, setExpandedDetail] = useState<'heavy' | 'light' | 'washed' | 'ironed' | null>(null)
+  const [expandedDetail, setExpandedDetail] = useState<'heavy' | 'light' | 'washed' | 'ironed' | 'transport' | null>(null)
 
   const { diaristaId } = useAuth()
   const { diaristas: allDiaristas, loading: loadingDiaristas, updateDiarista, refetch: refetchDiaristas } = useDiaristas()
@@ -469,6 +469,25 @@ export default function DiaristaPage() {
                       {laundryWeeks.filter(w => w.ironed).length === 1 ? 'semana' : 'semanas'}
                     </p>
                   </button>
+
+                  {/* Transporte */}
+                  <button 
+                    onClick={() => setExpandedDetail(expandedDetail === 'transport' ? null : 'transport')}
+                    className={`bg-gradient-to-br from-teal-500/10 to-teal-600/5 border rounded-xl p-3 text-left transition-all ${expandedDetail === 'transport' ? 'border-teal-500 ring-1 ring-teal-500/30' : 'border-teal-500/20'}`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-teal-500/20 flex items-center justify-center">
+                        <Bus className="h-4 w-4 text-teal-500" />
+                      </div>
+                      <span className="text-[11px] text-muted-foreground font-medium">Transporte</span>
+                    </div>
+                    <p className="text-2xl font-bold text-teal-500">
+                      {laundryWeeks.filter(w => w.paid_at && Number(w.transport_paid_amount) > 0).length}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {laundryWeeks.filter(w => w.paid_at && Number(w.transport_paid_amount) > 0).length === 1 ? 'semana paga' : 'semanas pagas'}
+                    </p>
+                  </button>
                 </div>
 
                 {/* Detalhes expandidos */}
@@ -589,6 +608,42 @@ export default function DiaristaPage() {
                           <div className="flex items-center justify-between pt-2 border-t border-border">
                             <span className="text-xs font-semibold">Total</span>
                             <span className="text-sm font-bold text-purple-500">R$ {(laundryWeeks.filter(w => w.ironed).length * (Number(currentDiarista?.ironing_value) || 0)).toFixed(2)}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {expandedDetail === 'transport' && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-teal-500">Adiantamento de Transporte</span>
+                          <span className="text-xs text-muted-foreground">Valor: R$ {(Number(currentDiarista?.transport_fee) || 15).toFixed(2)}/semana</span>
+                        </div>
+                        {laundryWeeks.filter(w => w.paid_at && Number(w.transport_paid_amount) > 0).length === 0 ? (
+                          <p className="text-xs text-muted-foreground text-center py-2">Nenhum adiantamento recebido este mes</p>
+                        ) : (
+                          (() => {
+                            const lastDay = new Date(selectedYear, selectedMonth, 0).getDate()
+                            const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+                            return laundryWeeks.filter(w => w.paid_at && Number(w.transport_paid_amount) > 0).map(week => {
+                              const startDay = (week.week_number - 1) * 7 + 1
+                              const endDay = Math.min(week.week_number * 7, lastDay)
+                              const paidAmount = Number(week.transport_paid_amount) || 0
+                              return (
+                                <div key={week.id} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
+                                  <div className="flex items-center gap-2">
+                                    <CheckCircle2 className="h-4 w-4 text-teal-500" />
+                                    <span className="text-sm">Semana {week.week_number} ({startDay}-{endDay} {monthNames[selectedMonth - 1]})</span>
+                                  </div>
+                                  <span className="text-sm font-semibold text-teal-500">R$ {paidAmount.toFixed(2)}</span>
+                                </div>
+                              )
+                            })
+                          })()
+                        )}
+                        {laundryWeeks.filter(w => w.paid_at && Number(w.transport_paid_amount) > 0).length > 0 && (
+                          <div className="flex items-center justify-between pt-2 border-t border-border">
+                            <span className="text-xs font-semibold">Total Recebido</span>
+                            <span className="text-sm font-bold text-teal-500">R$ {laundryWeeks.filter(w => w.paid_at && Number(w.transport_paid_amount) > 0).reduce((sum, w) => sum + (Number(w.transport_paid_amount) || 0), 0).toFixed(2)}</span>
                           </div>
                         )}
                       </div>
