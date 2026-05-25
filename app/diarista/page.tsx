@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { LayoutDashboard, CalendarCheck, WashingMachine, FileText, ScrollText, Trophy, AlertTriangle, LogOut, CheckCircle2, XCircle, Briefcase, TrendingUp, CalendarDays, Receipt, FileDown, Bus, Bell, X, User, Camera, Phone, Save, Check, MapPin, Building2, DollarSign, HandCoins } from 'lucide-react'
+import { LayoutDashboard, CalendarCheck, WashingMachine, FileText, ScrollText, Trophy, AlertTriangle, LogOut, CheckCircle2, XCircle, Briefcase, TrendingUp, CalendarDays, Receipt, FileDown, Bus, Bell, X, User, Camera, Phone, Save, Check, MapPin, Building2, DollarSign, HandCoins, StickyNote, Eye } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -75,6 +75,10 @@ export default function DiaristaPage() {
   const [profileSaved, setProfileSaved] = useState(false)
   const [profileError, setProfileError] = useState('')
 
+  // Notes alert state
+  const [notesAlertDismissed, setNotesAlertDismissed] = useState(false)
+  const [markingNotesSeen, setMarkingNotesSeen] = useState(false)
+
   // Sync profile form when diarista loads
   useEffect(() => {
     if (currentDiarista) {
@@ -87,7 +91,7 @@ export default function DiaristaPage() {
   const { payment } = useMonthlyPayments(selectedMonth, selectedYear, diaristaId)
   const { attendance: attendances, loading: loadingAttendance, refetch: refetchAttendance } = useAttendance(selectedMonth, selectedYear, diaristaId)
   const { laundryWeeks, loading: loadingLaundry, refetch: refetchLaundry } = useLaundryWeeks(selectedMonth, selectedYear, diaristaId)
-  const { notes } = useNotes(selectedMonth, selectedYear, diaristaId)
+  const { notes, markAsSeen, unseenNotes } = useNotes(selectedMonth, selectedYear, diaristaId)
   const { currentPeriod: currentPeriodAward } = useAwards(diaristaId)
   const { activeLoans, totalDebt } = useLoans(diaristaId)
 
@@ -357,6 +361,61 @@ export default function DiaristaPage() {
         {activeTab === 'resumo' && (
           <div className="space-y-3">
             <NotificationBanner />
+
+            {/* Alerta de Notas Nao Lidas */}
+            {unseenNotes.length > 0 && !notesAlertDismissed && (
+              <Card className="border-amber-500/50 bg-amber-500/10 overflow-hidden">
+                <CardContent className="py-3 px-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+                      <StickyNote className="h-5 w-5 text-amber-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+                        {unseenNotes.length === 1 ? 'Voce tem 1 nova anotacao!' : `Voce tem ${unseenNotes.length} novas anotacoes!`}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Clique abaixo para visualizar suas notas do mes
+                      </p>
+                      <button
+                        onClick={async () => {
+                          setMarkingNotesSeen(true)
+                          try {
+                            await markAsSeen(unseenNotes.map(n => n.id))
+                            setActiveTab('anotacoes')
+                            setNotesAlertDismissed(true)
+                          } catch (error) {
+                            console.error('Erro ao marcar notas:', error)
+                          } finally {
+                            setMarkingNotesSeen(false)
+                          }
+                        }}
+                        disabled={markingNotesSeen}
+                        className="mt-2 flex items-center gap-2 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {markingNotesSeen ? (
+                          <>
+                            <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Carregando...
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="h-3.5 w-3.5" />
+                            Visualizar Notas
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => setNotesAlertDismissed(true)}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Card: Onde trabalho hoje */}
             {(() => {
