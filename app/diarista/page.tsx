@@ -324,7 +324,14 @@ export default function DiaristaPage() {
 
       {/* Total Card - Ganho Atual */}
       <div className={cn('px-4 pb-3', activeTab === 'perfil' && 'hidden')}>
-        <Card className="gradient-primary text-white shadow-lg overflow-hidden">
+        <Card className="gradient-primary text-white shadow-lg overflow-hidden relative">
+          {/* Badge de Adiantamento no canto superior direito */}
+          {totalDebt > 0 && (
+            <div className="absolute top-2 right-2 bg-white/20 backdrop-blur-sm rounded-lg px-2.5 py-1.5 border border-white/30">
+              <p className="text-[9px] uppercase tracking-wide opacity-80 leading-none">Adiantado</p>
+              <p className="text-sm font-bold leading-tight">R$ {totalDebt.toFixed(2)}</p>
+            </div>
+          )}
           <CardContent className="pt-5 pb-5">
             <div className="text-center">
               <p className="text-sm opacity-90 mb-1">Seu ganho atual no momento</p>
