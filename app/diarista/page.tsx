@@ -682,7 +682,7 @@ export default function DiaristaPage() {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs font-semibold text-teal-500">Adiantamento de Transporte</span>
-                          <span className="text-xs text-muted-foreground">Valor: R$ {(Number(currentDiarista?.transport_fee) || 15).toFixed(2)}/semana</span>
+                          <span className="text-xs text-muted-foreground">Valor: R$ {(Number(currentDiarista?.transport_value) || 15).toFixed(2)}/semana</span>
                         </div>
                         {laundryWeeks.filter(w => w.paid_at && Number(w.transport_paid_amount) > 0).length === 0 ? (
                           <p className="text-xs text-muted-foreground text-center py-2">Nenhum adiantamento recebido este mes</p>
