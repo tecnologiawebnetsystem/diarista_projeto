@@ -28,7 +28,7 @@ import { CheckInSection } from '@/components/diarista/check-in-section'
 
 import { NotificationBanner } from '@/components/notification-banner'
 import { useDbNotifications } from '@/hooks/use-db-notifications'
-import { cn } from '@/lib/utils'
+import { cn, parseApiDate } from '@/lib/utils'
 import Link from 'next/link'
 
 const MONTHS_FULL = ['Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
@@ -485,8 +485,8 @@ export default function DiaristaPage() {
                         ) : (
                           heavyDays.map(day => (
                             <div key={day.id} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
-                              <span className="text-sm">{format(new Date(day.date + 'T00:00:00'), "dd/MM/yyyy (EEEE)", { locale: ptBR })}</span>
-                              <span className="text-sm font-semibold text-amber-500">R$ {(Number(currentDiarista?.heavy_cleaning_value) || 0).toFixed(2)}</span>
+<span className="text-sm">{format(parseApiDate(day.date), "dd/MM/yyyy (EEEE)", { locale: ptBR })}</span>
+  <span className="text-sm font-semibold text-amber-500">R$ {(Number(currentDiarista?.heavy_cleaning_value) || 0).toFixed(2)}</span>
                             </div>
                           ))
                         )}
@@ -509,8 +509,8 @@ export default function DiaristaPage() {
                         ) : (
                           lightDays.map(day => (
                             <div key={day.id} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
-                              <span className="text-sm">{format(new Date(day.date + 'T00:00:00'), "dd/MM/yyyy (EEEE)", { locale: ptBR })}</span>
-                              <span className="text-sm font-semibold text-green-500">R$ {(Number(currentDiarista?.light_cleaning_value) || 0).toFixed(2)}</span>
+<span className="text-sm">{format(parseApiDate(day.date), "dd/MM/yyyy (EEEE)", { locale: ptBR })}</span>
+  <span className="text-sm font-semibold text-green-500">R$ {(Number(currentDiarista?.light_cleaning_value) || 0).toFixed(2)}</span>
                             </div>
                           ))
                         )}
@@ -676,9 +676,9 @@ export default function DiaristaPage() {
                 <CardContent className="px-4 pb-4 space-y-2">
                   {warnings.map(w => (
                     <div key={w.id} className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
-                      <p className="text-[10px] text-muted-foreground mb-1">
-                        {format(new Date(w.date + 'T00:00:00'), "dd/MM/yyyy")}
-                      </p>
+<p className="text-[10px] text-muted-foreground mb-1">
+  {format(parseApiDate(w.date), "dd/MM/yyyy")}
+  </p>
                       <p className="text-sm">{w.content}</p>
                     </div>
                   ))}
@@ -706,9 +706,9 @@ export default function DiaristaPage() {
                             {note.note_type === 'extra_work' && 'Trabalho Extra'}
                             {note.note_type === 'missed_task' && 'Tarefa Não Realizada'}
                           </Badge>
-                          <span className="text-[10px] text-muted-foreground">
-                            {format(new Date(note.date + 'T00:00:00'), "dd/MM/yyyy")}
-                          </span>
+<span className="text-[10px] text-muted-foreground">
+  {format(parseApiDate(note.date), "dd/MM/yyyy")}
+  </span>
                         </div>
                         <p className="text-sm">{note.content}</p>
                       </div>

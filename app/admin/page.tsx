@@ -43,7 +43,7 @@ import { ContractViewer } from '@/components/contract-viewer'
 import { TransportSection } from '@/components/transport-section'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { cn } from '@/lib/utils'
+import { cn, parseApiDate } from '@/lib/utils'
 import type { Note, Diarista, WorkScheduleDay, Client, LaundryAssignment } from '@/types/database'
 import Link from 'next/link'
 
@@ -187,7 +187,7 @@ export default function AdminPage() {
   const handleEditNote = (note: Note) => {
     setEditingNote(note)
     setNoteFormData({
-      date: new Date(note.date + 'T00:00:00'),
+      date: parseApiDate(note.date),
       note_type: note.note_type,
       content: note.content,
       is_warning: note.is_warning,
@@ -690,7 +690,7 @@ export default function AdminPage() {
                           </div>
                         </div>
                         <p className="text-[11px] text-muted-foreground mb-1">
-                          {format(new Date(note.date + 'T00:00:00'), 'dd/MM/yyyy')}
+                          {format(parseApiDate(note.date), 'dd/MM/yyyy')}
                         </p>
                         <p className="text-sm text-foreground/90 leading-relaxed">{note.content}</p>
                       </CardContent>

@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query, queryOne } from '@/lib/mysql'
 
+// Helper to safely parse dates from MySQL (handles various formats)
+function safeParseDateString(dateValue: unknown): string {
+  if (!dateValue) return new Date().toISOString().split('T')[0]
+  const str = String(dateValue)
+  // If already in YYYY-MM-DD format
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str
+  // If ISO format, extract date part
+  if (str.includes('T')) return str.split('T')[0]
+  // Try to parse and format
+  const d = new Date(str)
+  return isNaN(d.getTime()) ? new Date().toISOString().split('T')[0] : d.toISOString().split('T')[0]
+}
+
 const MONTHS = [
   '', 'Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
@@ -578,7 +591,7 @@ export async function GET(request: NextRequest) {
         </thead>
         <tbody>
           ${attendanceData.map((a) => {
-            const d = new Date(a.date + 'T00:00:00')
+            const d = new Date(safeParseDateString(a.date) + 'T00:00:00')
             const dayName = d.toLocaleDateString('pt-BR', { weekday: 'short' })
             const isHeavy = a.day_type === 'heavy_cleaning'
             const val = a.present ? (isHeavy ? heavyCleaningValue : lightCleaningValue) : 0
@@ -651,7 +664,7 @@ export async function GET(request: NextRequest) {
             <span class="badge ${n.is_warning ? 'badge-warning' : n.note_type === 'extra_work' ? 'badge-paid' : n.note_type === 'missed_task' ? 'badge-warning' : 'badge-info'}">
               ${n.is_warning ? '&#x26A0; Advertencia' : (noteTypeLabels[n.note_type] || n.note_type)}
             </span>
-            <span class="date">${new Date(n.date + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}</span>
+            <span class="date">${new Date(safeParseDateString(n.date) + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}</span>
           </div>
           <div class="note-content">${n.content}</div>
         </div>
