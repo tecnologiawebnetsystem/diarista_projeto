@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/mysql'
 
+// Helper to safely parse dates from MySQL (handles various formats)
+function safeParseDateString(dateValue: unknown): string {
+  if (!dateValue) return new Date().toISOString().split('T')[0]
+  const str = String(dateValue)
+  // If already in YYYY-MM-DD format
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str
+  // If ISO format, extract date part
+  if (str.includes('T')) return str.split('T')[0]
+  // Try to parse and format
+  const d = new Date(str)
+  return isNaN(d.getTime()) ? new Date().toISOString().split('T')[0] : d.toISOString().split('T')[0]
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -75,7 +88,7 @@ export async function GET(request: NextRequest) {
     if (attendanceData.length > 0) {
       const grouped: Record<string, typeof attendanceData> = {}
       for (const a of attendanceData) {
-        const d = new Date(String(a.date) + 'T00:00:00')
+        const d = new Date(safeParseDateString(a.date) + 'T00:00:00')
         const key = `${d.getFullYear()}-${d.getMonth() + 1}`
         if (!grouped[key]) grouped[key] = []
         grouped[key].push(a)

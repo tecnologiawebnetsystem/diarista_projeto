@@ -91,6 +91,7 @@ export interface Note {
   note_type: string
   content: string
   is_warning: boolean
+  seen_at?: string | null
   diarista_id?: string | null
   created_at: string
   updated_at: string

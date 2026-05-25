@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { LayoutDashboard, CalendarCheck, WashingMachine, FileText, ScrollText, Trophy, AlertTriangle, LogOut, CheckCircle2, XCircle, Briefcase, TrendingUp, CalendarDays, Receipt, FileDown, Bus, Bell, X, User, Camera, Phone, Save, Check, MapPin, Building2, DollarSign, HandCoins } from 'lucide-react'
+import { LayoutDashboard, CalendarCheck, WashingMachine, FileText, ScrollText, Trophy, AlertTriangle, LogOut, CheckCircle2, XCircle, Briefcase, TrendingUp, CalendarDays, Receipt, FileDown, Bus, Bell, X, User, Camera, Phone, Save, Check, MapPin, Building2, DollarSign, HandCoins, StickyNote, Eye } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,7 +28,7 @@ import { CheckInSection } from '@/components/diarista/check-in-section'
 
 import { NotificationBanner } from '@/components/notification-banner'
 import { useDbNotifications } from '@/hooks/use-db-notifications'
-import { cn } from '@/lib/utils'
+import { cn, parseApiDate } from '@/lib/utils'
 import Link from 'next/link'
 
 const MONTHS_FULL = ['Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
@@ -59,7 +59,7 @@ export default function DiaristaPage() {
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear())
   const [activeTab, setActiveTab] = useState<'resumo' | 'anotacoes' | 'contrato' | 'perfil' | 'pagamentos' | 'emprestimos'>('resumo')
-  const [expandedDetail, setExpandedDetail] = useState<'heavy' | 'light' | 'washed' | 'ironed' | null>(null)
+  const [expandedDetail, setExpandedDetail] = useState<'heavy' | 'light' | 'washed' | 'ironed' | 'transport' | null>(null)
 
   const { diaristaId } = useAuth()
   const { diaristas: allDiaristas, loading: loadingDiaristas, updateDiarista, refetch: refetchDiaristas } = useDiaristas()
@@ -75,6 +75,10 @@ export default function DiaristaPage() {
   const [profileSaved, setProfileSaved] = useState(false)
   const [profileError, setProfileError] = useState('')
 
+  // Notes alert state
+  const [notesAlertDismissed, setNotesAlertDismissed] = useState(false)
+  const [markingNotesSeen, setMarkingNotesSeen] = useState(false)
+
   // Sync profile form when diarista loads
   useEffect(() => {
     if (currentDiarista) {
@@ -87,7 +91,7 @@ export default function DiaristaPage() {
   const { payment } = useMonthlyPayments(selectedMonth, selectedYear, diaristaId)
   const { attendance: attendances, loading: loadingAttendance, refetch: refetchAttendance } = useAttendance(selectedMonth, selectedYear, diaristaId)
   const { laundryWeeks, loading: loadingLaundry, refetch: refetchLaundry } = useLaundryWeeks(selectedMonth, selectedYear, diaristaId)
-  const { notes } = useNotes(selectedMonth, selectedYear, diaristaId)
+  const { notes, markAsSeen, unseenNotes } = useNotes(selectedMonth, selectedYear, diaristaId)
   const { currentPeriod: currentPeriodAward } = useAwards(diaristaId)
   const { activeLoans, totalDebt } = useLoans(diaristaId)
 
@@ -324,7 +328,14 @@ export default function DiaristaPage() {
 
       {/* Total Card - Ganho Atual */}
       <div className={cn('px-4 pb-3', activeTab === 'perfil' && 'hidden')}>
-        <Card className="gradient-primary text-white shadow-lg overflow-hidden">
+        <Card className="gradient-primary text-white shadow-lg overflow-hidden relative">
+          {/* Badge de Adiantamento no canto superior direito */}
+          {totalDebt > 0 && (
+            <div className="absolute top-2 right-2 bg-white/20 backdrop-blur-sm rounded-lg px-2.5 py-1.5 border border-white/30">
+              <p className="text-[9px] uppercase tracking-wide opacity-80 leading-none">Adiantado</p>
+              <p className="text-sm font-bold leading-tight">R$ {totalDebt.toFixed(2)}</p>
+            </div>
+          )}
           <CardContent className="pt-5 pb-5">
             <div className="text-center">
               <p className="text-sm opacity-90 mb-1">Seu ganho atual no momento</p>
@@ -350,6 +361,61 @@ export default function DiaristaPage() {
         {activeTab === 'resumo' && (
           <div className="space-y-3">
             <NotificationBanner />
+
+            {/* Alerta de Notas Nao Lidas */}
+            {unseenNotes.length > 0 && !notesAlertDismissed && (
+              <Card className="border-amber-500/50 bg-amber-500/10 overflow-hidden">
+                <CardContent className="py-3 px-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+                      <StickyNote className="h-5 w-5 text-amber-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+                        {unseenNotes.length === 1 ? 'Voce tem 1 nova anotacao!' : `Voce tem ${unseenNotes.length} novas anotacoes!`}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Clique abaixo para visualizar suas notas do mes
+                      </p>
+                      <button
+                        onClick={async () => {
+                          setMarkingNotesSeen(true)
+                          try {
+                            await markAsSeen(unseenNotes.map(n => n.id))
+                            setActiveTab('anotacoes')
+                            setNotesAlertDismissed(true)
+                          } catch (error) {
+                            console.error('Erro ao marcar notas:', error)
+                          } finally {
+                            setMarkingNotesSeen(false)
+                          }
+                        }}
+                        disabled={markingNotesSeen}
+                        className="mt-2 flex items-center gap-2 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {markingNotesSeen ? (
+                          <>
+                            <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Carregando...
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="h-3.5 w-3.5" />
+                            Visualizar Notas
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => setNotesAlertDismissed(true)}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Card: Onde trabalho hoje */}
             {(() => {
@@ -469,6 +535,25 @@ export default function DiaristaPage() {
                       {laundryWeeks.filter(w => w.ironed).length === 1 ? 'semana' : 'semanas'}
                     </p>
                   </button>
+
+                  {/* Transporte */}
+                  <button 
+                    onClick={() => setExpandedDetail(expandedDetail === 'transport' ? null : 'transport')}
+                    className={`bg-gradient-to-br from-teal-500/10 to-teal-600/5 border rounded-xl p-3 text-left transition-all ${expandedDetail === 'transport' ? 'border-teal-500 ring-1 ring-teal-500/30' : 'border-teal-500/20'}`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-teal-500/20 flex items-center justify-center">
+                        <Bus className="h-4 w-4 text-teal-500" />
+                      </div>
+                      <span className="text-[11px] text-muted-foreground font-medium">Transporte</span>
+                    </div>
+                    <p className="text-2xl font-bold text-teal-500">
+                      {laundryWeeks.filter(w => w.paid_at && Number(w.transport_paid_amount) > 0).length}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {laundryWeeks.filter(w => w.paid_at && Number(w.transport_paid_amount) > 0).length === 1 ? 'semana paga' : 'semanas pagas'}
+                    </p>
+                  </button>
                 </div>
 
                 {/* Detalhes expandidos */}
@@ -485,8 +570,8 @@ export default function DiaristaPage() {
                         ) : (
                           heavyDays.map(day => (
                             <div key={day.id} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
-                              <span className="text-sm">{format(new Date(day.date + 'T00:00:00'), "dd/MM/yyyy (EEEE)", { locale: ptBR })}</span>
-                              <span className="text-sm font-semibold text-amber-500">R$ {(Number(currentDiarista?.heavy_cleaning_value) || 0).toFixed(2)}</span>
+<span className="text-sm">{format(parseApiDate(day.date), "dd/MM/yyyy (EEEE)", { locale: ptBR })}</span>
+  <span className="text-sm font-semibold text-amber-500">R$ {(Number(currentDiarista?.heavy_cleaning_value) || 0).toFixed(2)}</span>
                             </div>
                           ))
                         )}
@@ -509,8 +594,8 @@ export default function DiaristaPage() {
                         ) : (
                           lightDays.map(day => (
                             <div key={day.id} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
-                              <span className="text-sm">{format(new Date(day.date + 'T00:00:00'), "dd/MM/yyyy (EEEE)", { locale: ptBR })}</span>
-                              <span className="text-sm font-semibold text-green-500">R$ {(Number(currentDiarista?.light_cleaning_value) || 0).toFixed(2)}</span>
+<span className="text-sm">{format(parseApiDate(day.date), "dd/MM/yyyy (EEEE)", { locale: ptBR })}</span>
+  <span className="text-sm font-semibold text-green-500">R$ {(Number(currentDiarista?.light_cleaning_value) || 0).toFixed(2)}</span>
                             </div>
                           ))
                         )}
@@ -589,6 +674,42 @@ export default function DiaristaPage() {
                           <div className="flex items-center justify-between pt-2 border-t border-border">
                             <span className="text-xs font-semibold">Total</span>
                             <span className="text-sm font-bold text-purple-500">R$ {(laundryWeeks.filter(w => w.ironed).length * (Number(currentDiarista?.ironing_value) || 0)).toFixed(2)}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {expandedDetail === 'transport' && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-teal-500">Adiantamento de Transporte</span>
+                          <span className="text-xs text-muted-foreground">Valor: R$ {(Number(currentDiarista?.transport_value) || 15).toFixed(2)}/semana</span>
+                        </div>
+                        {laundryWeeks.filter(w => w.paid_at && Number(w.transport_paid_amount) > 0).length === 0 ? (
+                          <p className="text-xs text-muted-foreground text-center py-2">Nenhum adiantamento recebido este mes</p>
+                        ) : (
+                          (() => {
+                            const lastDay = new Date(selectedYear, selectedMonth, 0).getDate()
+                            const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+                            return laundryWeeks.filter(w => w.paid_at && Number(w.transport_paid_amount) > 0).map(week => {
+                              const startDay = (week.week_number - 1) * 7 + 1
+                              const endDay = Math.min(week.week_number * 7, lastDay)
+                              const paidAmount = Number(week.transport_paid_amount) || 0
+                              return (
+                                <div key={week.id} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
+                                  <div className="flex items-center gap-2">
+                                    <CheckCircle2 className="h-4 w-4 text-teal-500" />
+                                    <span className="text-sm">Semana {week.week_number} ({startDay}-{endDay} {monthNames[selectedMonth - 1]})</span>
+                                  </div>
+                                  <span className="text-sm font-semibold text-teal-500">R$ {paidAmount.toFixed(2)}</span>
+                                </div>
+                              )
+                            })
+                          })()
+                        )}
+                        {laundryWeeks.filter(w => w.paid_at && Number(w.transport_paid_amount) > 0).length > 0 && (
+                          <div className="flex items-center justify-between pt-2 border-t border-border">
+                            <span className="text-xs font-semibold">Total Recebido</span>
+                            <span className="text-sm font-bold text-teal-500">R$ {laundryWeeks.filter(w => w.paid_at && Number(w.transport_paid_amount) > 0).reduce((sum, w) => sum + (Number(w.transport_paid_amount) || 0), 0).toFixed(2)}</span>
                           </div>
                         )}
                       </div>
@@ -676,9 +797,9 @@ export default function DiaristaPage() {
                 <CardContent className="px-4 pb-4 space-y-2">
                   {warnings.map(w => (
                     <div key={w.id} className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
-                      <p className="text-[10px] text-muted-foreground mb-1">
-                        {format(new Date(w.date + 'T00:00:00'), "dd/MM/yyyy")}
-                      </p>
+<p className="text-[10px] text-muted-foreground mb-1">
+  {format(parseApiDate(w.date), "dd/MM/yyyy")}
+  </p>
                       <p className="text-sm">{w.content}</p>
                     </div>
                   ))}
@@ -706,9 +827,9 @@ export default function DiaristaPage() {
                             {note.note_type === 'extra_work' && 'Trabalho Extra'}
                             {note.note_type === 'missed_task' && 'Tarefa Não Realizada'}
                           </Badge>
-                          <span className="text-[10px] text-muted-foreground">
-                            {format(new Date(note.date + 'T00:00:00'), "dd/MM/yyyy")}
-                          </span>
+<span className="text-[10px] text-muted-foreground">
+  {format(parseApiDate(note.date), "dd/MM/yyyy")}
+  </span>
                         </div>
                         <p className="text-sm">{note.content}</p>
                       </div>

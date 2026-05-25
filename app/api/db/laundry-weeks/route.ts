@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query, queryOne, execute, generateUUID } from '@/lib/mysql'
 
+// Convert ISO 8601 date to MySQL DATETIME format (YYYY-MM-DD HH:MM:SS)
+function toMySQLDatetime(isoDate: string | null | undefined): string | null {
+  if (!isoDate) return null
+  try {
+    const d = new Date(isoDate)
+    if (isNaN(d.getTime())) return null
+    return d.toISOString().slice(0, 19).replace('T', ' ')
+  } catch {
+    return null
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -39,7 +51,7 @@ export async function POST(request: NextRequest) {
     await execute(
       `INSERT INTO laundry_weeks (id, week_number, month, year, value, ironed, washed, transport_fee, transport_paid_amount, diarista_id, paid_at, receipt_url)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, week_number, month, year, value, ironed ? 1 : 0, washed ? 1 : 0, transport_fee, transport_paid_amount, diarista_id || null, paid_at, receipt_url]
+      [id, week_number, month, year, value, ironed ? 1 : 0, washed ? 1 : 0, transport_fee, transport_paid_amount, diarista_id || null, toMySQLDatetime(paid_at), receipt_url]
     )
     const created = await queryOne('SELECT * FROM laundry_weeks WHERE id = ?', [id])
     return NextResponse.json(created, { status: 201 })

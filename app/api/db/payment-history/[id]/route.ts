@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { execute } from '@/lib/mysql'
 
+// Convert ISO 8601 date to MySQL DATETIME format (YYYY-MM-DD HH:MM:SS)
+function toMySQLDatetime(isoDate: string | null | undefined): string | null {
+  if (!isoDate) return null
+  try {
+    const d = new Date(isoDate)
+    if (isNaN(d.getTime())) return null
+    return d.toISOString().slice(0, 19).replace('T', ' ')
+  } catch {
+    return null
+  }
+}
+
 type RouteContext = { params: Promise<{ id: string }> }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
@@ -23,11 +35,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
       if (body.status !== undefined) {
         setClauses.push('paid_at = ?')
-        setParams.push(body.status === 'paid' ? (body.paid_at || new Date().toISOString()) : null)
+        setParams.push(body.status === 'paid' ? toMySQLDatetime(body.paid_at || new Date().toISOString()) : null)
       }
       if (body.paid_at !== undefined && body.status === undefined) {
         setClauses.push('paid_at = ?')
-        setParams.push(body.paid_at)
+        setParams.push(toMySQLDatetime(body.paid_at))
       }
       if (body.receipt_url !== undefined) {
         setClauses.push('receipt_url = ?')

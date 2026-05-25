@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query, queryOne, execute, generateUUID } from '@/lib/mysql'
 
+// Convert ISO 8601 date to MySQL DATETIME format (YYYY-MM-DD HH:MM:SS)
+function toMySQLDatetime(isoDate: string | null | undefined): string | null {
+  if (!isoDate) return null
+  try {
+    const d = new Date(isoDate)
+    if (isNaN(d.getTime())) return null
+    return d.toISOString().slice(0, 19).replace('T', ' ')
+  } catch {
+    return null
+  }
+}
+
 function calculate5thBusinessDay(month: number, year: number): string {
   let count = 0
   const d = new Date(year, month - 1, 1)
@@ -68,7 +80,7 @@ export async function POST(request: NextRequest) {
       `INSERT INTO monthly_payments (id, month, year, payment_due_date, monthly_value, loan_deduction, hour_limit, diarista_id, payment_date, paid_at, receipt_url, notes)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE id = id`,
-      [id, month, year, dueDate, resolvedValue, deduction, hour_limit || '20:00:00', diarista_id || null, payment_date || null, paid_at || null, receipt_url || null, paymentNotes || null]
+      [id, month, year, dueDate, resolvedValue, deduction, hour_limit || '20:00:00', diarista_id || null, payment_date || null, toMySQLDatetime(paid_at), receipt_url || null, paymentNotes || null]
     )
 
     let sql = 'SELECT * FROM monthly_payments WHERE month = ? AND year = ?'

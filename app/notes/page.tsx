@@ -15,7 +15,7 @@ import { useNotes } from '@/hooks/use-notes'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import Link from 'next/link'
-import { cn } from '@/lib/utils'
+import { cn, parseApiDate } from '@/lib/utils'
 import type { Note } from '@/types/database'
 
 const MONTHS = [
@@ -67,7 +67,7 @@ export default function NotesPage() {
   const handleEdit = (note: Note) => {
     setEditingNote(note)
     setFormData({
-      date: new Date(note.date + 'T00:00:00'),
+      date: parseApiDate(note.date),
       note_type: note.note_type,
       content: note.content,
       is_warning: note.is_warning,
@@ -281,7 +281,7 @@ export default function NotesPage() {
                       </div>
                     </div>
                     <p className="text-[11px] text-muted-foreground mb-1">
-                      {format(new Date(note.date + 'T00:00:00'), "dd/MM/yyyy")}
+                      {format(parseApiDate(note.date), "dd/MM/yyyy")}
                     </p>
                     <p className="text-sm text-foreground/90 leading-relaxed">{note.content}</p>
                   </CardContent>

@@ -81,5 +81,23 @@ export function useNotes(month: number, year: number, diaristaId?: string | null
     }
   }
 
-  return { notes, loading, addNote, updateNote, deleteNote, refetch: fetchNotes }
+  async function markAsSeen(noteIds: string[]) {
+    try {
+      const res = await fetch('/api/db/notes/mark-seen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ noteIds }),
+      })
+      if (!res.ok) throw new Error('Erro ao marcar como visto')
+      const now = new Date().toISOString()
+      setNotes(prev => prev.map(n => noteIds.includes(n.id) ? { ...n, seen_at: now } : n))
+    } catch (error) {
+      console.error('Error marking notes as seen:', error)
+      throw error
+    }
+  }
+
+  const unseenNotes = notes.filter(n => !n.seen_at)
+
+  return { notes, loading, addNote, updateNote, deleteNote, markAsSeen, unseenNotes, refetch: fetchNotes }
 }
