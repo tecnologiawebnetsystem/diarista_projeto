@@ -12,7 +12,7 @@ interface AuthContextType {
   diarista: Diarista | null
   diaristaId: string | null
   loginAsDiarista: (d: Diarista) => void
-  loginAsAdmin: (pin: string) => Promise<boolean>
+  loginAsAdmin: () => void
   logout: () => void
   selectedDiaristaId: string | null
   setSelectedDiaristaId: (id: string | null) => void
@@ -56,26 +56,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sessionStorage.setItem('limpp_day_diarista_name', d.name)
   }
 
-  const loginAsAdmin = async (pin: string): Promise<boolean> => {
-    try {
-      const res = await fetch('/api/auth/verify-pin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin }),
-      })
-      if (!res.ok) return false
-      const data = await res.json()
-      if (data.success) {
-        setRole('admin')
-        setIsAuthenticated(true)
-        sessionStorage.setItem('limpp_day_role', 'admin')
-        return true
-      }
-      return false
-    } catch (error) {
-      console.error('Login error:', error)
-      return false
-    }
+  const loginAsAdmin = () => {
+    setRole('admin')
+    setIsAuthenticated(true)
+    sessionStorage.setItem('limpp_day_role', 'admin')
   }
 
   const logout = () => {
