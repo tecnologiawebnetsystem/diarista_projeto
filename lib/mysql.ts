@@ -2,12 +2,23 @@ import { Pool, type QueryResultRow } from 'pg'
 
 type Params = unknown[]
 
+function withExplicitSslMode(connectionString: string | undefined): string | undefined {
+  if (!connectionString) return connectionString
+
+  try {
+    const url = new URL(connectionString)
+    url.searchParams.set('sslmode', 'verify-full')
+    return url.toString()
+  } catch {
+    return connectionString
+  }
+}
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: withExplicitSslMode(process.env.DATABASE_URL),
   max: 5,
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 10_000,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
 })
 
 function toPostgresSql(sql: string): string {
