@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [screen, setScreen] = useState<Screen>('home')
   const [diaristas, setDiaristas] = useState<Diarista[]>([])
   const [loading, setLoading] = useState(true)
+  const [diaristaError, setDiaristaError] = useState('')
 
   useEffect(() => {
     if (role === 'admin') router.replace('/admin')
@@ -23,9 +24,20 @@ export default function LoginPage() {
 
   useEffect(() => {
     fetch('/api/db/diaristas?active=1')
-      .then((response) => response.ok ? response.json() : [])
-      .then((data: Diarista[]) => setDiaristas(data))
-      .catch(() => setDiaristas([]))
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Não foi possível carregar os perfis')
+        const data = await response.json()
+        if (!Array.isArray(data)) throw new Error('Resposta inválida da API')
+        return data as Diarista[]
+      })
+      .then((data) => {
+        setDiaristas(data)
+        setDiaristaError(data.length === 0 ? 'Nenhuma diarista ativa está cadastrada.' : '')
+      })
+      .catch(() => {
+        setDiaristas([])
+        setDiaristaError('Não foi possível carregar os perfis de diarista.')
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -35,6 +47,10 @@ export default function LoginPage() {
   }
 
   const enterDiarista = () => {
+    if (diaristas.length === 0) {
+      setScreen('diarista-select')
+      return
+    }
     if (diaristas.length === 1) {
       loginAsDiarista(diaristas[0])
       router.push('/diarista')
@@ -65,7 +81,7 @@ export default function LoginPage() {
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
               </button>
             ))}
-            {diaristas.length === 0 && <p className="rounded-xl border border-border bg-card p-4 text-center text-sm text-muted-foreground">Nenhuma diarista cadastrada.</p>}
+            {diaristas.length === 0 && <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-center text-sm text-muted-foreground">{diaristaError || 'Nenhuma diarista cadastrada.'}</p>}
           </div>
         </div>
       </main>
@@ -81,7 +97,7 @@ export default function LoginPage() {
           <p className="mt-1.5 text-[11px] font-medium uppercase tracking-[0.3em] text-muted-foreground">Gestão de serviços</p>
         </div>
         <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
-          <button onClick={enterDiarista} disabled={loading} className="flex w-full items-center gap-4 px-5 py-6 text-left transition hover:bg-muted disabled:opacity-60">
+          <button onClick={enterDiarista} disabled={loading} className="flex w-full items-center gap-4 px-5 py-6 text-left transition hover:bg-muted disabled:opacity-60" aria-busy={loading}>
             <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-2xl gradient-primary"><UserRound className="h-6 w-6 text-primary-foreground" /></div>
             <div className="flex-1"><p className="font-bold text-foreground">Diarista</p><p className="mt-1 text-xs text-muted-foreground">Entrar na área de diarista</p></div>
             <ChevronRight className="h-5 w-5 text-muted-foreground" />
