@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { ArrowLeft, Briefcase, ChevronRight, UserRound, Users } from 'lucide-react'
+import { ArrowLeft, Briefcase, ChevronRight, Lock, UserRound, Users } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import type { Diarista } from '@/types/database'
 
