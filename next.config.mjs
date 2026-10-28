@@ -1,9 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    // O TypeScript já garante a segurança de tipos — ESLint não bloqueia o build
-    ignoreDuringBuilds: true,
-  },
   images: {
     remotePatterns: [
       {

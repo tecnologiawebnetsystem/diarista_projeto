@@ -12,13 +12,43 @@ interface AuthContextType {
   diarista: Diarista | null
   diaristaId: string | null
   loginAsDiarista: (d: Diarista) => void
-  loginAsAdmin: (pin: string) => Promise<boolean>
+  loginAsAdmin: () => void
   logout: () => void
   selectedDiaristaId: string | null
   setSelectedDiaristaId: (id: string | null) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+const SESSION_KEYS = {
+  role: 'limpp_day_role',
+  diaristaId: 'limpp_day_diarista_id',
+  diaristaName: 'limpp_day_diarista_name',
+} as const
+
+function readSession(key: string) {
+  try {
+    return sessionStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function writeSession(key: string, value: string) {
+  try {
+    sessionStorage.setItem(key, value)
+  } catch (error) {
+    console.error('[v0] Não foi possível salvar a sessão:', error)
+  }
+}
+
+function removeSession(key: string) {
+  try {
+    sessionStorage.removeItem(key)
+  } catch (error) {
+    console.error('[v0] Não foi possível limpar a sessão:', error)
+  }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<UserRole>(null)
@@ -29,9 +59,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      const savedRole = sessionStorage.getItem('limpp_day_role') as UserRole
-      const savedDiaristaId = sessionStorage.getItem('limpp_day_diarista_id')
-      const savedDiaristaName = sessionStorage.getItem('limpp_day_diarista_name')
+      const savedRole = readSession(SESSION_KEYS.role) as UserRole
+      const savedDiaristaId = readSession(SESSION_KEYS.diaristaId)
+      const savedDiaristaName = readSession(SESSION_KEYS.diaristaName)
 
       if (savedRole) {
         setRole(savedRole)
@@ -51,31 +81,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRole('diarista')
     setIsAuthenticated(true)
     setDiarista(d)
-    sessionStorage.setItem('limpp_day_role', 'diarista')
-    sessionStorage.setItem('limpp_day_diarista_id', d.id)
-    sessionStorage.setItem('limpp_day_diarista_name', d.name)
+    writeSession(SESSION_KEYS.role, 'diarista')
+    writeSession(SESSION_KEYS.diaristaId, d.id)
+    writeSession(SESSION_KEYS.diaristaName, d.name)
   }
 
-  const loginAsAdmin = async (pin: string): Promise<boolean> => {
-    try {
-      const res = await fetch('/api/auth/verify-pin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin }),
-      })
-      if (!res.ok) return false
-      const data = await res.json()
-      if (data.success) {
-        setRole('admin')
-        setIsAuthenticated(true)
-        sessionStorage.setItem('limpp_day_role', 'admin')
-        return true
-      }
-      return false
-    } catch (error) {
-      console.error('Login error:', error)
-      return false
-    }
+  const loginAsAdmin = () => {
+    setRole('admin')
+    setIsAuthenticated(true)
+    writeSession(SESSION_KEYS.role, 'admin')
   }
 
   const logout = () => {
@@ -83,9 +97,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAuthenticated(false)
     setDiarista(null)
     setSelectedDiaristaId(null)
-    sessionStorage.removeItem('limpp_day_role')
-    sessionStorage.removeItem('limpp_day_diarista_id')
-    sessionStorage.removeItem('limpp_day_diarista_name')
+    removeSession(SESSION_KEYS.role)
+    removeSession(SESSION_KEYS.diaristaId)
+    removeSession(SESSION_KEYS.diaristaName)
   }
 
   return (
